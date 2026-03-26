@@ -155,7 +155,8 @@ imports:
       - finishing-a-development-branch
       - verification-before-completion
       - writing-skills
-      - using-superpowers           # will be renamed via overlay
+    # using-superpowers is NOT imported — replaced entirely by
+    # overlay/skills/using-rkstack/ (see "exclude + overlay-only" below)
 
   # Import agents from superpowers
   - upstream: superpowers
@@ -177,28 +178,40 @@ imports:
   #   include:
   #     - guard
 
-# Intra-pack skill dependencies.
-# The build validates that every skill listed in "requires" is either
-# imported or provided by overlay. Fails the build if not.
+# Dependency declarations.
+# The build validates that every dependency exists in the output.
+# Two kinds: skill deps (sibling skills) and resource deps (files, agents).
 dependencies:
   executing-plans:
-    requires:
+    skills:
       - finishing-a-development-branch
       - using-git-worktrees
       - writing-plans
   subagent-driven-development:
-    requires:
+    skills:
       - finishing-a-development-branch
       - using-git-worktrees
       - writing-plans
       - requesting-code-review
       - test-driven-development
+    resources:
+      - agents/code-reviewer.md                 # reviewer subagent prompt
+      - skills/subagent-driven-development/implementer-prompt.md
+      - skills/subagent-driven-development/spec-reviewer-prompt.md
+      - skills/subagent-driven-development/code-quality-reviewer-prompt.md
   writing-plans:
-    requires:
+    skills:
       - subagent-driven-development
       - executing-plans
+    resources:
+      - skills/writing-plans/plan-document-reviewer-prompt.md
   requesting-code-review:
-    requires: []                  # uses agents/code-reviewer, not a skill dep
+    resources:
+      - agents/code-reviewer.md
+  brainstorming:
+    resources:
+      - skills/brainstorming/spec-document-reviewer-prompt.md
+      - skills/brainstorming/visual-companion.md
 
 # Text replacements applied to ALL imported files (before overlay)
 transforms:
@@ -213,47 +226,81 @@ transforms:
 The overlay directory (`packs/{pack}/overlay/`) contains hand-authored files that
 are copied on top of the generated output **after** imports and transforms.
 
-### Three levels of customization
+### Four levels of customization
 
 **Level 1: Automatic transforms (manifest)**
+
 For mechanical replacements that apply everywhere.
+
 ```yaml
 transforms:
   replace:
     "superpowers:": "rkstack-base:"
 ```
+
 Handles the 52+ cross-references automatically. When upstream adds new references,
 the next build catches them too.
 
-**Level 2: Full file override (overlay)**
-When you need to rewrite a skill's logic, change section order, add paragraphs.
-Place the complete rewritten file in overlay:
+**Level 2: Exclude + overlay-only (rename a skill)**
+
+When you need to rename a skill directory (not just content). Don't import the
+upstream skill — provide your own version entirely in overlay:
+
+```yaml
+# in pack.yaml imports: using-superpowers is NOT in the include list
 ```
+
+```text
+# in overlay: your replacement skill with the new name
+packs/rkstack-base/overlay/skills/using-rkstack/SKILL.md
+```
+
+The upstream `using-superpowers/` is never copied. Only `using-rkstack/` appears
+in the output. This avoids the problem of both old and new directories coexisting.
+
+**Level 3: Full file override (overlay)**
+
+When you need to rewrite a skill's logic, change section order, add paragraphs,
+but keep the same directory name. Place the complete rewritten file in overlay:
+
+```text
 packs/rkstack-base/overlay/skills/brainstorming/SKILL.md
 ```
-This file **replaces** the upstream version entirely. You own it — upstream changes
-to this skill won't auto-merge (but you'll get a warning, see below).
 
-**Level 3: New files (overlay)**
+This file **replaces** the upstream version entirely. You own it — upstream changes
+to this skill won't auto-merge (but you'll get a drift warning, see below).
+
+**Level 4: New files (overlay)**
+
 For skills, hooks, agents not from any upstream. Place them in overlay:
-```
+
+```text
 packs/rkstack-base/overlay/skills/my-custom-skill/SKILL.md
 packs/rkstack-base/overlay/hooks/hooks.json
 packs/rkstack-base/overlay/hooks/session-start
 packs/rkstack-base/overlay/.claude-plugin/plugin.json
 ```
+
 These are purely your code — no upstream dependency.
 
-### How overlay merging works
+### How the build assembles output
 
-```
-For each file in the final plugin:
-  1. If overlay/ has this file → use overlay version (full override)
-  2. Else if imports provide this file → use imported + transforms
-  3. Else → skip (not in this pack)
+```text
+1. For each import in pack.yaml:
+   Copy from upstreams/{upstream}/{type}/{name}/ → plugins/{pack}/{type}/{name}/
+   (only names listed in "include")
+
+2. Apply text transforms to all imported files
+
+3. Copy overlay/ on top (rsync -a), overwriting matching paths, adding new paths
+   Overlay can add new skill dirs, replace imported files, provide .claude-plugin/, etc.
 ```
 
-Simple rule: **overlay always wins**.
+Rules:
+- **Imported but not in overlay** → auto-generated (upstream + transforms)
+- **Imported AND in overlay** → overlay wins (full override of that file)
+- **Not imported, only in overlay** → overlay-only (custom or renamed skill)
+- **Not imported, not in overlay** → not in output
 
 ### Tracking upstream drift for overridden files
 
@@ -262,30 +309,38 @@ upstream commit each overlay file was based on:
 
 ```yaml
 # packs/rkstack-base/pack.lock (auto-generated by build.sh)
+#
+# Machine keys are commit SHAs for exact comparison.
+# Tags are display metadata only — never used for drift logic.
+
 upstream_refs:
-  superpowers: v5.0.6    # submodule commit at last build time
+  superpowers:
+    sha: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+    tag: v5.0.6          # display only
 
 overrides:
   skills/brainstorming/SKILL.md:
     upstream_source: superpowers/skills/brainstorming/SKILL.md
-    based_on: v5.0.6     # upstream version when override was created
+    based_on_sha: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+    based_on_tag: v5.0.6   # display only
     override_date: 2026-03-15
   skills/using-rkstack/SKILL.md:
     upstream_source: superpowers/skills/using-superpowers/SKILL.md
-    based_on: v5.0.6
+    based_on_sha: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+    based_on_tag: v5.0.6   # display only
     override_date: 2026-03-27
 ```
 
 The build script generates and updates this lockfile. `--check-drift` compares
-the lockfile's `based_on` against the current submodule commit:
+the lockfile's `based_on_sha` against the current submodule HEAD:
 
 ```bash
 $ ./build.sh --check-drift rkstack-base
 
 Overridden files with upstream changes:
   skills/brainstorming/SKILL.md
-    based on: v5.0.6, current upstream: v5.1.0
-    upstream changed: 3 commits touching this file
+    based on: a1b2c3d (v5.0.6), current: f7e8d9c (v5.1.0)
+    upstream commits touching this file: 3
     review: diff upstreams/superpowers/skills/brainstorming/SKILL.md \
                  packs/rkstack-base/overlay/skills/brainstorming/SKILL.md
 ```
@@ -360,16 +415,24 @@ fi
 
 ### Dependency validation
 
-The build reads `dependencies` from `pack.yaml` and checks that every skill
-in `requires` exists in the output directory. If a required skill is missing
-(neither imported nor in overlay), the build fails with:
+The build reads `dependencies` from `pack.yaml` and validates two things:
+
+1. **Skill deps** — every skill in `skills:` list exists as a directory in the output
+2. **Resource deps** — every path in `resources:` list exists as a file in the output
+
+Failures are fatal:
 
 ```text
-ERROR: rkstack-base: skill "executing-plans" requires "finishing-a-development-branch"
+ERROR: rkstack-base: skill "executing-plans" requires skill "finishing-a-development-branch"
        but it is not imported and not in overlay/
+
+ERROR: rkstack-base: skill "subagent-driven-development" requires resource
+       "agents/code-reviewer.md" but it was not found in output
 ```
 
-This prevents shipping packs where skills reference siblings that aren't included.
+This prevents shipping packs where skills reference siblings or resources that
+aren't included. Companion files (prompts, scripts, reference docs) that live
+alongside skills are tracked as resource deps, not just skill-level deps.
 
 ## Upstream Update Procedure
 
@@ -428,8 +491,10 @@ Install per-project:
 ## Decided
 
 - **plugins/ handling** — committed to git after each build. Tags for reproducibility.
-- **Dependency model** — `dependencies` section in pack.yaml, validated at build time.
-- **Drift tracking** — lockfile (`pack.lock`) records upstream refs per override file.
+- **Dependency model** — `dependencies` section validates both skill deps and resource deps (files, agents, prompts).
+- **Drift tracking** — lockfile (`pack.lock`) uses commit SHAs as machine keys, tags as display-only metadata.
+- **Skill renames** — exclude from imports, provide entirely via overlay. No import + rename-in-place.
+- **Overlay merging** — `rsync -a` to include hidden directories (`.claude-plugin/` etc.).
 
 ## Remaining Decisions
 
