@@ -207,7 +207,8 @@ dependencies:
       - skills/writing-plans/plan-document-reviewer-prompt.md
   requesting-code-review:
     resources:
-      - agents/code-reviewer.md
+      - skills/requesting-code-review/code-reviewer.md   # prompt template inside skill dir
+      - agents/code-reviewer.md                          # agent definition (used by subagent dispatch)
   brainstorming:
     resources:
       - skills/brainstorming/spec-document-reviewer-prompt.md
@@ -287,7 +288,9 @@ These are purely your code — no upstream dependency.
 
 ```text
 1. For each import in pack.yaml:
-   Copy from upstreams/{upstream}/{type}/{name}/ → plugins/{pack}/{type}/{name}/
+   - skills (directories): copy upstreams/{upstream}/skills/{name}/ → plugins/{pack}/skills/{name}/
+   - agents (files):       copy upstreams/{upstream}/agents/{name}.md → plugins/{pack}/agents/{name}.md
+   - commands (files):     copy upstreams/{upstream}/commands/{name}.md → plugins/{pack}/commands/{name}.md
    (only names listed in "include")
 
 2. Apply text transforms to all imported files
