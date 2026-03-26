@@ -1,327 +1,246 @@
-# rkstack — Personal AI Development Workflow
+# rkstack
 
-## What is this
+## What This Repo Is
 
-rkstack is a unified skills repository that combines the best of multiple AI coding
-skill sources (superpowers, gstack, Anthropic marketplace, and custom skills) into
-curated, per-project skill packs with a consistent naming convention and controlled flow.
+rkstack is a repository of curated Claude Code plugin packs built from multiple
+upstream skill sources:
 
-## Why it exists
+- `superpowers`
+- `gstack`
+- selected custom rkstack content
 
-Working with multiple skill sources (superpowers, gstack, etc.) creates problems:
-- Different naming conventions — hard to remember which skill is where
-- No control over flow — TDD sometimes triggers, sometimes doesn't
-- System-wide install — same skills for all projects regardless of needs
-- No deep understanding — using skills as black boxes without knowing how they work
+The repo does **not** treat upstream skills as manually maintained copies.
+Instead, it keeps upstreams pinned in `.upstreams/`, defines what to import in
+`packs/{pack}/pack.yaml`, adds rkstack-owned customizations in
+`packs/{pack}/overlay/`, and generates installable plugins into `plugins/`
+using the Rust CLI `rkbuild`.
 
-rkstack solves this by:
-1. **Studying each upstream skill** — understanding what it does, why, how
-2. **Combining the best parts** — merging strengths of different sources
-3. **Controlling the flow** — explicitly defining when each skill triggers
-4. **Per-project install** — different skill packs for different project types
-5. **Own naming** — names that make sense to the author, not upstream convention
+## Core Principle
 
-## Core principle: patch-based, never manual
+**Source of truth lives in `packs/`, not in `plugins/`.**
 
-**All changes to upstream-derived skills MUST be stg patches.** Never edit upstream
-skill content by hand. This ensures:
-- When upstream releases a new version, we update the submodule and re-apply patches
-- Every customization is tracked, named, and reversible
-- We can see exactly what we changed and why
+- `.upstreams/` = read-only upstream sources pinned by git submodule commit
+- `packs/` = canonical rkstack configuration and custom content
+- `plugins/` = generated output committed to git after a successful build
 
-**Custom skills** (not derived from any upstream) can be created manually in `plugins/`.
+If a change is meant to persist, make it in:
 
-## Initial task
+- `packs/{pack}/pack.yaml`
+- `packs/{pack}/overlay/...`
+- Rust build tooling under `tools/rkbuild/`
+- docs such as `README.md` and `docs/`
 
-Before building any skill packs, the first step is to **study every upstream skill**:
+Do **not** manually edit generated files under `plugins/` and leave them there
+without also updating the corresponding source in `packs/` or the build logic.
 
-1. Add superpowers and gstack as git submodules in `upstreams/`
-2. Go through each skill one by one
-3. Document what it does, how it works, strengths/weaknesses in `docs/analysis/`
-4. Decide which skills go into which pack
-5. Only then start creating stg patches to build the packs
+## Build System
 
-This is a learning exercise as much as a building exercise. Understanding how each
-skill works is the foundation for making good decisions about combining them.
+This repo uses a Rust CLI named `rkbuild`.
 
-## Architecture
+Human-facing commands should go through `justfile`. `rkbuild` is the real build
+engine; `just` is the preferred task runner/interface for humans and Claude Code.
 
-### Upstream tracking via git submodules
-
-Upstreams are added as **git submodules** (not subtree). This keeps upstream history
-separate from our patch stack — stg only manages our changes in `plugins/`, while
-`upstreams/` is a clean pointer to a specific upstream commit/tag.
+Primary entrypoints:
 
 ```bash
-# Initial setup (one-time)
-git submodule add -b main https://github.com/obra/superpowers.git upstreams/superpowers
-git submodule add -b main https://github.com/garrytan/gstack.git upstreams/gstack
-
-# Pin to specific tags
-cd upstreams/superpowers && git checkout v5.0.6 && cd ../..
-cd upstreams/gstack && git checkout v0.11.17.0 && cd ../..
-git add upstreams/superpowers upstreams/gstack
-git commit -m "pin upstreams: superpowers v5.0.6, gstack v0.11.17.0"
-
-# Upgrade to new version
-cd upstreams/superpowers && git fetch && git checkout v5.1.0 && cd ../..
-git add upstreams/superpowers
-stg pop --all           # remove our patches
-git commit -m "upgrade superpowers to v5.1.0"
-stg push --all          # re-apply patches (resolve conflicts if any)
-
-# Clone with submodules
-git clone --recurse-submodules https://github.com/mrkhachaturov/rkstack.git
+just build                         # build all packs
+just build rkstack-base            # build one pack
+just validate                      # validate all packs without writing plugins/
+just validate rkstack-base
+just drift                         # compare pack.lock upstream SHAs vs submodules
+just drift rkstack-base
+just diff rkstack-base
+just check
 ```
 
-### Why submodules over subtree
-
-- **Clean separation:** upstream commits stay in upstream repos, our stg patches
-  only touch `plugins/`. No interleaved history.
-- **stg compatibility:** `stg pop --all` + submodule update + `stg push --all`
-  is clean. With subtree, upstream merge commits can conflict with stg patches.
-- **Easy diffing:** `cd upstreams/superpowers && git diff v5.0.6..v5.1.0` to see
-  what upstream changed — no filtering needed.
-- **Pinned versions:** `.gitmodules` records exactly which commit each upstream
-  points to. Reproducible builds.
-
-### Upstream sources
-
-| Upstream | Submodule path | Pinned version | What we take |
-|----------|---------------|----------------|-------------|
-| [superpowers](https://github.com/obra/superpowers) | `upstreams/superpowers` | v5.0.6 | Process: brainstorming, TDD, plans, debugging, worktrees |
-| [gstack](https://github.com/garrytan/gstack) | `upstreams/gstack` | v0.11.17.0 | Team roles: review, QA, security, ship, deploy, retro |
-| [Anthropic skills](https://github.com/anthropics/skills) | (reference only) | latest | Content: pdf, docx, frontend-design, webapp-testing |
-| Anthropic marketplace | (reference only) | latest | Integrations: any useful plugin |
-
-### Skill packs (plugins/)
-
-Each pack is a self-contained plugin installable per-project via the
-ccode-personal-plugins marketplace using `git-subdir` source type.
-
-**NOTE:** The pack structure below is a preliminary draft. The actual packs,
-their names, and which skills go where will be decided during Phase 1 (study)
-after we understand how each upstream skill works. Possible splits include
-web/infra, frontend/backend, language-specific packs, or something entirely
-different. The structure will emerge from understanding, not be imposed upfront.
-
-```
-plugins/
-├── rkstack-web/          ← (draft) Web development (Next.js, React, Vue)
-├── rkstack-infra/        ← (draft) Infrastructure (Docker, Terraform, K8s)
-├── rkstack-base/         ← (draft) Base workflow (debug, retro, finish) — for all projects
-└── (actual packs TBD after Phase 1)
-```
-
-### Marketplace integration via ccode-personal-plugins
-
-[ccode-personal-plugins](https://github.com/mrkhachaturov/ccode-personal-plugins) is
-our personal fork of the official [Anthropic Claude Code plugin marketplace](https://github.com/anthropics/claude-plugins-official).
-It syncs weekly with Anthropic upstream via GitHub Actions, and adds our own plugins
-on top via `custom-plugins.json`. Unwanted upstream plugins are filtered out via
-`exclude-plugins.txt`.
-
-rkstack skill packs are registered in ccode-personal-plugins as separate plugins
-using the `git-subdir` source type (same pattern as AWS `agent-plugins.git` which
-hosts multiple plugins in one repo). Each pack points to a subdirectory in this repo:
-
-```json
-{
-  "name": "rkstack-{pack}",
-  "source": {
-    "source": "git-subdir",
-    "url": "https://github.com/mrkhachaturov/rkstack.git",
-    "path": "plugins/rkstack-{pack}",
-    "ref": "main"
-  }
-}
-```
-
-Install per-project (not system-wide):
+Direct Rust entrypoint:
 
 ```bash
-/plugin install rkstack-{pack}@ccode-personal-plugins
+cargo run -p rkbuild -- build rkstack-base
+cargo run -p rkbuild -- validate rkstack-base
+cargo run -p rkbuild -- check-drift rkstack-base
+cargo run -p rkbuild -- diff rkstack-base
 ```
 
-### Related repositories
+## How Claude Code Should Work Here
 
-| Repo | Local path | Purpose |
-|------|-----------|---------|
-| [rkstack](https://github.com/mrkhachaturov/rkstack) | `/Volumes/storage/Projects/Git/Github/mrkhachaturov/rkstack` | This repo — unified skill packs |
-| [ccode-personal-plugins](https://github.com/mrkhachaturov/ccode-personal-plugins) | `/Volumes/storage/Projects/Git/Github/mrkhachaturov/ccode-personal-plugins` | Plugin marketplace (fork of [Anthropic claude-plugins-official](https://github.com/anthropics/claude-plugins-official)) — syncs weekly with upstream, adds our custom plugins, delivers rkstack packs to projects. Config: `.github/scripts/custom-plugins.json` for adding plugins, `exclude-plugins.txt` for removing unwanted ones. |
-| [cc-skills](https://github.com/mrkhachaturov/cc-skills) | `/Volumes/storage/Projects/Git/Github/mrkhachaturov/cc-skills` | Fork of [Anthropic example skills](https://github.com/anthropics/skills) (pdf, docx, pptx, frontend-design, webapp-testing) — separate from rkstack, content-oriented skills |
-| [gstack upstream](https://github.com/garrytan/gstack) | `/Volumes/storage/Projects/Git/Github/upstreams/gstack` | Full clone for study (also as submodule in `upstreams/gstack`) |
+When making changes in this repo:
 
-## Project structure
+1. Read the relevant `pack.yaml`, overlay files, and generated plugin output.
+2. Change the source of truth in `packs/` or `tools/rkbuild/`.
+3. Rebuild the affected pack with `just build <pack>` or `cargo run -p rkbuild -- build <pack>`.
+4. Inspect the generated diff in `plugins/`.
+5. If behavior depends on upstream pinning or overlay provenance, inspect `pack.lock`.
 
-```
+### Never do this
+
+- Do not hand-edit `.upstreams/`
+- Do not treat `plugins/` as canonical source
+- Do not reintroduce `stg`, patch-stack workflow, or manual copy/paste updates
+- Do not use shell-based bulk replacement logic in place of `rkbuild`
+
+### Preferred workflow
+
+- For normal repo workflows: prefer `just ...`
+- For import/customization changes: edit `packs/{pack}/pack.yaml` and/or `packs/{pack}/overlay/`
+- For generation behavior changes: edit `tools/rkbuild/src/main.rs`
+- For verification: run `just check` and then rebuild the target pack
+- If a workflow needs shell glue later, put it in `scripts/` and call it from `justfile`
+
+## Repository Structure
+
+```text
 rkstack/
-├── CLAUDE.md                 ← You are here
-├── README.md                 ← Public-facing description
-├── .gitmodules               ← Submodule definitions
-├── upstreams/                ← Upstream sources (git submodules, read-only reference)
-│   ├── superpowers/          ← submodule → obra/superpowers @ v5.0.6
-│   └── gstack/               ← submodule → garrytan/gstack @ v0.11.17.0
-├── plugins/                  ← Skill packs (each is a plugin)
-│   ├── rkstack-{pack}/      ← (structure TBD — packs will be defined in Phase 1)
-│   │   ├── .claude-plugin/
-│   │   │   └── manifest.json
-│   │   └── skills/
-│   │       └── {skill}/SKILL.md
-├── docs/                     ← Skill analysis and design decisions
-│   ├── analysis/             ← Deep-dive notes on each upstream skill
-│   └── flow/                 ← Flow diagrams and design decisions
-└── THIRD_PARTY_NOTICES.md    ← License attribution for upstream sources
+├── CLAUDE.md
+├── README.md
+├── Cargo.toml                    # workspace root
+├── .mise.toml                    # local tool + task definitions
+├── justfile                      # human-friendly task runner for rkbuild
+├── scripts/                      # optional helper scripts called from justfile
+├── .upstreams/                   # pinned git submodules, read-only
+│   ├── superpowers/
+│   └── gstack/
+├── packs/                        # source of truth
+│   └── rkstack-base/
+│       ├── pack.yaml             # imports, dependencies, transforms
+│       ├── pack.lock             # generated upstream SHA metadata
+│       └── overlay/              # rkstack-owned files layered on top
+├── plugins/                      # generated plugins, committed after build
+│   └── rkstack-base/
+└── tools/
+    └── rkbuild/
+        ├── Cargo.toml
+        └── src/main.rs
 ```
 
-## Commands
+## Manifest Model
+
+Each pack is defined by `packs/{pack}/pack.yaml`.
+
+Important sections:
+
+- `pack`: pack metadata
+- `imports`: which upstream skills/agents/commands to copy
+- `dependencies`: required sibling skills and resource files that must exist
+- `transforms.replace`: literal text replacements applied to imported text files
+
+Current example pack:
+
+- [`packs/rkstack-base/pack.yaml`](/Volumes/storage/Projects/Git/Github/mrkhachaturov/rkstack/packs/rkstack-base/pack.yaml)
+
+## Overlay Model
+
+`packs/{pack}/overlay/` contains rkstack-owned content copied on top of imports.
+
+Use overlay for:
+
+- plugin metadata such as `.claude-plugin/plugin.json`
+- hooks
+- new custom skills
+- full overrides of imported files
+- replacement skills under new names, such as `using-rkstack`
+
+Rename strategy:
+
+- Do **not** import the old upstream skill if you are replacing it with a new name
+- Provide the replacement entirely from overlay
+
+## Generated Output
+
+`plugins/{pack}/` is build output and is committed after successful rebuilds.
+
+This repo intentionally commits generated plugin output so that:
+
+- marketplace `git-subdir` installs can point at tagged repo states
+- generated pack contents are reviewable in normal git diffs
+- CI is not required to materialize artifacts for every consumer
+
+If `plugins/` differs from `packs/` + `rkbuild`, the fix is to rebuild, not to
+patch generated files manually.
+
+## Upstreams
+
+Upstreams are git submodules pinned to known commits/tags.
+
+Current pinned sources:
+
+- `.upstreams/superpowers`
+- `.upstreams/gstack`
+
+Use submodules for:
+
+- diffing upstream changes
+- pinning exact versions
+- rebuilding packs against new upstream commits
+
+Do not commit modifications inside submodule working trees.
+
+## Updating an Upstream
+
+Typical maintenance flow:
 
 ```bash
-# submodule management
-git submodule update --init --recursive       # after clone
-git submodule update --remote upstreams/X     # fetch latest from upstream
+cd .upstreams/superpowers
+git fetch
+git checkout v5.1.0
+cd ../..
 
-# stg patch management
-stg init                          # initialize stg on the branch
-stg series                        # list all patches in the stack
-stg new <name> -m "description"   # create a new patch
-stg refresh                       # update current patch with staged changes
-stg pop --all                     # unapply all patches (before upstream update)
-stg push --all                    # re-apply all patches (after upstream update)
-stg edit <name>                   # edit a patch description
-stg reorder                       # reorder patches in the stack
-stg show <name>                   # see the patch diff
-stg log <name>                    # see patch history
+just build rkstack-base
+just drift rkstack-base
 ```
 
-## Patch-based workflow with stg (Stacked Git)
+Then:
 
-### Why stg
+1. Review generated diffs in `plugins/`
+2. Review `packs/{pack}/pack.lock`
+3. If an override may need attention, compare overlay files against upstream
+4. Commit the submodule bump plus regenerated outputs together
 
-Each customization to an upstream skill is a **named, reorderable, re-appliable patch**.
-When upstream releases a new version, we update the submodule and re-apply patches.
-Conflicts are resolved per-patch — you see exactly which customization broke and why.
+## rkbuild Responsibilities
 
-### What gets patched vs what doesn't
+The Rust CLI is responsible for all pack assembly mechanics:
 
-| Content | How it's managed |
-|---------|-----------------|
-| Upstream-derived skills in `plugins/` | **stg patches only** — never edit manually |
-| Custom skills (no upstream source) | **Manual edits** — no patches needed |
-| `upstreams/` submodules | **git submodule** — read-only, never modify |
-| `docs/analysis/` | **Manual edits** — personal notes, not patched |
-| Manifests, README, CLAUDE.md | **Normal git commits** — infrastructure, not skills |
+- parse YAML manifest
+- copy imports from `.upstreams/`
+- apply literal text replacements across supported text file types
+- merge overlay recursively, including dotfiles
+- validate skill/resource dependencies
+- generate `pack.lock`
+- compare lockfile SHAs with current upstream submodule HEADs
+- diff fresh build output against committed `plugins/`
 
-### Patch naming convention
+If one of these behaviors changes, update `tools/rkbuild/src/main.rs` and then
+re-run the relevant build/validation commands.
 
-```
-{NN}-{pack}-{action}-{description}
+## Tooling Notes
 
-Examples:
-01-web-import-brainstorming        # copy skill as-is from upstreams/superpowers
-02-web-rename-brainstorming        # rename to think, adjust references
-03-web-restructure-think           # rewrite sections for our flow
-04-web-import-executing-plans      # copy as-is from upstreams/superpowers
-05-web-embed-tdd-in-code           # embed TDD into the code skill
-06-web-import-review               # copy from upstreams/gstack
-07-web-customize-review-checklist  # replace checklist with our own
-08-base-import-debugging           # copy from upstreams/superpowers
-09-base-import-investigate         # copy from upstreams/gstack
-10-base-merge-debug                # merge two debug skills into one
-```
+- Rust toolchain and `just` are managed via `mise`
+- `Cargo.lock` should be committed for this workspace
+- `target/` is ignored
+- `justfile` should stay thin; keep durable logic in Rust, and any future shell helpers in `scripts/`
 
-Import patches copy from `upstreams/` as-is. Subsequent patches modify.
-This way when upstream updates, import patches may conflict (upstream changed
-the source) but customization patches usually apply cleanly.
+## Marketplace / Delivery
 
-### Typical stg workflow
+Packs are meant to be published through the personal Claude Code marketplace via
+`git-subdir`, pointing at subdirectories under `plugins/`.
 
-```bash
-# Creating a new skill from upstream
-stg new 01-web-import-brainstorming -m "Import brainstorming from superpowers as-is"
-cp -r upstreams/superpowers/skills/brainstorming/ plugins/rkstack-web/skills/think/
-stg refresh
+Use tags for reproducible installs rather than mutable `main` refs.
 
-stg new 02-web-rename-brainstorming -m "Rename brainstorming to think, update references"
-# ... edit plugins/rkstack-web/skills/think/SKILL.md ...
-stg refresh
+## Current Priority
 
-# Upgrading upstream
-cd upstreams/superpowers && git fetch && git checkout v5.1.0 && cd ../..
-git add upstreams/superpowers
-stg pop --all                     # remove all our patches
-git commit -m "upgrade superpowers to v5.1.0"
-stg push --all                    # re-apply patches
-# if conflict on 01-web-import-brainstorming:
-#   → upstream changed brainstorming, re-copy from new version
-#   → stg refresh, stg push (continue with remaining patches)
+The repo is in the phase of building and refining the manifest-driven system.
+When unsure, optimize for:
 
-# Inspecting
-stg series                          # see all patches
-stg show 05-web-embed-tdd-in-code   # see what this patch changes
-stg diff                            # see uncommitted changes in current patch
-```
+1. correctness of `packs/` as source of truth
+2. determinism of `rkbuild`
+3. reproducible generated output in `plugins/`
+4. safe future upstream updates
 
-## Development workflow
+## Short Operational Rules
 
-### Phase 1: Study (current phase)
-
-1. Add superpowers and gstack as git submodules
-2. Read each upstream skill one by one
-3. Write analysis in `docs/analysis/{upstream}-{skill-name}.md`
-4. Map skills to packs — decide what goes where
-
-### Phase 2: Build packs
-
-1. For each skill: create stg import patch (copy from upstream as-is)
-2. Create stg customization patches (rename, restructure, merge, embed TDD)
-3. Test each pack by installing in a real project
-
-### Phase 3: Maintain
-
-1. Watch upstream releases
-2. Update submodule → pop/push stg patches
-3. Incorporate new upstream features worth having
-4. Add new custom skills as needed
-
-### Naming convention
-
-**NOTE:** The names below are a preliminary draft. Final naming will be decided
-during Phase 1 after studying all upstream skills. The principle stays: names
-should be action-oriented and immediately clear to the author.
-
-Draft examples (subject to change):
-
-- `think` — brainstorm and explore the problem
-- `plan` — design the solution with architecture review
-- `code` — implement with TDD (test first, always)
-- `review` — code review with checklists
-- `test` — QA in real browser
-- `security` — OWASP + STRIDE audit
-- `ship` — PR, changelog, push
-- `deploy` — merge, deploy, verify production
-- `debug` — systematic root-cause investigation
-- `retro` — weekly retrospective with metrics
-- `finish` — verify everything before claiming done
-
-## Key design decisions
-
-### TDD is mandatory in `code` skill
-Unlike superpowers where TDD is a separate optional skill that may or may not trigger,
-rkstack embeds the TDD cycle directly into the `code` skill. Red-Green-Refactor is
-not a suggestion — it's the only way the skill works.
-
-### Per-project, not system-wide
-Skills are installed per-project via the plugin marketplace. A Docker project gets
-`rkstack-infra`, a Next.js project gets `rkstack-web`. No unnecessary skills cluttering
-the context.
-
-### Patch-based, not fork-based
-Upstream skills are NOT copied and manually edited. They are imported via stg patches
-and customized via subsequent patches. This means upstream updates can be incorporated
-by re-applying the patch stack. Manual edits would make upstream tracking impossible.
-
-### Submodules for upstream, not subtree
-Upstreams live as git submodules — clean pointers to specific commits. This keeps
-our git history clean (only our patches, not upstream commits) and makes stg work
-smoothly (no merge commits from subtree pulls interfering with the patch stack).
+- Edit `packs/` or `tools/rkbuild/`, not generated `plugins/`
+- Rebuild after every source change
+- Treat `.upstreams/` as read-only references
+- Keep `pack.lock` generated by the tool
+- Prefer `just ...` for normal workflows, and `cargo run -p rkbuild -- ...` when working on the CLI itself
+- If shell is needed, add a script under `scripts/` and invoke it from `justfile`

@@ -1,0 +1,11 @@
+{
+  "name": "rkstack-base",
+  "description": "Base development workflow: brainstorming, planning, TDD, debugging, code review, and verification. Universal skills for all project types.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Ruben Khachaturov",
+    "email": "mr.kha4a2rov@protonmail.com"
+  },
+  "repository": "https://github.com/mrkhachaturov/rkstack",
+  "license": "MIT"
+}

@@ -1,0 +1,76 @@
+pack:
+  name: rkstack-base
+  version: 0.1.0
+  description: >
+    Base development workflow: brainstorming, planning, TDD, debugging,
+    code review, and verification. Universal skills for all projects.
+
+imports:
+  - upstream: superpowers
+    type: skills
+    include:
+      - brainstorming
+      - writing-plans
+      - executing-plans
+      - test-driven-development
+      - systematic-debugging
+      - dispatching-parallel-agents
+      - subagent-driven-development
+      - using-git-worktrees
+      - requesting-code-review
+      - receiving-code-review
+      - finishing-a-development-branch
+      - verification-before-completion
+      - writing-skills
+      # using-superpowers is NOT imported — replaced by overlay/skills/using-rkstack/
+
+  - upstream: superpowers
+    type: agents
+    include:
+      - code-reviewer
+
+  - upstream: superpowers
+    type: commands
+    include:
+      - brainstorm
+      - write-plan
+      - execute-plan
+
+dependencies:
+  executing-plans:
+    skills:
+      - finishing-a-development-branch
+      - using-git-worktrees
+      - writing-plans
+  subagent-driven-development:
+    skills:
+      - finishing-a-development-branch
+      - using-git-worktrees
+      - writing-plans
+      - requesting-code-review
+      - test-driven-development
+    resources:
+      - agents/code-reviewer.md
+      - skills/subagent-driven-development/implementer-prompt.md
+      - skills/subagent-driven-development/spec-reviewer-prompt.md
+      - skills/subagent-driven-development/code-quality-reviewer-prompt.md
+  writing-plans:
+    skills:
+      - subagent-driven-development
+      - executing-plans
+    resources:
+      - skills/writing-plans/plan-document-reviewer-prompt.md
+  requesting-code-review:
+    resources:
+      - skills/requesting-code-review/code-reviewer.md
+      - agents/code-reviewer.md
+  brainstorming:
+    resources:
+      - skills/brainstorming/spec-document-reviewer-prompt.md
+      - skills/brainstorming/visual-companion.md
+
+transforms:
+  replace:
+    "superpowers:": "rkstack-base:"
+    "superpowers plugin": "rkstack-base plugin"
+    "docs/superpowers/specs": "docs/specs"

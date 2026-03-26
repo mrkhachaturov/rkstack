@@ -39,7 +39,7 @@ A system that lets us:
 Instead of managing patches (stg) that record file contents and live outside git,
 we use a **declarative manifest** that describes what to import and how to transform
 it, plus an **overlay directory** for deep customizations. A build script reads the
-manifest, copies from upstreams, applies transforms and overlays, and writes the
+manifest, copies from `.upstreams/`, applies transforms and overlays, and writes the
 final plugin to `plugins/`.
 
 ### Why not stg (patch-based)
@@ -73,7 +73,7 @@ Also considered and rejected:
 
 ```
 rkstack/
-├── upstreams/                          ← git submodules (read-only, pinned to tags)
+├── .upstreams/                         ← git submodules (read-only, pinned to tags)
 │   ├── superpowers/                    ← obra/superpowers @ v5.0.6
 │   └── gstack/                         ← garrytan/gstack @ v0.11.17.0
 │
@@ -111,7 +111,7 @@ rkstack/
 
 | Directory | What it is | Who writes it |
 |-----------|-----------|---------------|
-| `upstreams/` | Git submodules, read-only | `git submodule update` |
+| `.upstreams/` | Git submodules, read-only | `git submodule update` |
 | `packs/` | Source of truth: manifests + overlays | You (human) |
 | `plugins/` | Build output, committed after each build | `build.sh` |
 
@@ -135,7 +135,7 @@ pack:
     Base development workflow: brainstorming, planning, TDD, debugging,
     code review, and verification. Universal skills for all projects.
 
-# Import skills from upstreams
+# Import skills from .upstreams
 imports:
 
   # Import all skills from superpowers
@@ -288,9 +288,9 @@ These are purely your code — no upstream dependency.
 
 ```text
 1. For each import in pack.yaml:
-   - skills (directories): copy upstreams/{upstream}/skills/{name}/ → plugins/{pack}/skills/{name}/
-   - agents (files):       copy upstreams/{upstream}/agents/{name}.md → plugins/{pack}/agents/{name}.md
-   - commands (files):     copy upstreams/{upstream}/commands/{name}.md → plugins/{pack}/commands/{name}.md
+   - skills (directories): copy .upstreams/{upstream}/skills/{name}/ → plugins/{pack}/skills/{name}/
+   - agents (files):       copy .upstreams/{upstream}/agents/{name}.md → plugins/{pack}/agents/{name}.md
+   - commands (files):     copy .upstreams/{upstream}/commands/{name}.md → plugins/{pack}/commands/{name}.md
    (only names listed in "include")
 
 2. Apply text transforms to all imported files
@@ -344,7 +344,7 @@ Overridden files with upstream changes:
   skills/brainstorming/SKILL.md
     based on: a1b2c3d (v5.0.6), current: f7e8d9c (v5.1.0)
     upstream commits touching this file: 3
-    review: diff upstreams/superpowers/skills/brainstorming/SKILL.md \
+    review: diff .upstreams/superpowers/skills/brainstorming/SKILL.md \
                  packs/rkstack-base/overlay/skills/brainstorming/SKILL.md
 ```
 
@@ -368,7 +368,7 @@ build_pack() {
     mkdir -p "${output}"
 
     # 2. Process imports from manifest
-    #    For each import: copy files from upstreams/{upstream}/{type}/
+    #    For each import: copy files from .upstreams/{upstream}/{type}/
     #    to ${output}/{type}/
     process_imports "${manifest}" "${output}"
 
@@ -441,12 +441,12 @@ alongside skills are tracked as resource deps, not just skill-level deps.
 
 ```bash
 # 1. See what changed
-cd upstreams/superpowers
+cd .upstreams/superpowers
 git fetch && git log v5.0.6..v5.1.0 --oneline -- skills/
 cd ../..
 
 # 2. Update submodule
-cd upstreams/superpowers && git checkout v5.1.0 && cd ../..
+cd .upstreams/superpowers && git checkout v5.1.0 && cd ../..
 
 # 3. Update version in manifests
 # Edit packs/rkstack-base/pack.yaml if needed (e.g. new skills to include)
@@ -461,7 +461,7 @@ git diff plugins/
 ./build.sh --check-drift
 
 # 7. Review, test, commit
-git add upstreams/superpowers plugins/ packs/
+git add .upstreams/superpowers plugins/ packs/
 git commit -m "upgrade superpowers to v5.1.0"
 git tag rkstack-base-v0.2.0    # tag for reproducible marketplace refs
 ```

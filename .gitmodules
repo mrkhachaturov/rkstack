@@ -1,6 +1,6 @@
-[submodule "upstreams/superpowers"]
-	path = upstreams/superpowers
+[submodule ".upstreams/superpowers"]
+	path = .upstreams/superpowers
 	url = https://github.com/obra/superpowers.git
-[submodule "upstreams/gstack"]
-	path = upstreams/gstack
+[submodule ".upstreams/gstack"]
+	path = .upstreams/gstack
 	url = https://github.com/garrytan/gstack.git
