@@ -79,7 +79,7 @@ rkstack/
 │
 ├── packs/                              ← source of truth: manifests + overlays
 │   ├── rkstack-base/
-│   │   ├── pack.yaml                   ← declares imports, renames, transforms
+│   │   ├── pack.yaml                   ← declares imports, dependencies, transforms
 │   │   └── overlay/                    ← hand-authored overrides and additions
 │   │       ├── .claude-plugin/
 │   │       │   └── plugin.json
@@ -383,7 +383,7 @@ build_pack() {
     fi
 
     # 5. Validate dependencies
-    #    Check that every skill listed in "requires" exists in output
+    #    Check that every entry in "skills:" and "resources:" exists in output
     validate_dependencies "${manifest}" "${output}"
 
     # 6. Update lockfile with current upstream refs and override metadata
