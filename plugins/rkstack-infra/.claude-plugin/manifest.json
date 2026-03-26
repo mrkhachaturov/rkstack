@@ -1,0 +1,5 @@
+{
+  "name": "rkstack-infra",
+  "description": "Infrastructure workflow — plan, code, review, deploy. For Docker, Terraform, Kubernetes projects.",
+  "version": "0.1.0"
+}
