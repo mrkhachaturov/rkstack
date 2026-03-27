@@ -4,3 +4,6 @@
 [submodule ".upstreams/gstack"]
 	path = .upstreams/gstack
 	url = https://github.com/garrytan/gstack.git
+[submodule ".upstreams/claude-code-docs"]
+	path = .upstreams/claude-code-docs
+	url = git@github.com:mrkhachaturov/claude-code-docs.git
