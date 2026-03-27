@@ -1,0 +1,311 @@
+---
+name: finishing-a-development-branch
+preamble-tier: 3
+version: 1.0.0
+description: |
+  Complete development work by presenting structured options for merge,
+  PR, or cleanup. Use when implementation is complete and all tests pass.
+  Guides the final steps: verify, choose integration method, execute.
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
+  - Agent
+  - AskUserQuestion
+---
+
+{{PREAMBLE}}
+
+{{BASE_BRANCH_DETECT}}
+
+# Finishing a Development Branch
+
+Guide completion of development work by presenting clear options and handling the chosen workflow.
+
+**Core principle:** Verify tests -> Present options -> Execute choice -> Clean up.
+
+**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
+
+---
+
+## Step 1: Pre-flight Verification
+
+Before presenting options, verify the branch is ready to integrate.
+
+### 1.1 Check branch safety
+
+```bash
+_CURRENT=$(git branch --show-current 2>/dev/null || echo "unknown")
+echo "CURRENT_BRANCH: $_CURRENT"
+```
+
+If the current branch equals `<base>` (the detected base branch), **STOP**: "You're on the base branch. Switch to a feature branch first."
+
+### 1.2 Check for uncommitted changes
+
+```bash
+git status --short
+```
+
+If there are uncommitted changes, present them and use AskUserQuestion:
+
+> **Re-ground:** On branch `<branch>` with uncommitted changes.
+>
+> **Simplify:** You have changes that aren't committed yet. They need to be handled before integrating.
+>
+> **RECOMMENDATION:** Choose A to include everything. Completeness: 9/10.
+>
+> A) Commit all changes now (recommended) -- Completeness: 9/10
+> B) Stash changes -- keep them separate from this branch -- Completeness: 7/10
+> C) Discard uncommitted changes -- Completeness: 5/10
+
+### 1.3 Run tests
+
+Read the test command from CLAUDE.md (look for a `## Testing` section). If no test command is configured, auto-detect the project's test framework:
+
+```bash
+# Check CLAUDE.md for test command
+grep -A 3 "^## Testing" CLAUDE.md 2>/dev/null | head -5
+# Detect test infrastructure
+ls jest.config.* vitest.config.* playwright.config.* .rspec pytest.ini setup.py Cargo.toml go.mod 2>/dev/null
+ls package.json Gemfile pyproject.toml 2>/dev/null
+```
+
+Run the detected test command. **Never hardcode** `npm test` or `cargo test` -- use whatever the project uses.
+
+**If tests fail:** Do NOT immediately stop. Apply the Test Failure Ownership Triage:
+
+{{TEST_FAILURE_TRIAGE}}
+
+**After triage:** If any in-branch failures remain unfixed, **STOP**. Do not proceed to Step 2. If all failures were pre-existing and handled (fixed, TODOed, assigned, or skipped), continue.
+
+**If all tests pass:** Continue to Step 2.
+
+### 1.4 Gather branch summary
+
+```bash
+# Commit count on this branch
+git log <base>..HEAD --oneline | wc -l | tr -d ' '
+
+# Files changed
+git diff <base>...HEAD --stat
+
+# Commits on this branch
+git log <base>..HEAD --oneline
+```
+
+Note the commit count, files changed count, and insertions/deletions for use in the options presentation.
+
+---
+
+## Step 2: Detect Base Branch
+
+Use `_BASE` from the Base Branch Detection output above. Verify it is correct:
+
+```bash
+echo "Base branch: $_BASE"
+git log --oneline $_BASE..HEAD | head -5
+```
+
+If the base branch looks wrong (e.g., zero commits diverged), use AskUserQuestion to confirm:
+
+> **Re-ground:** Detected `<base>` as your base branch, but this branch shows 0 commits ahead.
+>
+> **Simplify:** I need to know which branch you want to integrate into.
+>
+> **RECOMMENDATION:** Confirm or correct the base branch.
+>
+> A) Use `<base>` as detected
+> B) Use a different branch (specify)
+
+---
+
+## Step 3: Present Options
+
+Use AskUserQuestion with the full format (re-ground, simplify, recommend, options):
+
+> **Re-ground:** Working on branch `<branch>` in project `<project>`. <N> commits, <M> files changed since `<base>`.
+>
+> **Simplify:** Your implementation is ready. How do you want to integrate it?
+>
+> **RECOMMENDATION:** Choose B for collaborative repos (creates a review trail), A for solo repos (faster). Completeness: 9/10.
+>
+> A) Merge locally -- `git merge` into `<base>`, push directly. Fast, no review trail. Completeness: 7/10
+> B) Push + create PR (recommended for collaborative) -- push branch, create PR with summary. Completeness: 9/10
+> C) Keep branch as-is -- not ready to integrate yet. Completeness: 5/10
+> D) Discard branch -- abandon this work. Completeness: N/A
+
+Check `REPO_MODE` from the preamble:
+- **`solo`**: Recommend A (merge locally) -- faster, no review overhead.
+- **`collaborative`** or **`unknown`**: Recommend B (push + PR) -- creates review trail.
+
+---
+
+## Step 4: Execute Choice
+
+### Option A: Merge Locally
+
+1. Fetch and merge base into feature branch first (catch conflicts early):
+   ```bash
+   git fetch origin <base> && git merge origin/<base> --no-edit
+   ```
+
+2. If merge conflicts arise, resolve them. If complex, **STOP** and show conflicts.
+
+3. Switch to base branch and merge:
+   ```bash
+   git checkout <base>
+   git pull origin <base>
+   git merge <branch> --no-edit
+   ```
+
+4. Verify tests pass on the merged result. Use the same test command from Step 1. If tests fail, **STOP** -- do not push broken code.
+
+5. Push:
+   ```bash
+   git push origin <base>
+   ```
+
+6. Continue to Step 5 (Cleanup).
+
+### Option B: Push + Create PR
+
+1. Push the branch with upstream tracking:
+   ```bash
+   git push -u origin <branch>
+   ```
+
+2. Create a PR using `gh pr create` with a structured body:
+   ```bash
+   gh pr create --base <base> --title "<type>: <summary>" --body "$(cat <<'EOF'
+   ## Summary
+   <bullet points of what changed -- infer from commits and diff>
+
+   ## Test plan
+   - [ ] All tests pass
+   - [ ] <additional verification steps relevant to the changes>
+
+   Generated with [Claude Code](https://claude.com/claude-code)
+   EOF
+   )"
+   ```
+
+   For the title, use conventional commit format: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:` based on the nature of the changes.
+
+   For the summary, use `git log <base>..HEAD --oneline` and `git diff <base>...HEAD --stat` to write concise bullet points describing what changed.
+
+3. Output the PR URL.
+
+4. Continue to Step 5 (Cleanup).
+
+### Option C: Keep Branch As-Is
+
+Report current state:
+
+```
+Keeping branch <branch>. Current status:
+- <N> commits ahead of <base>
+- <M> files changed
+- All tests passing
+
+Next steps when ready:
+- Run this skill again to merge or create PR
+- Continue development on this branch
+```
+
+**Do NOT clean up worktree or branch.** Skip Step 5.
+
+### Option D: Discard Branch
+
+This is destructive. Confirm with AskUserQuestion:
+
+> **Re-ground:** About to permanently delete branch `<branch>` with <N> commits.
+>
+> **Simplify:** This will permanently delete all work on this branch. This cannot be undone.
+>
+> **RECOMMENDATION:** Only choose A if you are certain this work is not needed. Completeness: N/A.
+>
+> A) Confirm discard -- permanently delete branch and all commits
+> B) Cancel -- keep the branch (go back to options)
+
+If confirmed:
+```bash
+git checkout <base>
+git branch -D <branch>
+```
+
+If the branch was pushed to remote:
+```bash
+git push origin --delete <branch> 2>/dev/null || true
+```
+
+Continue to Step 5 (Cleanup).
+
+---
+
+## Step 5: Cleanup
+
+**For Options A, B, D only.** Skip for Option C.
+
+### 5.1 Remove worktree if applicable
+
+```bash
+# Check if we're in a worktree
+_WT_PATH=$(git rev-parse --show-toplevel 2>/dev/null)
+_MAIN_WT=$(git worktree list --porcelain | head -1 | sed 's/worktree //')
+```
+
+If `_WT_PATH` differs from `_MAIN_WT`, we are in a worktree:
+```bash
+cd "$_MAIN_WT"
+git worktree remove "$_WT_PATH" 2>/dev/null || echo "Worktree already removed or not applicable"
+```
+
+### 5.2 Delete local branch if merged (Options A and D only)
+
+For Option A (merged):
+```bash
+git branch -d <branch>
+```
+
+For Option D (discarded): already deleted in Step 4.
+
+For Option B (PR created): keep the local branch -- it may need updates based on review.
+
+### 5.3 Report final status
+
+```
+Branch completion: DONE
+- Method: <merge locally | PR created | discarded>
+- Base branch: <base>
+- Worktree: <removed | not applicable>
+- Local branch: <deleted | kept for PR>
+<PR URL if Option B>
+```
+
+---
+
+## Quick Reference
+
+| Option | Tests | Merge | Push | PR | Keep Worktree | Cleanup Branch |
+|--------|-------|-------|------|----|---------------|----------------|
+| A. Merge locally | verify post-merge | yes | yes (base) | no | no | yes (delete) |
+| B. Push + create PR | pre-verified | no | yes (branch) | yes | yes | no (keep) |
+| C. Keep as-is | pre-verified | no | no | no | yes | no |
+| D. Discard | n/a | no | no | no | no | yes (force) |
+
+---
+
+## Important Rules
+
+- **Never skip test verification.** If tests fail, stop.
+- **Never merge without verifying tests on the result.** Post-merge test run is mandatory for Option A.
+- **Never force-push.** Use regular `git push` only.
+- **Never delete work without explicit confirmation.** Option D requires typed confirmation.
+- **Never hardcode test commands.** Read from CLAUDE.md or auto-detect.
+- **Always present exactly 4 options.** Keep them structured and concise.
+- **Always use AskUserQuestion format** with re-ground, simplify, recommend, and lettered options.
+- **Clean up worktree for Options A and D only.** Keep for B and C.
