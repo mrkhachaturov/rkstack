@@ -1,0 +1,221 @@
+---
+name: verification-before-completion
+preamble-tier: 2
+version: 1.0.0
+description: |
+  Verification gate before claiming work is complete, fixed, or passing.
+  Use before committing or creating PRs. Iron law: NO completion claims
+  without fresh verification evidence. Run command, read output, verify
+  claim, then state result.
+allowed-tools:
+  - Bash
+  - Read
+  - Grep
+  - Glob
+  - AskUserQuestion
+---
+
+{{PREAMBLE}}
+
+# Verification Before Completion
+
+Claiming work is complete without verification is dishonesty, not efficiency.
+
+**Core principle:** Evidence before claims, always.
+
+**Violating the letter of this rule is violating the spirit of this rule.**
+
+---
+
+## IRON LAW: No Completion Claims Without Fresh Verification Evidence
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+If you haven't run the verification command **in this session**, you cannot claim it passes. Previous runs, memory of past results, and assumptions do not count. Fresh means NOW.
+
+---
+
+## The Verification Flow
+
+Every claim must pass through this gate. No exceptions.
+
+```
+BEFORE claiming any status or expressing satisfaction:
+
+1. IDENTIFY: What command proves this claim?
+2. RUN: Execute the FULL command (fresh, complete)
+3. READ: Full output, check exit code, count failures
+4. VERIFY: Does output confirm the claim?
+   - If NO: State actual status with evidence
+   - If YES: State claim WITH the evidence
+5. ONLY THEN: Make the claim
+
+Skip any step = lying, not verifying
+```
+
+**Where to find the right commands:** Read CLAUDE.md for project-specific test, build, and lint commands. If CLAUDE.md does not specify a command, ask the user. Never guess or hardcode framework commands.
+
+---
+
+## Status Protocol
+
+Use the **Completion Status** protocol from the preamble above. Here is how each status maps to verification evidence:
+
+- **DONE** requires: every claim backed by a command you ran AND output you read in THIS session. No claim without a receipt. If you ran tests, show the pass count. If you ran a build, show exit code 0. If you checked requirements, show each one verified.
+
+- **DONE_WITH_CONCERNS** requires: all verifications passed, but you observed warnings, edge cases, deprecation notices, or things that need attention. List each concern with the evidence that surfaced it. Example: "Tests pass (47/47) but 3 deprecation warnings in test output."
+
+- **BLOCKED** requires: you tried 3+ distinct approaches and none worked. Show what you tried and what happened each time. Do not say BLOCKED after one attempt.
+
+- **NEEDS_CONTEXT** requires: you identified a specific piece of information the user must provide before you can verify. State exactly what you need and why you cannot determine it yourself.
+
+**Status format:**
+
+```
+STATUS: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+EVIDENCE:
+  - [claim]: [command ran] -> [output summary]
+  - [claim]: [command ran] -> [output summary]
+CONCERNS: (if DONE_WITH_CONCERNS)
+  - [what you noticed and its impact]
+```
+
+---
+
+## Common Verification Failures
+
+These are NOT equivalent. Each requires its own verification.
+
+| Claim | Requires | NOT Sufficient |
+|-------|----------|----------------|
+| "Tests pass" | Test command output: 0 failures | "Linter clean" |
+| "Linter clean" | Linter output: 0 errors | "Tests pass" |
+| "Build succeeds" | Build command: exit 0 | "Tests pass" or "linter clean" |
+| "Bug fixed" | Test original symptom: passes | "Code changed, assumed fixed" |
+| "One test passes" | That specific test output | "All tests pass" |
+| "All tests pass" | Full suite output: 0 failures | "One test passes" |
+| "Code compiles" | Compiler output: 0 errors | "Code looks correct" |
+| "Code works" | Run the code, observe behavior | "Code compiles" |
+| "It works now" | Fresh run in THIS session | "It worked before" |
+| "Requirements met" | Line-by-line checklist verified | "Tests pass" |
+| "Agent completed" | VCS diff shows correct changes | "Agent reports success" |
+
+---
+
+## Red Flags -- STOP Immediately
+
+If you catch yourself thinking or about to say any of these, STOP and run verification first.
+
+| What you're about to say | What to do instead |
+|--------------------------|-------------------|
+| "I just ran this" | Run it again. NOW. |
+| "It should work" | Prove it. Run the command. |
+| "I'm confident" | Confidence is not evidence. |
+| "Looks correct" | Correctness requires proof. |
+| "Tests passed earlier" | Earlier is not now. Run again. |
+| "Just this once" | No exceptions. Ever. |
+| "The linter passed, so..." | Linter is not compiler is not tests. |
+| "The agent said it worked" | Verify the agent's claims yourself. |
+| "Partial check is enough" | Partial proves nothing about the whole. |
+| "I'm tired / let's wrap up" | Exhaustion is not an excuse. |
+| "Different words so rule doesn't apply" | Spirit over letter. Always. |
+
+**Also stop if you are about to:**
+- Express satisfaction ("Great!", "Perfect!", "Done!") before verification
+- Commit, push, or create a PR without verification
+- Move to the next task without verifying the current one
+- Delegate to an agent without verifying the agent's output
+
+---
+
+## Key Patterns
+
+### Tests
+
+Run the **full test suite**, not just the test you changed.
+
+```
+RUN:    [full test command from CLAUDE.md]
+READ:   Count total, passed, failed, skipped
+VERIFY: 0 failures, no skipped tests hiding problems
+THEN:   "All tests pass (X/X)"
+```
+
+If the project uses TDD, verify the red-green cycle: test must FAIL without the fix and PASS with it. One direction is not enough.
+
+### Build
+
+Run the **actual build command**, not a related but different tool.
+
+```
+RUN:    [build command from CLAUDE.md]
+READ:   Exit code, any warnings
+VERIFY: Exit 0, no error output
+THEN:   "Build succeeds (exit 0)"
+```
+
+### Lint
+
+Linting is separate from building, which is separate from testing. Verify each independently.
+
+```
+RUN:    [lint command from CLAUDE.md]
+READ:   Error count, warning count
+VERIFY: 0 errors (warnings: report as DONE_WITH_CONCERNS if present)
+THEN:   "Linter clean (0 errors, N warnings)"
+```
+
+### Requirements
+
+Re-read the plan or spec. Create a checklist. Verify each item with specific evidence.
+
+```
+READ:   The plan/spec/requirements document
+CREATE: A checklist of every requirement
+VERIFY: Each requirement with a specific command or file read
+THEN:   Report completion with per-requirement evidence
+```
+
+Any unchecked item means DONE_WITH_CONCERNS at best.
+
+### Agent Delegation
+
+Never trust an agent's self-report. Verify independently.
+
+```
+AFTER:  Agent reports success
+RUN:    git diff to see what actually changed
+READ:   Every changed file
+VERIFY: Changes match what was requested, no unintended modifications
+THEN:   Report based on YOUR verification, not the agent's claim
+```
+
+### Diff Verification
+
+Before committing or creating a PR, review everything that changed.
+
+```
+RUN:    git diff [base-branch]...HEAD (or git diff --staged for uncommitted)
+READ:   Every change in the diff
+VERIFY: All changes are intentional. Look for:
+  - Accidental debug code (console.log, print, debugger)
+  - Temporary files or test artifacts
+  - Commented-out code that should be removed
+  - Unrelated changes that snuck in
+  - Hardcoded values that should be configurable
+THEN:   "Diff reviewed: N files changed, all changes intentional"
+```
+
+If anything looks wrong, fix it BEFORE claiming completion.
+
+---
+
+## The Bottom Line
+
+**No shortcuts for verification.**
+
+Run the command. Read the output. THEN claim the result.
+
+This is non-negotiable.
