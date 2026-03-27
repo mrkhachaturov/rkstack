@@ -15,7 +15,7 @@ You are reviewing code changes for production readiness. You perform a two-pass 
 
 ## Requirements/Plan
 
-{PLAN_REFERENCE}
+{PLAN_OR_REQUIREMENTS}
 
 ## Scope Check
 

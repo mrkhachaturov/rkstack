@@ -258,19 +258,23 @@ bun scripts/gen-skill-docs.ts --host codex # generate for Codex
 
 **Done:**
 - Repository structure (monorepo, root = plugin)
-- gen-skill-docs.ts in TypeScript/Bun with resolver architecture
-- First skill template: brainstorming (from superpowers, gstack format)
-- Preamble with scc project detection
-- Design docs and gstack analysis in docs/
+- gen-skill-docs.ts with frontmatter parsing, fail on unresolved placeholders
+- discover-skills.ts (dynamic skill scanning)
+- skill-check.ts (health dashboard)
+- dev-skill.ts (watch mode)
+- Preamble tier system (T1-T4) with AskUserFormat, Completeness, RepoMode, Escalation
+- Resolvers: PREAMBLE, TEST_FAILURE_TRIAGE, BASE_BRANCH_DETECT
+- 17 skills at gstack depth (brainstorming, writing-plans, TDD, debugging, verification,
+  code-review, finishing-branch, executing-plans, subagent-driven, parallel-agents,
+  worktrees, receiving-review, writing-skills, careful, freeze, guard, unfreeze)
+- Hooks: session-start (injects using-rkstack), PreToolUse (careful/freeze/guard)
+- Agent: code-reviewer
+- Design docs, gstack analysis, workflow doc
 
-**Next (in order):**
-1. Preamble tier system (T1-T4, match gstack preamble.ts)
-2. discover-skills.ts (dynamic skill scanning)
-3. skill-check.ts (health dashboard)
-4. dev-skill.ts (watch mode)
-5. Convert remaining superpowers skills to templates
-6. hooks/guard (PreToolUse safety)
-7. bin/ utilities (rkstack-detect, rkstack-repo-mode, rkstack-config)
+**Next:**
+1. bin/ utilities (rkstack-detect, rkstack-repo-mode, rkstack-config)
+2. lib/worktree.ts (git worktree isolation for testing)
+3. Codex/Gemini host support in gen-skill-docs (frontmatter transformation)
 
 ## Reference Material
 
