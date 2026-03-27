@@ -14,41 +14,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Extract version
-        id: version
+      - name: Extract version and changelog
+        id: info
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-          # Find previous tag for changelog diff
-          PREV_TAG=$(git tag --sort=-v:refname | grep -v "$GITHUB_REF_NAME" | head -1)
-          echo "prev_tag=${PREV_TAG:-}" >> "$GITHUB_OUTPUT"
+          # Extract changelog entry (between ## headers)
+          NOTES=$(awk "/^## ${VERSION}/,/^## [0-9]/" CHANGELOG.md | sed '$ d')
+          # Write multiline to output
+          {
+            echo "notes<<NOTES_EOF"
+            echo "$NOTES"
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          PREV_TAG="${{ steps.version.outputs.prev_tag }}"
-
-          # Extract CHANGELOG entry for this version
-          NOTES=$(awk "/^## ${VERSION}/,/^## [0-9]/" CHANGELOG.md | sed '$ d')
-
-          if [ -z "$NOTES" ]; then
-            NOTES="Release v${VERSION}"
-          fi
-
-          COMPARE=""
-          if [ -n "$PREV_TAG" ]; then
-            COMPARE="
-
-          Full changelog: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...v${VERSION}"
-          fi
-
-          gh release create "v${VERSION}" \
-            --title "v${VERSION}" \
-            --notes "${NOTES}${COMPARE}" \
+          gh release create "${{ github.ref_name }}" \
+            --title "v${{ steps.info.outputs.version }}" \
+            --notes "${{ steps.info.outputs.notes }}" \
             --latest

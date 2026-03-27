@@ -132,14 +132,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          OLD_VERSION="${{ steps.version.outputs.old_version }}"
-          CHANGED=$(git diff HEAD~1 --name-only skills/*/refs/ | sed 's|.*/refs/||' | sort -u | tr '\n' ', ' | sed 's/,$//')
+
+          # Extract changelog entry for this version (between ## headers)
+          NOTES=$(awk "/^## ${VERSION}/,/^## [0-9]/" CHANGELOG.md | sed '$ d')
+          if [ -z "$NOTES" ]; then
+            NOTES="Updated Claude Code reference docs to v${VERSION}"
+          fi
 
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
-            --notes "Updated Claude Code reference docs: ${CHANGED}
-
-          Full changelog: https://github.com/${{ github.repository }}/compare/v${OLD_VERSION}...v${VERSION}" \
+            --notes "$NOTES" \
             --latest=false
 
       - name: No changes
