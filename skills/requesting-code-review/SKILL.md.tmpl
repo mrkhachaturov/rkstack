@@ -1,0 +1,254 @@
+---
+name: requesting-code-review
+preamble-tier: 3
+version: 1.0.0
+description: |
+  Request and manage code reviews. Use when completing tasks, implementing
+  major features, or before merging. Dispatches code-reviewer agent with
+  two-pass review: CRITICAL first, then INFORMATIONAL. Fix-first paradigm.
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
+  - Agent
+  - AskUserQuestion
+---
+
+{{PREAMBLE}}
+
+{{BASE_BRANCH_DETECT}}
+
+# Requesting Code Review
+
+You are running the `/requesting-code-review` workflow. Dispatch a focused code-reviewer agent to catch structural issues that tests don't catch. The reviewer gets precisely crafted context — never your session's history.
+
+**Announce at start:** "I'm using the requesting-code-review skill to review the current branch."
+
+**Core principle:** Review early, review often. Fix first, ask second.
+
+---
+
+## When to Request Review
+
+**Mandatory:**
+- After each task in subagent-driven development
+- After completing a major feature
+- Before merge to main
+
+**Optional but valuable:**
+- When stuck (fresh perspective)
+- Before refactoring (baseline check)
+- After fixing a complex bug
+
+---
+
+## Step 1: Check Branch
+
+1. Run `git branch --show-current` to get the current branch.
+2. If on the base branch, output: **"Nothing to review -- you're on the base branch or have no changes against it."** and stop.
+3. Run `git fetch origin <base> --quiet && git diff origin/<base> --stat` to check if there's a diff. If no diff, output the same message and stop.
+
+---
+
+## Step 2: Scope Drift Detection
+
+Before reviewing code quality, check: **did they build what was requested -- nothing more, nothing less?**
+
+1. Read commit messages: `git log origin/<base>..HEAD --oneline`
+2. Read plan file if it exists: look for `docs/plans/*.md` referencing this feature. Read PR description: `gh pr view --json body --jq .body 2>/dev/null || true`.
+   **If no PR exists:** rely on commit messages and plan files for stated intent -- this is the common case since review runs before a PR is created.
+3. Identify the **stated intent** -- what was this branch supposed to accomplish?
+4. Run `git diff origin/<base>...HEAD --stat` and compare the files changed against the stated intent.
+5. Evaluate with skepticism:
+
+   **SCOPE CREEP detection:**
+   - Files changed that are unrelated to the stated intent
+   - New features or refactors not mentioned in the plan
+   - "While I was in there..." changes that expand blast radius
+
+   **MISSING REQUIREMENTS detection:**
+   - Requirements from plan/PR description not addressed in the diff
+   - Test coverage gaps for stated requirements
+   - Partial implementations (started but not finished)
+
+6. Output (before the main review begins):
+   ```
+   Scope Check: [CLEAN / DRIFT DETECTED / REQUIREMENTS MISSING]
+   Intent: <1-line summary of what was requested>
+   Delivered: <1-line summary of what the diff actually does>
+   [If drift: list each out-of-scope change]
+   [If missing: list each unaddressed requirement]
+   ```
+
+7. This is **INFORMATIONAL** -- does not block the review. Proceed to Step 3.
+
+---
+
+## Step 3: Get the Diff
+
+Fetch the latest base branch to avoid false positives from stale local state:
+
+```bash
+git fetch origin <base> --quiet
+```
+
+Get the full diff. This includes both committed and uncommitted changes against the latest base branch:
+
+```bash
+git diff origin/<base>...HEAD
+```
+
+Also get SHAs for the reviewer agent context:
+
+```bash
+BASE_SHA=$(git merge-base origin/<base> HEAD)
+HEAD_SHA=$(git rev-parse HEAD)
+echo "BASE_SHA: $BASE_SHA"
+echo "HEAD_SHA: $HEAD_SHA"
+```
+
+---
+
+## Step 4: Dispatch Code-Reviewer Agent
+
+Use the Agent tool to dispatch the code-reviewer agent with the review context. Fill in the template from `requesting-code-review/code-reviewer.md`:
+
+**Placeholders to fill:**
+- `{WHAT_WAS_IMPLEMENTED}` -- Summary of what was built (from scope drift analysis)
+- `{PLAN_OR_REQUIREMENTS}` -- The stated intent, plan file reference, or requirements
+- `{BASE_SHA}` -- Starting commit SHA from Step 3
+- `{HEAD_SHA}` -- Ending commit SHA from Step 3
+- `{DESCRIPTION}` -- Brief summary of the changes
+- `{SCOPE_CHECK_RESULT}` -- The scope check output from Step 2
+
+The agent performs the two-pass review and returns structured findings. See `code-reviewer.md` for the full review framework.
+
+---
+
+## Step 5: Act on Feedback -- Fix-First Paradigm
+
+**Every finding gets action -- not just critical ones.**
+
+Output a summary header: `Pre-Landing Review: N issues (X critical, Y informational)`
+
+### Step 5a: Classify each finding
+
+For each finding from the reviewer, classify as AUTO-FIX or ASK:
+
+**AUTO-FIX** (apply directly, no discussion):
+- Single-file change
+- No behavior change
+- Naming, formatting, comments
+- Obvious typos
+- Missing null checks with clear intent
+- Dead code removal
+
+**ASK** (requires user approval):
+- Multi-file change
+- Behavior change
+- Design decision
+- Breaking change
+- Ambiguous intent
+- Security-related change
+
+Critical findings lean toward ASK; informational findings lean toward AUTO-FIX.
+
+### Step 5b: Auto-fix all AUTO-FIX items
+
+Apply each fix directly. For each one, output a one-line summary:
+`[AUTO-FIXED] [file:line] Problem -> what you did`
+
+### Step 5c: Batch-ask about ASK items
+
+If there are ASK items remaining, present them in ONE AskUserQuestion:
+
+- List each item with a number, the severity label, the problem, and a recommended fix
+- For each item, provide options: A) Fix as recommended, B) Skip
+- Include an overall RECOMMENDATION
+
+Example format:
+```
+I auto-fixed 5 issues. 2 need your input:
+
+1. [CRITICAL] app/models/post.rb:42 -- Race condition in status transition
+   Fix: Add `WHERE status = 'draft'` to the UPDATE
+   -> A) Fix  B) Skip
+
+2. [INFORMATIONAL] app/services/generator.rb:88 -- LLM output not type-checked before DB write
+   Fix: Add JSON schema validation
+   -> A) Fix  B) Skip
+
+RECOMMENDATION: Fix both -- #1 is a real race condition, #2 prevents silent data corruption.
+```
+
+If 3 or fewer ASK items, you may use individual AskUserQuestion calls instead of batching.
+
+### Step 5d: Apply user-approved fixes
+
+Apply fixes for items where the user chose "Fix." Output what was fixed.
+
+If no ASK items exist (everything was AUTO-FIX), skip the question entirely.
+
+---
+
+## Step 6: Review Report
+
+After all fixes are applied, output the final structured report:
+
+```
+## Review Summary
+
+**Branch:** <current branch> -> <base branch>
+**Scope:** [CLEAN / DRIFT DETECTED / REQUIREMENTS MISSING]
+**Verdict:** [Ready to merge / Ready with fixes applied / Needs attention]
+
+### Strengths
+[What's well done -- be specific with file:line citations]
+
+### Issues Found
+[Total: N | Critical: X | Important: Y | Minor: Z]
+
+#### Critical (Must Fix)
+[Bugs, security issues, data loss risks -- with file:line]
+
+#### Important (Should Fix)
+[Architecture problems, missing error handling, test gaps -- with file:line]
+
+#### Minor (Nice to Have)
+[Code style, optimization opportunities, documentation -- with file:line]
+
+### Actions Taken
+- [AUTO-FIXED] N items (list each)
+- [USER-APPROVED] N items (list each)
+- [SKIPPED] N items (list each)
+
+### Assessment
+**Ready to merge?** [Yes / No / With fixes]
+**Reasoning:** [1-2 sentence technical assessment]
+```
+
+---
+
+## Verification of Claims
+
+Before producing the final review output:
+- If you claim "this pattern is safe" -- cite the specific line proving safety
+- If you claim "this is handled elsewhere" -- read and cite the handling code
+- If you claim "tests cover this" -- name the test file and method
+- Never say "likely handled" or "probably tested" -- verify or flag as unknown
+
+**Rationalization prevention:** "This looks fine" is not a finding. Either cite evidence it IS fine, or flag it as unverified.
+
+---
+
+## Important Rules
+
+- **Read the FULL diff before commenting.** Do not flag issues already addressed in the diff.
+- **Fix-first, not read-only.** AUTO-FIX items are applied directly. ASK items are only applied after user approval. Never commit, push, or create PRs -- that is the user's job.
+- **Be terse.** One line problem, one line fix. No preamble.
+- **Only flag real problems.** Skip anything that's fine.
+- **Cite file:line for every finding.** Never give vague feedback like "improve error handling."
+- **Two passes always.** CRITICAL first (blockers), then INFORMATIONAL (improvements). Never mix severity levels.
