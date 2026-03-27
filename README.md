@@ -1,86 +1,192 @@
-# RKstack
+# 🛠️ RKstack
 
-AI development workflow for Claude Code, Codex, and Gemini.
+> 🤖 AI development workflow plugin for Claude Code, Codex, and Gemini.
+>
+> One plugin. 21 skills. Install once, adapts to your project.
 
-One plugin. 21 skills. Install once, adapts to your project.
+![Skills](https://img.shields.io/badge/skills-21-0f766e)
+![Tests](https://img.shields.io/badge/tests-75%20passing-22c55e)
+![Tiers](https://img.shields.io/badge/preamble%20tiers-T1--T4-6366f1)
+![License](https://img.shields.io/badge/license-MIT-3b82f6)
 
-## Install
+| | Scope | Meaning |
+|---|-------|---------|
+| 🧠 | Workflow | Full cycle: idea → spec → plan → implement → verify → review → ship |
+| 🛡️ | Safety | PreToolUse hooks block destructive commands and scope-lock edits |
+| 🔍 | Detection | scc detects your stack, preamble adapts behavior automatically |
+| 📐 | Platform-agnostic | Reads CLAUDE.md for commands — works with any stack |
 
-**Claude Code:**
+> [!IMPORTANT]
+> RKstack enforces discipline that prevents common AI agent failures:
+> skipping tests, guessing at root causes, claiming things work without
+> checking, and making destructive changes without warning.
+
+---
+
+## ⚡ Quick Start
+
 ```bash
+# Claude Code
 /install-plugin rkstack@ccode-personal-plugins
 ```
 
-## What It Does
+That's it. Skills activate automatically based on what you're doing.
 
-RKstack gives AI agents a structured development workflow. Every skill
-enforces discipline that prevents common agent failures: skipping tests,
-guessing at root causes, claiming things work without checking, making
-destructive changes without warning.
+---
 
-### The Flow
+## 🗺️ The Flow
+
+```mermaid
+graph LR
+    A["💡 Idea"] --> B["🧠 brainstorming"]
+    B --> C["📋 writing-plans"]
+    C --> D{"Execute"}
+    D -->|inline| E["⚙️ executing-plans"]
+    D -->|subagents| F["🤖 subagent-driven"]
+    E --> G["✅ verification"]
+    F --> G
+    G --> H["🔍 code-review"]
+    H --> I["🚀 finishing-branch"]
+    I --> J["📝 document-release"]
+
+    style A fill:#f59e0b,color:#000
+    style B fill:#8b5cf6,color:#fff
+    style C fill:#6366f1,color:#fff
+    style G fill:#10b981,color:#fff
+    style H fill:#0ea5e9,color:#fff
+    style I fill:#0f766e,color:#fff
+```
+
+Each step uses **test-driven-development** (RED → GREEN → REFACTOR). Bugs trigger **systematic-debugging** (5-phase investigation, 3-strike escalation).
+
+---
+
+## 📦 Skills
+
+### 🧠 Core Workflow
+
+| | Skill | What it does |
+|---|-------|-------------|
+| 💡 | **brainstorming** | Explore ideas before code. Design spec before implementation. |
+| 📋 | **writing-plans** | Bite-sized TDD tasks. Exact file paths. No placeholders. |
+| ⚙️ | **executing-plans** | Inline execution with checkpoints every 3 tasks. |
+| 🤖 | **subagent-driven-development** | Fresh agent per task. Two-stage review. |
+| 🧪 | **test-driven-development** | RED → GREEN → REFACTOR. No code without failing test. |
+| ✅ | **verification-before-completion** | Prove it works before claiming done. |
+| 🔍 | **requesting-code-review** | Two-pass review (CRITICAL → INFORMATIONAL). Fix-first. |
+| 🚀 | **finishing-a-development-branch** | Test triage → merge/PR → cleanup. |
+
+### 🔧 Quality & Security
+
+| | Skill | What it does |
+|---|-------|-------------|
+| 🐛 | **systematic-debugging** | 5-phase investigation. 3 strikes then escalate. |
+| 🛡️ | **cso** | OWASP Top 10 + STRIDE security audit. |
+| 📝 | **document-release** | Post-ship documentation audit and sync. |
+| 📊 | **retro** | Weekly retrospective with commit analysis and trends. |
+| 💬 | **receiving-code-review** | Respond to feedback with technical rigor. |
+
+### 🚧 Safety Guardrails
+
+| | Skill | What it does |
+|---|-------|-------------|
+| ⚠️ | **careful** | Warn before `rm -rf`, `DROP TABLE`, `force-push`. |
+| 🔒 | **freeze** | Lock edits to one directory. Hard block. |
+| 🛡️ | **guard** | Both careful + freeze at once. |
+| 🔓 | **unfreeze** | Remove freeze restriction. |
+
+### 🔩 Utility
+
+| | Skill | What it does |
+|---|-------|-------------|
+| 🌳 | **using-git-worktrees** | Isolated workspaces for feature work. |
+| ⚡ | **dispatching-parallel-agents** | Run independent tasks in parallel. |
+| ✏️ | **writing-skills** | Create or edit skills with the template system. |
+
+---
+
+## 🏛️ Architecture
+
+### 🔄 Session Lifecycle
+
+```mermaid
+graph TD
+    A["🚀 Session starts"] --> B["hooks/session-start"]
+    B --> C["📖 Injects using-rkstack"]
+    C --> D{"User intent?"}
+    D -->|build| E["🧠 brainstorming"]
+    D -->|bug| F["🐛 systematic-debugging"]
+    D -->|review| G["🔍 requesting-code-review"]
+    D -->|ship| H["🚀 finishing-branch"]
+    D -->|security| I["🛡️ cso"]
+    D -->|safety| J["🚧 guard"]
+
+    style A fill:#0f766e,color:#fff
+    style C fill:#6366f1,color:#fff
+```
+
+### 📐 Preamble Tier System
+
+Every skill gets a preamble — a bash block collecting project facts. Tiers control context depth:
+
+| | Tier | Sections | Skills |
+|---|------|----------|--------|
+| 🟢 | T1 | Core detection + Escalation | using-rkstack, careful, freeze, guard, unfreeze |
+| 🔵 | T2 | + AskUserQuestion Format + Completeness | brainstorming, debugging, plans, verification, +8 more |
+| 🟣 | T3 | + Repo Ownership + Search Before Building | test-driven-development |
+| 🔴 | T4 | Full context (gate-quality) | requesting-code-review, finishing-branch |
+
+### 🔧 Template System
 
 ```
-Idea → brainstorming → writing-plans → [executing-plans | subagent-driven]
-  → test-driven-development → verification → requesting-code-review
-  → finishing-a-development-branch → document-release
+skills/{name}/SKILL.md.tmpl     ← human writes (content + {{PLACEHOLDERS}})
+        │
+        ▼  gen-skill-docs.ts    ← resolves placeholders from registry
+        │
+        ▼
+skills/{name}/SKILL.md          ← generated, committed, read by Claude
 ```
 
-### Skills
+---
 
-| Skill | What it does |
-|-------|-------------|
-| **brainstorming** | Explore ideas before code. Design spec before implementation. |
-| **writing-plans** | Bite-sized TDD tasks. Exact file paths. No placeholders. |
-| **executing-plans** | Inline execution with checkpoints every 3 tasks. |
-| **subagent-driven-development** | Fresh agent per task. Two-stage review. |
-| **test-driven-development** | RED → GREEN → REFACTOR. No code without failing test. |
-| **systematic-debugging** | 5-phase investigation. 3 strikes then escalate. |
-| **verification-before-completion** | Prove it works before claiming done. |
-| **requesting-code-review** | Two-pass review. Fix-first paradigm. |
-| **finishing-a-development-branch** | Test triage → merge/PR → cleanup. |
-| **cso** | OWASP Top 10 + STRIDE security audit. |
-| **document-release** | Post-ship documentation audit and sync. |
-| **retro** | Weekly retrospective with commit analysis. |
-| **careful** | Warn before rm -rf, DROP TABLE, force-push. |
-| **freeze** | Lock edits to one directory. Hard block. |
-| **guard** | Both careful + freeze at once. |
-| **unfreeze** | Remove freeze restriction. |
-| **using-git-worktrees** | Isolated workspaces for feature work. |
-| **dispatching-parallel-agents** | Run independent tasks in parallel. |
-| **receiving-code-review** | Respond to feedback with technical rigor. |
-| **writing-skills** | Create or edit skills with the template system. |
+## 🧰 For Contributors
 
-### How It Works
+```bash
+just build         # 🔨 generate all SKILL.md from templates
+just check         # ✅ verify generated files are fresh
+just skill-check   # 🩺 health dashboard for all skills
+just dev           # 👀 watch mode: auto-regen on change
+bun test           # 🧪 run 75 tests (<6s)
+just setup         # 📦 install tools via mise
+```
 
-1. **Session starts** — hook injects the root skill (`using-rkstack`)
-2. **User works** — skills activate based on intent keywords
-3. **Skills chain** — brainstorming leads to planning leads to execution
-4. **Safety always on** — PreToolUse hooks intercept destructive commands
-5. **Platform-agnostic** — reads your project's CLAUDE.md for commands
+| | Tool | Purpose |
+|---|------|---------|
+| 🧰 | `mise` | Installs bun, just, scc |
+| ⚡ | `just` | Task runner |
+| 📊 | `scc` | Tech stack detection |
+| 🍞 | `bun` | TypeScript runtime + test runner |
 
-Skills detect your tech stack via [scc](https://github.com/boyter/scc)
-and adapt automatically: TypeScript, Python, Rust, Go, Docker, Terraform.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add skills and work with templates.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for why rkstack is built this way.
 
-## Philosophy
+---
+
+## 💡 Philosophy
 
 See [ETHOS.md](ETHOS.md) for the full builder philosophy:
 
-1. **Completeness is cheap** — AI makes the last 10% near-free. Do it.
-2. **Search before building** — know what exists before you design.
-3. **Evidence before assertions** — prove it works, don't claim it.
-4. **Platform-agnostic** — read from CLAUDE.md, never hardcode.
-5. **Escalate, don't guess** — 3 strikes then stop.
+| | Principle | What it means |
+|---|-----------|--------------|
+| 🌊 | **Completeness is cheap** | AI makes the last 10% near-free. Do it. |
+| 🔎 | **Search before building** | Know what exists before you design. |
+| 📋 | **Evidence before assertions** | Prove it works, don't claim it. |
+| 🔌 | **Platform-agnostic** | Read from CLAUDE.md, never hardcode. |
+| 🚨 | **Escalate, don't guess** | 3 strikes then stop. |
 
-## For Contributors
+---
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add skills, run the
-build system, and work with templates.
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for why rkstack is built the way
-it is.
-
-## License
+## 📄 License
 
 MIT. See [LICENSE](LICENSE).
 
