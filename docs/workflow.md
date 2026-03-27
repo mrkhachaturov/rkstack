@@ -55,14 +55,14 @@ Idea / request
          │
          ▼
 ┌─────────────────┐
-│  requesting-     │  T3 — two-pass review (CRITICAL then INFORMATIONAL)
+│  requesting-     │  T4 — two-pass review (CRITICAL then INFORMATIONAL)
 │  code-review     │  Dispatches code-reviewer agent
 │                  │  Fix-first: AUTO-FIX safe issues, ASK for design decisions
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│  finishing-a-    │  T3 — merge, PR, or cleanup
+│  finishing-a-    │  T4 — merge, PR, or cleanup
 │  development-    │  Pre-flight: test triage, base branch detection
 │  branch          │  Options: merge locally / push+PR / keep / discard
 └─────────────────┘
@@ -113,10 +113,10 @@ Every skill gets a preamble injected at the top. The tier controls how much cont
 
 | Tier | Sections Included | Skills |
 |------|------------------|--------|
-| T1 | Core bash (scc, branch, repo-mode) + Completion Status + Escalation | using-rkstack, brainstorming, careful, freeze, guard |
-| T2 | T1 + AskUserQuestion Format + Completeness Principle | systematic-debugging, writing-plans, verification |
-| T3 | T2 + Repo Ownership + Search Before Building | TDD, requesting-code-review, finishing-branch |
-| T4 | T3 (reserved for future ship/deploy/QA skills) | — |
+| T1 | Core bash (scc, branch, repo-mode) + Completion Status + Escalation | using-rkstack, brainstorming, careful, freeze, guard, unfreeze |
+| T2 | T1 + AskUserQuestion Format + Completeness Principle | systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, parallel-agents, worktrees, receiving-review, writing-skills, document-release, retro |
+| T3 | T2 + Repo Ownership + Search Before Building | TDD, cso |
+| T4 | T3 (gate-quality skills) | requesting-code-review, finishing-a-development-branch |
 
 **AskUserQuestion Format** (T2+): re-ground → simplify → recommend → options with Completeness scoring
 
