@@ -7,6 +7,7 @@ description: |
   code changes, auto-updates factual content, gates risky changes, polishes
   CHANGELOG voice, and ensures cross-doc consistency. Run after shipping
   or when documentation may be stale.
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read

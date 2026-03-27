@@ -3,11 +3,9 @@ name: finishing-a-development-branch
 preamble-tier: 4
 version: 2.0.0
 description: |
-  Complete development work by presenting structured options for merge,
-  PR, or cleanup. Use when implementation is complete and all tests pass.
-  Guides the final steps: verify, choose integration method, execute.
-  Includes shipping gates: base-branch merge before tests, verification
-  gate, CHANGELOG/TODOS auto-update, bisectable commit check, rich PR body.
+  Use when implementation is complete and ready to merge, create PR, or
+  clean up a branch. Use when asked to ship, merge, land, or finish.
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read

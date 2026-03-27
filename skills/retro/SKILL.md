@@ -1,5 +1,6 @@
 ---
 name: retro
+argument-hint: "[24h|7d|14d|30d|compare]"
 preamble-tier: 2
 version: 1.0.0
 description: |
@@ -114,6 +115,12 @@ REASON: [1-2 sentences]
 ATTEMPTED: [what you tried]
 RECOMMENDATION: [what the user should do next]
 ```
+
+## Arguments
+
+Parse the following: $ARGUMENTS
+
+If no arguments provided, default to `7d` (last 7 days).
 
 # /retro — Engineering Retrospective
 

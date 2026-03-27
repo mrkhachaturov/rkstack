@@ -3,14 +3,9 @@ name: systematic-debugging
 preamble-tier: 2
 version: 1.0.0
 description: |
-  Systematic root-cause debugging with evidence-based investigation.
-  Use when encountering any bug, test failure, or unexpected behavior,
-  before proposing fixes. Five phases: investigate, analyze, hypothesize,
-  implement, verify. 3+ failed fixes means stop and escalate.
-  Use when asked to "debug this", "fix this bug", "why is this broken",
-  "investigate this error", or "root cause analysis".
-  Proactively suggest when the user reports errors, unexpected behavior, or
-  is troubleshooting why something stopped working.
+  Use when encountering any bug, test failure, or unexpected behavior.
+  Use before proposing fixes. Use when asked to debug, investigate,
+  find root cause, or figure out why something is broken.
 allowed-tools:
   - Bash
   - Read
@@ -26,12 +21,12 @@ hooks:
     - matcher: "Edit"
       hooks:
         - type: command
-          command: "bash ${CLAUDE_SKILL_DIR}/../freeze/bin/check-freeze.sh"
+          command: "bash ${CLAUDE_PLUGIN_ROOT}/skills/freeze/bin/check-freeze.sh"
           statusMessage: "Checking debug scope boundary..."
     - matcher: "Write"
       hooks:
         - type: command
-          command: "bash ${CLAUDE_SKILL_DIR}/../freeze/bin/check-freeze.sh"
+          command: "bash ${CLAUDE_PLUGIN_ROOT}/skills/freeze/bin/check-freeze.sh"
           statusMessage: "Checking debug scope boundary..."
 ---
 
@@ -169,7 +164,7 @@ See `root-cause-tracing.md` in this directory for the complete backward tracing 
 After forming your root cause hypothesis, lock edits to the affected module to prevent scope creep. Debug sessions that touch unrelated code create more bugs than they fix.
 
 ```bash
-[ -x "${CLAUDE_SKILL_DIR}/../freeze/bin/check-freeze.sh" ] && echo "FREEZE_AVAILABLE" || echo "FREEZE_UNAVAILABLE"
+[ -x "${CLAUDE_PLUGIN_ROOT}/skills/freeze/bin/check-freeze.sh" ] && echo "FREEZE_AVAILABLE" || echo "FREEZE_UNAVAILABLE"
 ```
 
 **If FREEZE_AVAILABLE:** Identify the narrowest directory containing the affected files. Write it to the freeze state file:

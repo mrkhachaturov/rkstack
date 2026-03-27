@@ -1,5 +1,6 @@
 ---
 name: cso
+argument-hint: "[--diff|--owasp|--infra|--code|--scope <domain>]"
 preamble-tier: 2
 version: 1.0.0
 description: |
@@ -20,6 +21,12 @@ allowed-tools:
 ---
 
 {{PREAMBLE}}
+
+## Arguments
+
+Parse the following: $ARGUMENTS
+
+If no arguments provided, run full audit mode.
 
 # /cso — Chief Security Officer Audit
 

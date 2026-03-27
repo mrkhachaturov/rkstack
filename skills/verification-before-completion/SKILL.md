@@ -3,10 +3,9 @@ name: verification-before-completion
 preamble-tier: 2
 version: 1.0.0
 description: |
-  Verification gate before claiming work is complete, fixed, or passing.
-  Use before committing or creating PRs. Iron law: NO completion claims
-  without fresh verification evidence. Run command, read output, verify
-  claim, then state result.
+  Use before claiming work is complete, fixed, or passing. Use before
+  committing or creating PRs. Use when about to say "done", "tests pass",
+  or "it works".
 allowed-tools:
   - Bash
   - Read

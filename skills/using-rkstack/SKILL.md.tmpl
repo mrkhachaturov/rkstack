@@ -6,6 +6,7 @@ description: |
   Root skill injected at session start. Establishes how to find and use
   skills, maps user intent to the right skill, defines instruction priority.
   Loaded automatically — not invoked manually.
+user-invocable: false
 allowed-tools:
   - Bash
   - Read

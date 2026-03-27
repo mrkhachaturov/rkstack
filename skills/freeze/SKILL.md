@@ -1,5 +1,6 @@
 ---
 name: freeze
+argument-hint: "<directory>"
 preamble-tier: 1
 version: 0.1.0
 description: |
@@ -8,6 +9,7 @@ description: |
   "fixing" unrelated code, or when you want to scope changes to one module.
   Use when asked to "freeze", "restrict edits", "only edit this folder",
   or "lock down edits".
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read

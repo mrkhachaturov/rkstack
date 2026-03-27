@@ -7,6 +7,7 @@ description: |
   again. Use when you want to widen edit scope without ending the session.
   Use when asked to "unfreeze", "unlock edits", "remove freeze", or
   "allow all edits".
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read
