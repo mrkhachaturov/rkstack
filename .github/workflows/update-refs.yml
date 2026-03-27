@@ -44,7 +44,6 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         id: refs-changed
         run: |
-          # Check if any files in skills/*/refs/ or generated SKILL.md changed
           if git diff --quiet skills/; then
             echo "refs_changed=false" >> "$GITHUB_OUTPUT"
           else
@@ -55,6 +54,7 @@ jobs:
 
       - name: Bump patch version
         if: steps.refs-changed.outputs.refs_changed == 'true'
+        id: version
         run: |
           # Read current version from plugin.json
           VERSION=$(jq -r .version .claude-plugin/plugin.json)
@@ -79,7 +79,23 @@ jobs:
           jq --arg v "$NEW_VERSION" '.version = $v' package.json > tmp.json
           mv tmp.json package.json
 
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "old_version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version bumped: $VERSION → $NEW_VERSION"
+
+      - name: Update CHANGELOG
+        if: steps.refs-changed.outputs.refs_changed == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DATE=$(date -u +%Y-%m-%d)
+          CHANGED=$(git diff --name-only skills/*/refs/ | sed 's|.*/refs/||' | sort -u | tr '\n' ', ' | sed 's/,$//')
+
+          # Prepend entry after the first line (# Changelog)
+          sed -i "1a\\
+          \\
+          ## ${VERSION} — ${DATE}\\
+          \\
+          Updated Claude Code reference docs: ${CHANGED}" CHANGELOG.md
 
       - name: Commit and push
         if: steps.refs-changed.outputs.refs_changed == 'true'
@@ -87,21 +103,44 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Stage submodule update + refs + generated files + version
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Stage everything
           git add .upstreams/claude-code-docs
           git add skills/*/refs/
           git add skills/*/SKILL.md
           git add .claude-plugin/plugin.json package.json
-          git add VERSION 2>/dev/null || true
+          git add VERSION CHANGELOG.md 2>/dev/null || true
 
-          # List what changed for the commit message
           CHANGED=$(git diff --cached --name-only skills/*/refs/ | sed 's|.*/refs/||' | sort -u | tr '\n' ', ' | sed 's/,$//')
-          VERSION=$(jq -r .version .claude-plugin/plugin.json)
 
           git commit -m "chore: update claude-code refs → v${VERSION}
 
           Updated refs: ${CHANGED}"
           git push
+
+      - name: Create release tag
+        if: steps.refs-changed.outputs.refs_changed == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git tag "v${VERSION}"
+          git push origin "v${VERSION}"
+
+      - name: Create GitHub release
+        if: steps.refs-changed.outputs.refs_changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          OLD_VERSION="${{ steps.version.outputs.old_version }}"
+          CHANGED=$(git diff HEAD~1 --name-only skills/*/refs/ | sed 's|.*/refs/||' | sort -u | tr '\n' ', ' | sed 's/,$//')
+
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --notes "Updated Claude Code reference docs: ${CHANGED}
+
+          Full changelog: https://github.com/${{ github.repository }}/compare/v${OLD_VERSION}...v${VERSION}" \
+            --latest=false
 
       - name: No changes
         if: steps.check.outputs.changed != 'true'
