@@ -183,12 +183,58 @@ Hand-authored files that live alongside templates. NOT processed by gen-skill-do
 - **finishing-a-development-branch** → uses **TEST_FAILURE_TRIAGE** from preamble
 - **requesting-code-review** → dispatches **code-reviewer** agent
 
-## What's Not Built Yet (Phase 2)
+## Execution Skills
 
-These superpowers skills still need gstack-depth conversion:
-- executing-plans
-- subagent-driven-development
-- dispatching-parallel-agents
-- using-git-worktrees
-- receiving-code-review
-- writing-skills
+```
+Plan ready
+  │
+  ├──▶ executing-plans (T2)         — inline, same session, checkpoint every 3 tasks
+  │
+  └──▶ subagent-driven-development  — fresh agent per task, two-stage review
+       (T2)                           (spec compliance → code quality)
+       Uses: implementer-prompt.md, spec-reviewer-prompt.md,
+             code-quality-reviewer-prompt.md
+
+Both use: test-driven-development for each task
+Both end with: verification → code-review → finishing-branch
+```
+
+## Parallel & Isolation
+
+```
+dispatching-parallel-agents (T2)    using-git-worktrees (T2)
+  │                                   │
+  Tasks MUST be independent           Isolated workspace for feature work
+  No shared files                     Smart directory selection
+  Dispatch all in single message      Safety verification before start
+  Review for conflicts after          Cleanup on completion
+```
+
+## Meta Skills
+
+| Skill | Tier | Purpose |
+|-------|------|---------|
+| writing-skills | T2 | Create/edit skills — template system, frontmatter, tiers, testing |
+| receiving-code-review | T2 | Respond to review feedback with technical rigor, not blind agreement |
+
+## All 17 Skills
+
+| Skill | Tier | Source | Category |
+|-------|------|--------|----------|
+| using-rkstack | T1 | superpowers + gstack | Root / session entry |
+| brainstorming | T1 | superpowers | Design |
+| careful | T1 | gstack | Safety |
+| freeze | T1 | gstack | Safety |
+| guard | T1 | gstack | Safety |
+| systematic-debugging | T2 | gstack /investigate + superpowers | Quality |
+| writing-plans | T2 | superpowers (enriched) | Planning |
+| verification-before-completion | T2 | superpowers (enriched) | Quality |
+| executing-plans | T2 | superpowers (enriched) | Execution |
+| subagent-driven-development | T2 | superpowers (adapted) | Execution |
+| dispatching-parallel-agents | T2 | superpowers (enriched) | Execution |
+| using-git-worktrees | T2 | superpowers (adapted) | Utility |
+| receiving-code-review | T2 | superpowers (adapted) | Quality |
+| writing-skills | T2 | superpowers + rkstack | Meta |
+| test-driven-development | T3 | superpowers (enriched) | Quality |
+| requesting-code-review | T3 | gstack /review + superpowers | Quality |
+| finishing-a-development-branch | T3 | gstack /ship + superpowers | Shipping |
