@@ -83,7 +83,8 @@ function resolveTemplate(templatePath: string, content: string): string {
     repoRoot: ROOT,
   };
 
-  return content.replace(PLACEHOLDER_RE, (match, name: string) => {
+  // Resolve placeholders
+  let result = content.replace(PLACEHOLDER_RE, (match, name: string) => {
     const resolver = RESOLVERS[name];
     if (!resolver) {
       console.error(`WARNING: unknown placeholder ${match} in ${relative}`);
@@ -91,6 +92,16 @@ function resolveTemplate(templatePath: string, content: string): string {
     }
     return resolver(ctx);
   });
+
+  // Inject AUTO-GENERATED comment after frontmatter
+  const frontmatterEnd = result.indexOf('---', result.indexOf('---') + 3);
+  if (frontmatterEnd !== -1) {
+    const insertPos = frontmatterEnd + 3;
+    const comment = `\n<!-- AUTO-GENERATED from ${path.basename(templatePath)} — do not edit directly -->\n<!-- Regenerate: just build -->`;
+    result = result.slice(0, insertPos) + comment + result.slice(insertPos);
+  }
+
+  return result;
 }
 
 // ─── Main ──────────────────────────────────────────────────

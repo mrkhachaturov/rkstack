@@ -1,13 +1,22 @@
 ---
 name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+preamble-tier: 1
+version: 1.0.0
+description: |
+  Explore ideas before implementation. Turn vague requests into fully formed designs
+  and specs through collaborative dialogue. Use before any creative work — creating
+  features, building components, adding functionality, or modifying behavior.
+  Proactively suggest when the user jumps straight to code without a design.
+allowed-tools:
+  - Bash
+  - Read
+  - Grep
+  - Glob
+  - Agent
+  - AskUserQuestion
 ---
-
-# Brainstorming Ideas Into Designs
-
-Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
-
-Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+<!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
+<!-- Regenerate: just build -->
 
 ## Preamble (run first)
 
@@ -51,6 +60,12 @@ Use the preamble output to adapt your behavior:
 - **Collaborative repo** → flag issues, document findings, don't assume ownership.
 - **CLAUDE.md exists** → read it for project-specific commands and conventions.
 
+# Brainstorming Ideas Into Designs
+
+Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+
+Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
 <HARD-GATE>
 Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
 </HARD-GATE>
@@ -77,7 +92,6 @@ You MUST create a task for each of these items and complete them in order:
 
 ```dot
 digraph brainstorming {
-    "Run preamble\n(detect project)" [shape=box];
     "Explore project context" [shape=box];
     "Visual questions ahead?" [shape=diamond];
     "Offer Visual Companion\n(own message, no other content)" [shape=box];
@@ -90,7 +104,6 @@ digraph brainstorming {
     "User reviews spec?" [shape=diamond];
     "Invoke writing-plans skill" [shape=doublecircle];
 
-    "Run preamble\n(detect project)" -> "Explore project context";
     "Explore project context" -> "Visual questions ahead?";
     "Visual questions ahead?" -> "Offer Visual Companion\n(own message, no other content)" [label="yes"];
     "Visual questions ahead?" -> "Ask clarifying questions" [label="no"];
@@ -109,12 +122,17 @@ digraph brainstorming {
 
 **The terminal state is invoking writing-plans.** Do NOT invoke any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
 
-## The Process
+---
 
-**Understanding the idea:**
+## Step 0: Project context
+
+Use the preamble output to understand the tech stack. Adapt your questions to the detected languages and frameworks. If CLAUDE.md exists, read it for project conventions.
+
+---
+
+## Step 1: Understand the idea
 
 - Check out the current project state first (files, docs, recent commits)
-- Use the preamble output to understand the tech stack — adapt your questions to the detected languages and frameworks
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
@@ -122,36 +140,19 @@ digraph brainstorming {
 - Only one question per message — if a topic needs more exploration, break it into multiple questions
 - Focus on understanding: purpose, constraints, success criteria
 
-### AskUserQuestion format
+---
 
-When asking the user a question, follow this structure:
-
-1. **Re-ground** (1-2 sentences): project name, branch, what you're working on
-2. **Simplify** (plain English): what the problem is, no jargon, use analogies if helpful
-3. **Recommend** (with reasoning): always prefer the complete option
-   - Include `Completeness: X/10` for each option (10 = all edges, 7 = happy path, 3 = shortcut)
-   - Show effort: `(human: ~X days / CC: ~Y min)`
-4. **Options** (lettered): A, B, C — one decision per question, never batch multiple decisions
-
-**Exploring approaches:**
+## Step 2: Explore approaches
 
 - Propose 2-3 different approaches with trade-offs
 - Present options conversationally with your recommendation and reasoning
 - Lead with your recommended option and explain why
+- Include `Completeness: X/10` for each option (10 = all edges, 7 = happy path, 3 = shortcut)
+- Show effort: `(human: ~X days / CC: ~Y min)`. Recommend the most complete option.
 
-### Completeness principle
+---
 
-AI makes the marginal cost of completeness near-zero. Always prefer the full
-implementation over shortcuts:
-
-- Completeness 10/10: all edge cases, error handling, tests, documentation
-- Completeness 7/10: happy path works, some edge cases skipped
-- Completeness 3/10: proof of concept, significant work deferred
-
-When presenting options, show completeness scores and effort comparison:
-`(human: ~X days / CC: ~Y min)`. Recommend the most complete option.
-
-**Presenting the design:**
+## Step 3: Present the design
 
 - Once you believe you understand what you're building, present the design
 - Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
@@ -164,23 +165,25 @@ When presenting options, show completeness scores and effort comparison:
 - Break the system into smaller units that each have one clear purpose, communicate through well-defined interfaces, and can be understood and tested independently
 - For each unit, you should be able to answer: what does it do, how do you use it, and what does it depend on?
 - Can someone understand what a unit does without reading its internals? Can you change the internals without breaking consumers? If not, the boundaries need work.
-- Smaller, well-bounded units are also easier for you to work with — you reason better about code you can hold in context at once, and your edits are more reliable when files are focused. When a file grows large, that's often a signal that it's doing too much.
 
 **Working in existing codebases:**
 
 - Explore the current structure before proposing changes. Follow existing patterns.
-- Where existing code has problems that affect the work (e.g., a file that's grown too large, unclear boundaries, tangled responsibilities), include targeted improvements as part of the design — the way a good developer improves code they're working in.
+- Where existing code has problems that affect the work (e.g., a file that's grown too large, unclear boundaries, tangled responsibilities), include targeted improvements as part of the design.
 - Don't propose unrelated refactoring. Stay focused on what serves the current goal.
 
-## After the Design
+---
 
-**Documentation:**
+## Step 4: Write design doc
 
 - Write the validated design (spec) to `docs/specs/YYYY-MM-DD-<topic>-design.md`
   - (User preferences for spec location override this default)
 - Commit the design document to git
 
-**Spec Self-Review:**
+---
+
+## Step 5: Spec self-review
+
 After writing the spec document, look at it with fresh eyes:
 
 1. **Placeholder scan:** Any "TBD", "TODO", incomplete sections, or vague requirements? Fix them.
@@ -190,30 +193,24 @@ After writing the spec document, look at it with fresh eyes:
 
 Fix any issues inline. No need to re-review — just fix and move on.
 
-**User Review Gate:**
-After the spec review loop passes, ask the user to review the written spec before proceeding:
+---
+
+## Step 6: User review gate
+
+Ask the user to review the written spec before proceeding:
 
 > "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
 
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
+Wait for the user's response. If they request changes, make them and re-run the spec self-review. Only proceed once the user approves.
 
-### Escalation protocol
+---
 
-After 3 failed attempts at any operation, stop and report:
-
-```
-STATUS: BLOCKED
-REASON: [1-2 sentences describing what failed]
-ATTEMPTED: [what was tried, max 3 items]
-RECOMMENDATION: [concrete next step for the user]
-```
-
-Do not retry indefinitely. Do not work around the problem silently.
-
-**Implementation:**
+## Step 7: Transition to implementation
 
 - Invoke the writing-plans skill to create a detailed implementation plan
 - Do NOT invoke any other skill. writing-plans is the next step.
+
+---
 
 ## Key Principles
 
@@ -237,8 +234,6 @@ A browser-based companion for showing mockups, diagrams, and visual options duri
 
 - **Use the browser** for content that IS visual — mockups, wireframes, layout comparisons, architecture diagrams, side-by-side visual designs
 - **Use the terminal** for content that is text — requirements questions, conceptual choices, tradeoff lists, A/B/C/D text options, scope decisions
-
-A question about a UI topic is not automatically a visual question. "What does personality mean in this context?" is a conceptual question — use the terminal. "Which wizard layout works better?" is a visual question — use the browser.
 
 If they agree to the companion, read the detailed guide before proceeding:
 `skills/brainstorming/visual-companion.md`

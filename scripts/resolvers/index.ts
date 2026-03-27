@@ -1,6 +1,5 @@
 import type { Resolver } from './types';
 import { generatePreamble } from './preamble';
-import { generateAskFormat, generateEscalation, generateCompleteness } from './shared';
 
 /**
  * Registry of all placeholder resolvers.
@@ -13,7 +12,4 @@ import { generateAskFormat, generateEscalation, generateCompleteness } from './s
  */
 export const RESOLVERS: Record<string, Resolver> = {
   PREAMBLE: generatePreamble,
-  ASK_FORMAT: generateAskFormat,
-  ESCALATION: generateEscalation,
-  COMPLETENESS: generateCompleteness,
 };

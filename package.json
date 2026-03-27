@@ -1,0 +1,19 @@
+{
+  "name": "rkstack",
+  "version": "0.1.0",
+  "description": "AI development workflow — skills for Claude Code, Codex, and Gemini",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "bun scripts/gen-skill-docs.ts",
+    "build:codex": "bun scripts/gen-skill-docs.ts --host codex",
+    "build:all": "bun scripts/gen-skill-docs.ts && bun scripts/gen-skill-docs.ts --host codex",
+    "check": "bun scripts/gen-skill-docs.ts --dry-run",
+    "skill:check": "echo 'TODO: bun scripts/skill-check.ts'",
+    "dev:skill": "echo 'TODO: bun scripts/dev-skill.ts'",
+    "test": "echo 'TODO: bun test'"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
