@@ -19,19 +19,29 @@ allowed-tools:
 
 # Writing RKstack Skills
 
-## Overview
+This skill teaches how to create skills for the **rkstack plugin**. It combines three sources:
 
-**Writing skills IS Test-Driven Development applied to process documentation.**
+1. **This file** — our gstack-based design: templates, tiers, resolvers, build workflow
+2. **refs/** — official Claude Code documentation (auto-updated from Anthropic every 3 hours)
+3. **Companion files** — superpowers testing methodology for bulletproofing skills
 
-You write test cases (pressure scenarios with subagents), watch them fail (baseline behavior), write the skill (documentation), watch tests pass (agents comply), and refactor (close loopholes).
+When you need authoritative detail on a Claude Code feature, this file tells you exactly which ref to read and which section matters.
 
-**Core principle:** If you didn't watch an agent fail without the skill, you don't know if the skill teaches the right thing.
+**Announce at start:** "I'm using the writing-rkstack-skills skill to create/edit a skill."
 
-**Announce at start:** "I'm using the writing-skills skill to create/edit a skill."
+---
 
-## RKstack Skill Structure
+## RKstack Template System
 
-Skills in RKstack use a template system. You author `.tmpl` files; the build system generates the final `SKILL.md` that Claude reads at load time.
+We use a build system adapted from gstack. Human authors write `.tmpl` files; `gen-skill-docs.ts` resolves placeholders and produces the final `SKILL.md` that Claude reads at load time.
+
+```
+skills/{name}/SKILL.md.tmpl         <- human writes template + {{PLACEHOLDERS}}
+scripts/gen-skill-docs.ts           <- reads .tmpl, resolves placeholders, writes .md
+skills/{name}/SKILL.md              <- generated, committed, tagged AUTO-GENERATED
+```
+
+**Never edit SKILL.md directly.** Always edit the `.tmpl`. The generated file is overwritten on next build.
 
 ### File Layout
 
@@ -40,11 +50,20 @@ skills/{name}/
   SKILL.md.tmpl         # human-authored template (source of truth)
   SKILL.md              # generated output (committed, read by Claude)
   companion-file.md     # hand-authored reference (not templated)
+  bin/                  # hook scripts (if skill has PreToolUse hooks)
 ```
 
-### Frontmatter Format
+Claude Code supports a directory per skill with SKILL.md as the entrypoint and any number of supporting files. Keep SKILL.md under 500 lines — move detailed reference material to separate files.
 
-Every `.tmpl` starts with YAML frontmatter between `---` delimiters:
+> **Full supporting files guidance:** Read `refs/skills.md` — section "Add supporting files".
+
+---
+
+## Frontmatter
+
+Every `.tmpl` starts with YAML frontmatter. We use a superset of the official Claude Code fields.
+
+### RKstack-Required Fields
 
 ```yaml
 ---
@@ -52,8 +71,8 @@ name: skill-name-with-hyphens
 preamble-tier: 2
 version: 1.0.0
 description: |
-  Use when [specific triggering conditions and symptoms].
-  Third person. Under 500 characters preferred. Max 1024 characters total.
+  Use when [specific triggering conditions].
+  Third person. Under 500 characters. Max 1024 total.
 allowed-tools:
   - Bash
   - Read
@@ -61,302 +80,337 @@ allowed-tools:
 ---
 ```
 
-**Required fields:**
-- `name` — letters, numbers, hyphens only. Use gerund form when natural (e.g., `writing-plans`, `requesting-code-review`).
-- `preamble-tier` — integer 1-4, controls how much context the preamble injects (see Preamble Tier Guide below).
+- `name` — letters, numbers, hyphens only (max 64 chars). Gerund form preferred (`writing-plans`, `requesting-code-review`).
+- `preamble-tier` — integer 1-4, controls preamble depth (see Preamble Tier Guide).
 - `version` — semver string.
-- `description` — starts with action verbs or "Use when...". Describes ONLY triggering conditions, NOT the skill's workflow. Third person.
-- `allowed-tools` — list of tools the skill needs.
+- `description` — starts with "Use when..." or action verbs. Describes ONLY triggering conditions, NOT the skill's workflow. This is critical: Claude reads descriptions to decide which skills to load. If the description summarizes the workflow, Claude may follow the description shortcut instead of reading the full skill. Keep it about WHEN, not WHAT.
+- `allowed-tools` — tools Claude can use without permission prompts when this skill is active.
 
-**Optional fields:**
-- `benefits-from` — list of other skills this skill may invoke or reference.
+### Optional Fields
 
-### Placeholder System
+- `hooks` — PreToolUse hooks scoped to this skill's lifecycle.
+- `benefits-from` — list of skills this skill may invoke or reference.
 
-After frontmatter, the first line should be the PREAMBLE placeholder (double braces around the word PREAMBLE). This is resolved by the build system into the appropriate preamble block for the skill's tier.
+### Full Official Field Reference
 
-Other placeholders follow the pattern `{{Name}}` (uppercase letters and underscores between double braces) and are resolved by functions in `scripts/resolvers/`. To add a new placeholder:
+Claude Code supports additional fields we don't currently use but may adopt:
+
+| Field | What it does |
+|-------|-------------|
+| `disable-model-invocation` | Prevents Claude from auto-loading this skill. User-only invocation. |
+| `user-invocable` | Set `false` to hide from `/` menu. Claude can still load it. |
+| `context` | Set `fork` to run in a subagent context (isolated, no conversation history). |
+| `agent` | Which subagent type to use with `context: fork` (`Explore`, `Plan`, custom). |
+| `model` | Override model per skill. |
+| `effort` | Override effort level (`low`, `medium`, `high`, `max`). |
+| `paths` | Glob patterns — auto-activate only when working with matching files. |
+| `argument-hint` | Autocomplete hint shown in `/` menu (e.g., `[issue-number]`). |
+
+> **Complete field reference with defaults and types:** Read `refs/skills.md` — section "Frontmatter reference".
+
+---
+
+## Dynamic Context
+
+Claude Code supports features for injecting runtime data into skills:
+
+**String substitutions** — replaced before Claude sees the skill:
+- `$ARGUMENTS` / `$0`, `$1` — arguments passed when invoking the skill
+- `${CLAUDE_SKILL_DIR}` — path to the skill's directory (we use this in hook commands)
+- `${CLAUDE_SESSION_ID}` — current session ID
+
+**Shell injection** — `` !`command` `` runs a shell command during preprocessing, output replaces the placeholder. Claude only sees the result, not the command. Useful for injecting git state, file contents, or API data.
+
+We currently use `${CLAUDE_SKILL_DIR}` in hook declarations for relative paths to scripts. We don't yet use `$ARGUMENTS` or `` !`command` `` but they're available.
+
+> **Full substitution reference:** Read `refs/skills.md` — section "Available string substitutions" and "Inject dynamic context".
+
+---
+
+## Preamble Tier Guide
+
+The preamble is a bash block injected at the top of every generated SKILL.md via the `{{PREAMBLE}}` placeholder. It runs first, collecting project context (tech stack via scc, git branch, repo mode, CLAUDE.md presence). Higher tiers include everything from lower tiers.
+
+| Tier | What It Adds | Use For |
+|------|-------------|---------|
+| **T1** | Core: scc detection, branch, repo-mode, framework hints, CLAUDE.md check, completion status + escalation | Lightweight utility skills (careful, freeze, guard, unfreeze, using-rkstack) |
+| **T2** | T1 + AskUserQuestion format (re-ground → simplify → recommend → options) + Completeness principle (effort table, X/10 scoring) | Moderate workflow skills (brainstorming, debugging, plans, verification) |
+| **T3** | T2 + Repo ownership (solo vs collaborative handling) + Search Before Building (three-layer knowledge model) | Heavy workflow skills needing repo context (TDD) |
+| **T4** | Same as T3 | Gate-quality skills (requesting-code-review, finishing-a-development-branch) |
+
+**Choosing a tier:**
+- Asks the user questions → T2+ (needs AskUserQuestion format)
+- Modifies code and needs repo ownership context → T3+
+- Simple guard or reference → T1
+
+AskUserFormat, Completeness, Escalation, and RepoMode are **sections within the preamble** — not separate `{{PLACEHOLDER}}`s. This matches gstack's design.
+
+---
+
+## Hooks
+
+We use PreToolUse hooks for safety guards. Hooks are declared inline in skill frontmatter and fire ONLY during that skill's lifecycle.
+
+**Our hook pattern:**
+
+```yaml
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "bash ${CLAUDE_SKILL_DIR}/bin/check-careful.sh"
+          statusMessage: "Checking for destructive commands..."
+```
+
+Hook scripts read JSON from stdin (tool input), return JSON to stdout:
+- `{}` — allow (no action)
+- `{"permissionDecision": "ask", "message": "..."}` — warn, user can override
+- `{"permissionDecision": "deny", "message": "..."}` — hard block
+
+Exit codes: 0 = allow/pass-through, 2 = block (stderr shown as reason).
+
+**Our hooks:**
+- `careful` — PreToolUse on Bash, returns "ask" for destructive commands (rm -rf, DROP TABLE, force-push). Safe exceptions for build artifacts.
+- `freeze` — PreToolUse on Edit/Write, returns "deny" for edits outside boundary. State file at `${CLAUDE_PLUGIN_DATA}/freeze-dir.txt`.
+- `guard` — chains both: Bash → careful, Edit/Write → freeze.
+
+Claude Code supports 22+ hook events beyond PreToolUse: PostToolUse, SessionStart, Stop, PermissionRequest, SubagentStart/Stop, FileChanged, PreCompact, PostCompact, and more. Hooks can be `command` (shell), `http` (POST to URL), `prompt` (single LLM call), or `agent` (multi-turn verification).
+
+> **Full hook event list and JSON schemas:** Read `refs/hooks.md` — section "Hook events".
+> **Practical patterns (formatting, blocking, context re-injection):** Read `refs/hooks-guide.md`.
+
+---
+
+## Plugin Structure
+
+RKstack is a Claude Code plugin. The plugin system uses namespace isolation: skills are invoked as `/rkstack:skill-name`, preventing conflicts with other plugins or project-local skills.
+
+```
+rkstack/
+  .claude-plugin/plugin.json    # manifest (name, version, description)
+  skills/                       # plugin skills (shipped to users)
+  hooks/                        # plugin hooks (hooks.json + scripts)
+  agents/                       # agent definitions
+```
+
+Two environment variables are available in hook commands:
+- `${CLAUDE_PLUGIN_ROOT}` — path to the plugin directory
+- `${CLAUDE_PLUGIN_DATA}` — persistent data directory (survives plugin updates)
+
+> **Plugin manifest schema and structure:** Read `refs/plugins.md` and `refs/plugins-reference.md`.
+
+---
+
+## Subagents
+
+We use subagents for isolated task execution (code-reviewer agent) and for delegating work in subagent-driven-development.
+
+Agent definitions live in `agents/` as markdown files with YAML frontmatter:
+
+```yaml
+---
+name: code-reviewer
+description: |
+  Use this agent when a major step needs review against plan and standards.
+model: inherit
+---
+
+[system prompt body]
+```
+
+Subagents get their own fresh context — they do NOT inherit the parent conversation. Built-in agents: `Explore` (read-only), `Plan` (research-focused), `general-purpose` (full tools).
+
+Skills can preload into subagents, and subagents support persistent memory, tool restrictions, and `maxTurns` limits.
+
+> **Agent configuration schema and patterns:** Read `refs/sub-agents.md`.
+
+---
+
+## Memory and Context
+
+Skills run within Claude's context window. Context fills fast — performance degrades as it fills. Design skills to be focused and concise.
+
+**CLAUDE.md** is the persistent instruction system. Loads from multiple levels: managed > project > user. Skills should reference CLAUDE.md for project-specific config (test commands, build commands), not duplicate it.
+
+**Rules system** (`.claude/rules/`) organizes instructions by topic with optional `paths` glob patterns for conditional loading. Import syntax: `@path/to/file` expands other files.
+
+**Auto memory** — Claude saves notes to `~/.claude/projects/<project>/memory/`. Machine-local, not shared. Don't rely on it in skills.
+
+> **CLAUDE.md hierarchy, import syntax, rules system:** Read `refs/memory.md`.
+> **Context management and compaction behavior:** Read `refs/how-claude-code-works.md` — section "The context window".
+
+---
+
+## Permissions
+
+Skills grant tool access via `allowed-tools` in frontmatter. This works within the user's permission system — deny rules still apply.
+
+Permission precedence: **deny > ask > allow**. Rules are tool-specific with glob matching: `Bash(npm run *)`, `Read(src/**)`, `Agent(AgentName)`.
+
+Permission modes: `default` (ask for everything), `acceptEdits` (skip file prompts), `plan` (read-only), `auto` (classifier-based).
+
+> **Permission rule syntax and tool-specific rules:** Read `refs/permissions.md`.
+
+---
+
+## Resolver System
+
+Placeholders follow the pattern `{{NAME}}` (uppercase + underscores) and are resolved by functions in `scripts/resolvers/`.
+
+| Placeholder | Resolver | What It Produces |
+|-------------|----------|-----------------|
+| `{{PREAMBLE}}` | `preamble.ts` | Tier-based preamble block |
+| `{{TEST_FAILURE_TRIAGE}}` | `preamble.ts` | Test failure ownership analysis |
+| `{{BASE_BRANCH_DETECT}}` | `utility.ts` | Dynamic main/master/develop detection |
+
+### Adding a New Placeholder
 
 1. Check how gstack does it in `.upstreams/gstack/scripts/resolvers/`
 2. Create resolver function in `scripts/resolvers/`
 3. Register in `scripts/resolvers/index.ts`
-4. Use the placeholder in any `.tmpl`
+4. Use `{{PLACEHOLDER_NAME}}` in any `.tmpl`
 
-### Companion Files
+The build system fails on unresolved placeholders — you'll catch mistakes immediately.
 
-Files like `testing-skills-with-subagents.md`, `persuasion-principles.md`, or `visual-companion.md` are hand-authored and live alongside the template. They are NOT processed by the template system. Reference them from the skill with relative paths.
+---
 
-### Build Commands
+## Checking Upstreams
 
-```bash
-just build          # generate all SKILL.md from templates
-just check          # verify generated files are up to date (--dry-run)
-just skill-check    # health dashboard for all skills
-```
+Before writing any new skill or infrastructure:
 
-## Preamble Tier Guide
+1. **Check gstack first:** `.upstreams/gstack/` — does gstack have this skill or pattern? Study their version, follow it.
+2. **Check superpowers:** `.upstreams/superpowers/` — does superpowers have content for this? Use as content reference.
+3. **Adapt, don't copy.** Study the pattern, then write your own version.
 
-The preamble is a bash block injected at the top of every generated SKILL.md. It runs first when Claude loads a skill, collecting project context. Higher tiers include everything from lower tiers.
+Do not copy files from upstreams directly. Do not hand-edit `.upstreams/`.
 
-| Tier | What It Adds | Use For |
-|------|-------------|---------|
-| **T1** | Core: scc detection, branch, repo-mode, CLAUDE.md check, completion status | Lightweight utility skills (careful, freeze, guard, using-rkstack) |
-| **T2** | T1 + AskUserQuestion format + Completeness principle | Moderate workflow skills (debugging, plans, verification, writing-skills) |
-| **T3** | T2 + Repo ownership section + Search Before Building | Heavy workflow skills needing repo context (TDD, code-review, shipping) |
-| **T4** | Same as T3 (reserved for future critical gate skills) | Future: deploy, QA, release gate skills |
-
-**Choosing a tier:** If the skill asks the user questions, it needs T2+ (for AskUserQuestion format). If it modifies code or needs to understand repo ownership, it needs T3+. If it is a simple guard or reference, T1 is sufficient.
+---
 
 ## Skill Authoring Rules
 
 ### Natural language for logic, bash for execution
 
-Each bash block in a skill runs in a separate shell. There is no variable persistence between blocks. Pass state through prose (natural language instructions), not shell variables.
+Each bash block runs in a separate shell — no variable persistence. Pass state through prose: "Using the base branch detected in Step 0, run..."
 
 ### Numbered decision steps, not nested if/else
 
-LLMs parse prose better than nested conditionals. Use numbered steps with clear decision points:
+LLMs parse prose better than nested conditionals:
 
 ```markdown
 1. Check if tests exist for the module
 2. If no tests exist: create test file first (RED)
 3. If tests exist: run them to establish baseline
-4. Based on results, choose approach A or B
 ```
 
 ### One decision per AskUserQuestion
 
-Never batch multiple decisions into a single question. Each AskUserQuestion should present ONE choice with lettered options.
+Never batch decisions. Each question: re-ground → simplify → recommend → lettered options.
 
 ### Never hardcode framework commands
 
-Read from the target project's CLAUDE.md for test commands, build commands, lint commands. If CLAUDE.md doesn't specify, ask the user with AskUserQuestion and record the answer.
+Read from CLAUDE.md. If missing: AskUserQuestion and persist the answer.
 
-### SKILL.md.tmpl files are prompt templates, not bash scripts
+### Keep SKILL.md under 500 lines
 
-Use natural language for logic and `<placeholder>` tokens for runtime values. The template is read by an LLM, not executed as a program.
+Move detailed reference to companion files. Claude loads SKILL.md on invocation — every line costs context.
 
-## What is a Skill?
+> **Effective skill writing patterns:** Read `refs/best-practices.md` — section "Write an effective CLAUDE.md" (same principles apply to skills).
 
-A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future Claude instances find and apply effective approaches.
-
-**Skills are:** Reusable techniques, patterns, tools, reference guides
-
-**Skills are NOT:** Narratives about how you solved a problem once
-
-### Skill Types
-
-| Type | Examples | What It Contains |
-|------|----------|-----------------|
-| **Technique** | TDD, systematic debugging | Concrete method with steps to follow |
-| **Pattern** | brainstorming, writing plans | Way of thinking about problems |
-| **Reference** | API docs, tool guides | Syntax, commands, configuration |
-
-## When to Create a Skill
-
-**Create when:**
-- Technique wasn't intuitively obvious
-- You'd reference this again across projects
-- Pattern applies broadly (not project-specific)
-- Others would benefit
-
-**Don't create for:**
-- One-off solutions
-- Standard practices well-documented elsewhere
-- Project-specific conventions (put in CLAUDE.md instead)
-- Mechanical constraints enforceable with automation
-
-## Claude Search Optimization (CSO)
-
-Future Claude needs to FIND your skill. Optimize for discovery.
-
-### Description Field
-
-**Purpose:** Claude reads the description to decide which skills to load. Make it answer: "Should I read this skill right now?"
-
-**CRITICAL: Description = When to Use, NOT What the Skill Does**
-
-Testing revealed that when a description summarizes the skill's workflow, Claude may follow the description instead of reading the full skill content. Descriptions that summarize workflow create a shortcut Claude will take. The skill body becomes documentation Claude skips.
-
-```yaml
-# BAD: Summarizes workflow — Claude may follow this instead of reading skill
-description: Use when executing plans — dispatches subagent per task with code review between tasks
-
-# GOOD: Just triggering conditions, no workflow summary
-description: Use when executing implementation plans with independent tasks in the current session
-```
-
-### Keyword Coverage
-
-Use words Claude would search for:
-- Error messages: "Hook timed out", "race condition"
-- Symptoms: "flaky", "hanging", "zombie"
-- Synonyms: "timeout/hang/freeze", "cleanup/teardown"
-- Tools: Actual commands, library names
-
-### Token Efficiency
-
-The context window is a shared resource. Every token counts.
-
-**Target word counts:**
-- Frequently-loaded skills: under 200 words
-- Other skills: under 500 words (still be concise)
-
-**Techniques:**
-- Move details to tool `--help` instead of documenting all flags
-- Use cross-references: "REQUIRED: Use [other-skill-name] for workflow"
-- Compress examples — one excellent example beats many mediocre ones
-- Don't repeat what cross-referenced skills already cover
+---
 
 ## Skill Testing Methodology
 
 **The Iron Law: No skill without a failing test first.**
 
-This applies to NEW skills AND EDITS to existing skills. Same discipline as TDD for code.
+Same discipline as TDD for code. Applies to NEW skills AND EDITS.
 
-### RED: Baseline (Watch It Fail)
+### RED → GREEN → REFACTOR
 
-Run pressure scenario with subagent WITHOUT the skill. Document exact behavior:
-- What choices did the agent make?
-- What rationalizations did it use (capture verbatim)?
-- Which pressures triggered violations?
+1. **RED:** Run pressure scenario with subagent WITHOUT the skill. Document exact rationalizations verbatim.
+2. **GREEN:** Write minimal skill addressing those specific failures. Run same scenario WITH skill — agent should comply.
+3. **REFACTOR:** Agent found new rationalization? Add explicit counter. Re-test until bulletproof.
 
-### GREEN: Write Minimal Skill
+**Full testing methodology:** See `testing-skills-with-subagents.md` — pressure types, plugging holes, meta-testing.
 
-Write skill that addresses those specific rationalizations. Don't add extra content for hypothetical cases.
+**Persuasion principles for bulletproofing:** See `persuasion-principles.md` — research-backed techniques (Cialdini, Meincke) for discipline-enforcing skills.
 
-Run same scenarios WITH skill. Agent should now comply.
+---
 
-### REFACTOR: Close Loopholes
+## CSO: Claude Search Optimization
 
-Agent found new rationalization? Add explicit counter. Re-test until bulletproof.
+Claude reads skill descriptions to decide which to load. Optimize for discovery.
 
-**Full testing methodology:** See `testing-skills-with-subagents.md` in this directory for:
-- How to write pressure scenarios
-- Pressure types (time, sunk cost, authority, exhaustion)
-- Plugging holes systematically
-- Meta-testing techniques
+**Description = WHEN to use, NOT WHAT it does.** Testing revealed that workflow summaries in descriptions cause Claude to skip the full skill content.
 
-**Persuasion principles for bulletproofing:** See `persuasion-principles.md` in this directory for research-backed techniques (Cialdini, 2021; Meincke et al., 2025) on authority, commitment, scarcity, social proof, and unity principles.
+```yaml
+# BAD: summarizes workflow — Claude shortcuts the full skill
+description: Dispatches subagent per task with code review between tasks
 
-**Anthropic's official guidance:** See `anthropic-best-practices.md` in this directory for Anthropic's skill authoring best practices — conciseness, degrees of freedom, progressive disclosure.
-
-## Bulletproofing Discipline-Enforcing Skills
-
-Skills that enforce discipline (like TDD) need to resist rationalization.
-
-### Close Every Loophole Explicitly
-
-Don't just state the rule — forbid specific workarounds:
-
-```markdown
-Write code before test? Delete it. Start over.
-
-**No exceptions:**
-- Don't keep it as "reference"
-- Don't "adapt" it while writing tests
-- Delete means delete
+# GOOD: triggering conditions only
+description: Use when executing implementation plans with independent tasks
 ```
 
-### Build Rationalization Table
+**Keywords:** Use error messages, symptoms, synonyms, tool names Claude would search for.
 
-Capture rationalizations from baseline testing. Every excuse agents make goes in the table:
+**Token budget:** Descriptions are loaded into context so Claude knows what's available. Budget is 2% of context window (~16K chars). Many skills = some excluded. Run `/context` to check.
 
-```markdown
-| Excuse | Reality |
-|--------|---------|
-| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
-| "I'll test after" | Tests passing immediately prove nothing. |
-```
+> **Skill discovery mechanics and troubleshooting:** Read `refs/skills.md` — section "Troubleshooting".
 
-### Create Red Flags List
+---
 
-Make it easy for agents to self-check:
+## Build Workflow
 
-```markdown
-## Red Flags — STOP and Start Over
-- Code before test
-- "I already manually tested it"
-- "This is different because..."
-```
+### Creating a New Skill
 
-## Workflow: Creating a New Skill
-
-1. **Check upstreams first**
-   - Does gstack have this skill? If yes, study their version — use their pattern.
-   - Does the upstream (.upstreams/superpowers/) have this skill? If yes, use as content reference.
-
-2. **Create the template**
-   - `skills/{name}/SKILL.md.tmpl` with proper frontmatter
-   - PREAMBLE placeholder as first line after frontmatter
-   - Follow skill authoring rules (natural language, numbered steps, no hardcoded commands)
-
-3. **Add companion files** (if needed)
-   - Hand-authored `.md` files alongside the template
-   - Referenced from the skill with relative paths
-
-4. **Build and verify**
+1. Check upstreams (gstack pattern, superpowers content)
+2. Create `skills/{name}/SKILL.md.tmpl` with frontmatter + `{{PREAMBLE}}`
+3. Add companion files if needed
+4. Build and verify:
    ```bash
-   just build        # generates SKILL.md from template
-   just check        # verifies generated files match templates
-   just skill-check  # health dashboard — all green?
+   just build          # generates SKILL.md
+   just check          # verifies freshness
+   just skill-check    # health dashboard — all green?
    ```
+5. Test the skill (RED → GREEN → REFACTOR)
+6. Commit both `.tmpl` and generated `.md`
 
-5. **Test the skill** (see Testing Methodology above)
+### Editing an Existing Skill
 
-6. **Commit both files**
-   - Always commit both `.tmpl` (source) and `.md` (generated)
-   - Never edit `SKILL.md` directly — always edit the `.tmpl`
+1. Edit `.tmpl` (NEVER edit SKILL.md directly)
+2. `just build` → `just check` → test → commit both
 
-## Workflow: Editing an Existing Skill
+### Merge Conflicts on SKILL.md
 
-1. Edit `skills/{name}/SKILL.md.tmpl` (NEVER edit SKILL.md directly)
-2. Run `just build` to regenerate
-3. Verify with `just check`
-4. Test the change (same Iron Law — no edit without a failing test)
-5. Commit both `.tmpl` and generated `.md`
+NEVER resolve by accepting either side. Instead: resolve conflicts on `.tmpl` templates, run `just build` to regenerate, stage the regenerated files.
 
-## Skill Creation Checklist
+---
 
-**RED Phase — Write Failing Test:**
-- [ ] Create pressure scenarios (3+ combined pressures for discipline skills)
-- [ ] Run scenarios WITHOUT skill — document baseline behavior verbatim
-- [ ] Identify patterns in rationalizations/failures
+## Contributor Checklist
 
-**GREEN Phase — Write Minimal Skill:**
-- [ ] Name uses only letters, numbers, hyphens
-- [ ] YAML frontmatter with all required fields (name, preamble-tier, version, description, allowed-tools)
-- [ ] Description starts with action verbs or "Use when...", includes specific triggers
-- [ ] Description in third person, no workflow summary
-- [ ] PREAMBLE placeholder as first line after frontmatter
-- [ ] Clear overview with core principle
-- [ ] Address specific baseline failures identified in RED
-- [ ] One excellent example (not multi-language)
-- [ ] Run scenarios WITH skill — verify agents now comply
+- [ ] Edited `.tmpl` (not `.md`)
+- [ ] `{{PREAMBLE}}` is first placeholder after frontmatter
+- [ ] All required fields: name, preamble-tier, version, description, allowed-tools
+- [ ] Description is triggering conditions only (no workflow summary)
+- [ ] Tier chosen appropriately
+- [ ] Checked gstack and superpowers upstreams
+- [ ] No hardcoded framework commands
+- [ ] SKILL.md under 500 lines (reference material in companion files)
+- [ ] `just build` succeeds
+- [ ] `just check` passes
+- [ ] `just skill-check` shows green
+- [ ] Tested with RED → GREEN → REFACTOR
+- [ ] Committed both `.tmpl` and `.md`
 
-**REFACTOR Phase — Close Loopholes:**
-- [ ] Identify NEW rationalizations from testing
-- [ ] Add explicit counters (if discipline skill)
-- [ ] Build rationalization table from all test iterations
-- [ ] Create red flags list
-- [ ] Re-test until bulletproof
-
-**Build and Deploy:**
-- [ ] `just build` — generates SKILL.md
-- [ ] `just check` — all files up to date
-- [ ] `just skill-check` — health dashboard green
-- [ ] Commit both `.tmpl` and `.md`
+---
 
 ## Anti-Patterns
 
-**Editing SKILL.md directly** — Always edit the `.tmpl`. The generated file will be overwritten on next build.
-
-**Narrative storytelling** — "In session 2025-10-03, we found..." is too specific. Write reusable techniques instead.
-
-**Multi-language dilution** — One excellent example beats mediocre examples in five languages.
-
-**Inventing patterns when gstack has one** — Check `.upstreams/gstack/` before writing new infrastructure.
-
-**Hardcoding project commands** — Read from CLAUDE.md or ask the user.
-
-**Separate placeholders for preamble content** — AskUserFormat, Completeness, RepoMode belong INSIDE the preamble, not as separate placeholders.
+- **Editing SKILL.md directly** — overwritten on next build
+- **Workflow summary in description** — Claude shortcuts the full skill
+- **Inventing patterns when gstack has one** — check `.upstreams/gstack/` first
+- **Hardcoding project commands** — read from CLAUDE.md or ask the user
+- **Separate placeholders for preamble content** — AskUserFormat, Completeness, RepoMode belong INSIDE the preamble
+- **Narrative storytelling** — "In session 2025-10-03 we found..." is too specific
+- **Multi-language dilution** — one excellent example beats five mediocre ones
+- **Skills over 500 lines** — move reference material to companion files
