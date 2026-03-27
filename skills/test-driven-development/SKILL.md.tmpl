@@ -387,7 +387,7 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 
 ## Testing Anti-Patterns
 
-When adding mocks or test utilities, read @testing-anti-patterns.md to avoid common pitfalls:
+When adding mocks or test utilities, read testing-anti-patterns.md to avoid common pitfalls:
 - Testing mock behavior instead of real behavior
 - Adding test-only methods to production classes
 - Mocking without understanding dependencies
@@ -510,6 +510,15 @@ Before marking work complete:
 - [ ] Coverage meets project standards (check CLAUDE.md)
 
 Can't check all boxes? You skipped TDD. Start over.
+
+---
+
+## Status Report
+
+After completing TDD cycles, report:
+- **DONE** — all tests pass, all code covered by tests, refactoring complete
+- **DONE_WITH_CONCERNS** — tests pass but coverage gaps or design concerns remain
+- **BLOCKED** — cannot make a test pass after 3 attempts
 
 ---
 

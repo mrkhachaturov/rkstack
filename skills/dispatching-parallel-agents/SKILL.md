@@ -244,3 +244,11 @@ After merging all agent results, verify before claiming completion:
 4. **Check for unintended changes** — debug code, commented-out blocks, hardcoded values
 
 Use the verification-before-completion skill if available. No completion claims without fresh evidence.
+
+## Status Report
+
+After all results are collected and verified, report:
+- **DONE** — all parallel tasks completed, results merged, tests pass
+- **DONE_WITH_CONCERNS** — tasks completed but conflicts found or some results need review
+- **BLOCKED** — one or more agents failed and could not be re-dispatched
+- **NEEDS_CONTEXT** — insufficient information to craft agent prompts
