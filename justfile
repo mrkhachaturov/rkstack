@@ -20,6 +20,11 @@ check:
 skill-check:
   bun scripts/skill-check.ts
 
+[group("build")]
+[doc("Generate project-local skills from dev/skills/ to .claude/skills/")]
+dev-build:
+  bun scripts/gen-dev-skills.ts
+
 [group("dev")]
 [doc("Watch mode: auto-regen + validate on change")]
 dev:

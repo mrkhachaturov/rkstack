@@ -1,6 +1,8 @@
 /**
  * Shared discovery for SKILL.md and .tmpl files.
- * Scans root + one level of subdirs under skills/, skipping node_modules/.git/dist.
+ * Scans two paths:
+ *   skills/     → output to skills/     (shipped to users)
+ *   dev/skills/ → output to .claude/skills/ (project-local, contributors only)
  *
  * Follows gstack's pattern: flat scan, no recursion, returns relative paths.
  */
@@ -18,11 +20,10 @@ function subdirs(dir: string): string[] {
 }
 
 /**
- * Find all SKILL.md.tmpl files under skillsDir + check root for SKILL.md.tmpl.
- * Returns relative paths from repoRoot.
+ * Find plugin skill templates (shipped to users).
+ * Scans: root, skills/{name}/
  */
 export function discoverTemplates(repoRoot: string): Array<{ tmpl: string; output: string }> {
-  const skillsDir = path.join(repoRoot, 'skills');
   const results: Array<{ tmpl: string; output: string }> = [];
 
   // Check root SKILL.md.tmpl
@@ -30,7 +31,8 @@ export function discoverTemplates(repoRoot: string): Array<{ tmpl: string; outpu
     results.push({ tmpl: 'SKILL.md.tmpl', output: 'SKILL.md' });
   }
 
-  // Check skills/{name}/SKILL.md.tmpl (one level deep)
+  // Check skills/{name}/SKILL.md.tmpl (shipped to users)
+  const skillsDir = path.join(repoRoot, 'skills');
   for (const dir of subdirs(skillsDir)) {
     const rel = `skills/${dir}/SKILL.md.tmpl`;
     if (fs.existsSync(path.join(repoRoot, rel))) {
@@ -42,11 +44,29 @@ export function discoverTemplates(repoRoot: string): Array<{ tmpl: string; outpu
 }
 
 /**
+ * Find dev skill templates (contributor-only).
+ * dev/skills/{name}/SKILL.md.tmpl → .claude/skills/{name}/SKILL.md
+ * These are plain-copied (no placeholder resolution) since they
+ * document the template system and contain literal {{...}} syntax.
+ */
+export function discoverDevTemplates(repoRoot: string): Array<{ tmpl: string; output: string }> {
+  const devSkillsDir = path.join(repoRoot, 'dev', 'skills');
+  const results: Array<{ tmpl: string; output: string }> = [];
+  for (const dir of subdirs(devSkillsDir)) {
+    const tmplRel = `dev/skills/${dir}/SKILL.md.tmpl`;
+    if (fs.existsSync(path.join(repoRoot, tmplRel))) {
+      results.push({ tmpl: tmplRel, output: `.claude/skills/${dir}/SKILL.md` });
+    }
+  }
+
+  return results.sort((a, b) => a.tmpl.localeCompare(b.tmpl));
+}
+
+/**
  * Find all SKILL.md files (generated or standalone).
- * Returns relative paths from repoRoot.
+ * Scans: root, skills/{name}/, .claude/skills/{name}/
  */
 export function discoverSkillFiles(repoRoot: string): string[] {
-  const skillsDir = path.join(repoRoot, 'skills');
   const results: string[] = [];
 
   // Check root SKILL.md
@@ -54,9 +74,19 @@ export function discoverSkillFiles(repoRoot: string): string[] {
     results.push('SKILL.md');
   }
 
-  // Check skills/{name}/SKILL.md (one level deep)
+  // Check skills/{name}/SKILL.md
+  const skillsDir = path.join(repoRoot, 'skills');
   for (const dir of subdirs(skillsDir)) {
     const rel = `skills/${dir}/SKILL.md`;
+    if (fs.existsSync(path.join(repoRoot, rel))) {
+      results.push(rel);
+    }
+  }
+
+  // Check .claude/skills/{name}/SKILL.md
+  const claudeSkillsDir = path.join(repoRoot, '.claude', 'skills');
+  for (const dir of subdirs(claudeSkillsDir)) {
+    const rel = `.claude/skills/${dir}/SKILL.md`;
     if (fs.existsSync(path.join(repoRoot, rel))) {
       results.push(rel);
     }
