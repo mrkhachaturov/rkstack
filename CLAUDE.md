@@ -124,6 +124,14 @@ Important sections:
 - `dependencies`: required sibling skills and resource files that must exist
 - `transforms.replace`: literal text replacements applied to imported text files
 
+Import entries support both forms:
+
+- `name`
+- `source-name as target-name`
+
+Use `source as target` when you want to import an upstream item under a different
+name in the generated pack. This is the preferred mechanism for renamed imports.
+
 Current example pack:
 
 - [`packs/rkstack-base/pack.yaml`](/Volumes/storage/Projects/Git/Github/mrkhachaturov/rkstack/packs/rkstack-base/pack.yaml)
@@ -135,15 +143,19 @@ Current example pack:
 Use overlay for:
 
 - plugin metadata such as `.claude-plugin/plugin.json`
+- platform root files such as `GEMINI.md` and `.codex/INSTALL.md`
 - hooks
 - new custom skills
 - full overrides of imported files
-- replacement skills under new names, such as `using-rkstack`
+- partial overrides on renamed imports, such as `using-rkstack/SKILL.md` while
+  keeping imported `references/`
 
 Rename strategy:
 
-- Do **not** import the old upstream skill if you are replacing it with a new name
-- Provide the replacement entirely from overlay
+- Prefer renamed imports in `pack.yaml`: `source-name as target-name`
+- Then override only the files you actually own in overlay
+- Use overlay-only replacement only when you truly do not want any upstream files
+  from that item to be copied
 
 ## Generated Output
 

@@ -22,7 +22,7 @@ imports:
       - finishing-a-development-branch
       - verification-before-completion
       - writing-skills
-      # using-superpowers is NOT imported — replaced by overlay/skills/using-rkstack/
+      - using-superpowers as using-rkstack  # import dir renamed, overlay overrides SKILL.md
 
   - upstream: superpowers
     type: agents
@@ -71,6 +71,20 @@ dependencies:
 
 transforms:
   replace:
+    # skill cross-references (superpowers:skill-name → rkstack-base:skill-name)
     "superpowers:": "rkstack-base:"
+    # plugin name
     "superpowers plugin": "rkstack-base plugin"
+    # config and data paths
+    "~/.config/superpowers/": "~/.config/rkstack/"
+    ".superpowers/": ".rkstack/"
+    # docs paths
     "docs/superpowers/specs": "docs/specs"
+    "docs/superpowers/plans": "docs/plans"
+    # deprecated commands referencing skill names
+    "\"superpowers brainstorming\"": "\"rkstack-base brainstorming\""
+    "\"superpowers writing-plans\"": "\"rkstack-base writing-plans\""
+    "\"superpowers executing-plans\"": "\"rkstack-base executing-plans\""
+    # branding
+    "Superpowers": "RKstack"
+    "github.com/obra/superpowers": "github.com/mrkhachaturov/rkstack"

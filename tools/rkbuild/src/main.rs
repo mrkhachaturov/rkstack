@@ -341,6 +341,16 @@ fn load_manifest(repo: &RepoPaths, pack: &str) -> Result<Manifest> {
     Ok(manifest)
 }
 
+/// Parse "name" or "name as alias" from an include entry.
+/// Returns (source_name, destination_name).
+fn parse_include_entry(entry: &str) -> (&str, &str) {
+    if let Some((src, dst)) = entry.split_once(" as ") {
+        (src.trim(), dst.trim())
+    } else {
+        (entry.as_ref(), entry.as_ref())
+    }
+}
+
 fn process_imports(repo: &RepoPaths, manifest: &Manifest, output: &Path) -> Result<()> {
     for import in &manifest.imports {
         let upstream_root = repo.upstreams.join(&import.upstream);
@@ -348,24 +358,26 @@ fn process_imports(repo: &RepoPaths, manifest: &Manifest, output: &Path) -> Resu
             bail!("upstream '{}' not found at {}", import.upstream, upstream_root.display());
         }
 
-        for name in &import.include {
+        for entry in &import.include {
+            let (src_name, dst_name) = parse_include_entry(entry);
+
             match import.kind {
                 ImportType::Skills => {
-                    let src = upstream_root.join("skills").join(name);
-                    let dst = output.join("skills").join(name);
+                    let src = upstream_root.join("skills").join(src_name);
+                    let dst = output.join("skills").join(dst_name);
                     if !src.is_dir() {
                         bail!("skill directory not found: {}", src.display());
                     }
                     copy_tree_contents(&src, &dst)?;
                 }
                 ImportType::Agents => {
-                    let src = upstream_root.join("agents").join(format!("{name}.md"));
-                    let dst = output.join("agents").join(format!("{name}.md"));
+                    let src = upstream_root.join("agents").join(format!("{src_name}.md"));
+                    let dst = output.join("agents").join(format!("{dst_name}.md"));
                     copy_file_with_parents(&src, &dst)?;
                 }
                 ImportType::Commands => {
-                    let src = upstream_root.join("commands").join(format!("{name}.md"));
-                    let dst = output.join("commands").join(format!("{name}.md"));
+                    let src = upstream_root.join("commands").join(format!("{src_name}.md"));
+                    let dst = output.join("commands").join(format!("{dst_name}.md"));
                     copy_file_with_parents(&src, &dst)?;
                 }
             }

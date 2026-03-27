@@ -5,6 +5,10 @@ upstream_refs:
 overrides:
   .claude-plugin/plugin.json:
     override_date: 2026-03-27
+  .codex/INSTALL.md:
+    override_date: 2026-03-27
+  GEMINI.md:
+    override_date: 2026-03-27
   hooks/hooks.json:
     override_date: 2026-03-27
   hooks/session-start:

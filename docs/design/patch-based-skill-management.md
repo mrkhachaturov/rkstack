@@ -155,8 +155,7 @@ imports:
       - finishing-a-development-branch
       - verification-before-completion
       - writing-skills
-    # using-superpowers is NOT imported — replaced entirely by
-    # overlay/skills/using-rkstack/ (see "exclude + overlay-only" below)
+      - using-superpowers as using-rkstack  # rename on import; overlay replaces only SKILL.md
 
   # Import agents from superpowers
   - upstream: superpowers
@@ -222,6 +221,29 @@ transforms:
     "docs/superpowers/specs": "docs/specs"
 ```
 
+### Import rename syntax
+
+Each `include` entry supports two forms:
+
+- `name`
+- `source-name as target-name`
+
+Examples:
+
+```yaml
+include:
+  - brainstorming
+  - using-superpowers as using-rkstack
+  - code-reviewer as rkstack-code-reviewer
+```
+
+This means:
+
+- read from `.upstreams/{upstream}/{type}/source-name`
+- write to `plugins/{pack}/{type}/target-name`
+
+Rename support is general-purpose and can be reused for future upstream items.
+
 ## Overlay: Deep Customization
 
 The overlay directory (`packs/{pack}/overlay/`) contains hand-authored files that
@@ -242,22 +264,27 @@ transforms:
 Handles the 52+ cross-references automatically. When upstream adds new references,
 the next build catches them too.
 
-**Level 2: Exclude + overlay-only (rename a skill)**
+**Level 2: Renamed import + partial overlay**
 
-When you need to rename a skill directory (not just content). Don't import the
-upstream skill — provide your own version entirely in overlay:
+When you need to rename an imported directory but still want to keep some upstream
+files. Import it under a new name, then override only the files you own:
 
 ```yaml
-# in pack.yaml imports: using-superpowers is NOT in the include list
+include:
+  - using-superpowers as using-rkstack
 ```
 
 ```text
-# in overlay: your replacement skill with the new name
 packs/rkstack-base/overlay/skills/using-rkstack/SKILL.md
 ```
 
-The upstream `using-superpowers/` is never copied. Only `using-rkstack/` appears
-in the output. This avoids the problem of both old and new directories coexisting.
+Result:
+
+- upstream `using-superpowers/references/*` is copied into `using-rkstack/references/*`
+- transforms still apply
+- overlay replaces only `using-rkstack/SKILL.md`
+
+This is the preferred pattern for future renamed imports.
 
 **Level 3: Full file override (overlay)**
 
@@ -280,6 +307,8 @@ packs/rkstack-base/overlay/skills/my-custom-skill/SKILL.md
 packs/rkstack-base/overlay/hooks/hooks.json
 packs/rkstack-base/overlay/hooks/session-start
 packs/rkstack-base/overlay/.claude-plugin/plugin.json
+packs/rkstack-base/overlay/GEMINI.md
+packs/rkstack-base/overlay/.codex/INSTALL.md
 ```
 
 These are purely your code — no upstream dependency.
@@ -288,9 +317,9 @@ These are purely your code — no upstream dependency.
 
 ```text
 1. For each import in pack.yaml:
-   - skills (directories): copy .upstreams/{upstream}/skills/{name}/ → plugins/{pack}/skills/{name}/
-   - agents (files):       copy .upstreams/{upstream}/agents/{name}.md → plugins/{pack}/agents/{name}.md
-   - commands (files):     copy .upstreams/{upstream}/commands/{name}.md → plugins/{pack}/commands/{name}.md
+   - skills (directories): copy .upstreams/{upstream}/skills/{source}/ → plugins/{pack}/skills/{target}/
+   - agents (files):       copy .upstreams/{upstream}/agents/{source}.md → plugins/{pack}/agents/{target}.md
+   - commands (files):     copy .upstreams/{upstream}/commands/{source}.md → plugins/{pack}/commands/{target}.md
    (only names listed in "include")
 
 2. Apply text transforms to all imported files
