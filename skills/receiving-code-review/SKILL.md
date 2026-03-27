@@ -338,7 +338,7 @@ When replying to inline review comments on GitHub, reply in the comment thread (
 
 ## After Processing All Feedback
 
-Run the `/verification-before-completion` skill to confirm the changes are correct and nothing was broken before signaling done.
+Run the `verification-before-completion` skill to confirm the changes are correct and nothing was broken before signaling done.
 
 ---
 

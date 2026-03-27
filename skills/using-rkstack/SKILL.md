@@ -168,6 +168,24 @@ When the user's request matches a workflow stage, suggest the relevant skill:
 | Safety, caution, production, destructive | `guard` or `careful` |
 | Scoped edits, restrict changes, "only touch" | `freeze` |
 | Verify, check, prove, "make sure" | `verification-before-completion` |
+| Execute plan, follow steps, run plan | `executing-plans` |
+| Subagent execution, agent per task, dispatch agents | `subagent-driven-development` |
+| Parallel tasks, independent work, run simultaneously | `dispatching-parallel-agents` |
+| Worktree, isolated workspace, feature branch | `using-git-worktrees` |
+| Respond to review feedback, reviewer said | `receiving-code-review` |
+| Create skill, edit skill, skill template | `writing-skills` |
+| Documentation update, release docs, post-ship | `document-release` |
+| Retrospective, weekly review, what shipped | `retro` |
+| Security audit, OWASP, vulnerability, pentest | `cso` |
+| Unlock edits, remove freeze, unfreeze | `unfreeze` |
+
+### Workflow Chain
+
+The typical end-to-end development progression:
+
+```
+brainstorming → writing-plans → [executing-plans | subagent-driven-development] → verification-before-completion → requesting-code-review → finishing-a-development-branch → document-release
+```
 
 If a skill doesn't exist yet, fall back to your best judgment — but note what skill would have helped.
 
