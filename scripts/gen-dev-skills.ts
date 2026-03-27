@@ -55,9 +55,21 @@ function main() {
       }
     } else {
       // Ensure output directory exists
-      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      const outputDir = path.dirname(outputPath);
+      fs.mkdirSync(outputDir, { recursive: true });
       fs.writeFileSync(outputPath, generated);
       console.log(`Generated: ${output}`);
+
+      // Copy companion files (*.md except SKILL.md and SKILL.md.tmpl)
+      const tmplDir = path.dirname(tmplPath);
+      for (const entry of fs.readdirSync(tmplDir)) {
+        if (entry === 'SKILL.md' || entry === 'SKILL.md.tmpl') continue;
+        const src = path.join(tmplDir, entry);
+        if (fs.statSync(src).isFile()) {
+          fs.copyFileSync(src, path.join(outputDir, entry));
+          console.log(`  Copied: ${entry}`);
+        }
+      }
     }
   }
 
