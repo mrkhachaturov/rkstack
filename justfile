@@ -6,8 +6,9 @@ setup:
   mise install
 
 [group("build")]
-[doc("Generate all SKILL.md from templates")]
+[doc("Pull latest docs + generate all SKILL.md from templates")]
 build:
+  git submodule update --remote .upstreams/claude-code-docs 2>/dev/null || true
   bun scripts/gen-skill-docs.ts
 
 [group("build")]

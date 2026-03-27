@@ -2,8 +2,7 @@ name: Update Claude Code Docs Refs
 
 on:
   schedule:
-    # Every 6 hours — claude-code-docs updates every 3h, we check twice as often
-    - cron: '0 */6 * * *'
+    - cron: '0 8 * * *'  # Daily at 08:00 UTC
   workflow_dispatch: # Manual trigger
 
 permissions:
@@ -19,10 +18,16 @@ jobs:
           submodules: true
           fetch-depth: 0
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
       - name: Update claude-code-docs submodule
         run: git submodule update --remote .upstreams/claude-code-docs
 
-      - name: Check for changes
+      - name: Check if upstream docs changed
         id: check
         run: |
           if git diff --quiet .upstreams/claude-code-docs; then
@@ -31,14 +36,73 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit submodule update
+      - name: Build (copies refs + generates SKILL.md)
         if: steps.check.outputs.changed == 'true'
+        run: bun scripts/gen-skill-docs.ts
+
+      - name: Check if refs actually changed
+        if: steps.check.outputs.changed == 'true'
+        id: refs-changed
+        run: |
+          # Check if any files in skills/*/refs/ or generated SKILL.md changed
+          if git diff --quiet skills/; then
+            echo "refs_changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "refs_changed=true" >> "$GITHUB_OUTPUT"
+            echo "Changed files:"
+            git diff --name-only skills/
+          fi
+
+      - name: Bump patch version
+        if: steps.refs-changed.outputs.refs_changed == 'true'
+        run: |
+          # Read current version from plugin.json
+          VERSION=$(jq -r .version .claude-plugin/plugin.json)
+
+          # Split into a.b.c and increment c
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+
+          # Update plugin.json
+          jq --arg v "$NEW_VERSION" '.version = $v' .claude-plugin/plugin.json > tmp.json
+          mv tmp.json .claude-plugin/plugin.json
+
+          # Update VERSION file if it exists
+          if [ -f VERSION ]; then
+            echo "$NEW_VERSION" > VERSION
+          fi
+
+          # Update package.json version
+          jq --arg v "$NEW_VERSION" '.version = $v' package.json > tmp.json
+          mv tmp.json package.json
+
+          echo "Version bumped: $VERSION → $NEW_VERSION"
+
+      - name: Commit and push
+        if: steps.refs-changed.outputs.refs_changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .upstreams/claude-code-docs
-          git commit -m "chore: update claude-code-docs submodule
 
-          Auto-updated by CI. Run 'just dev-build' locally to refresh
-          .claude/skills/*/refs/ with the latest docs."
+          # Stage submodule update + refs + generated files + version
+          git add .upstreams/claude-code-docs
+          git add skills/*/refs/
+          git add skills/*/SKILL.md
+          git add .claude-plugin/plugin.json package.json
+          git add VERSION 2>/dev/null || true
+
+          # List what changed for the commit message
+          CHANGED=$(git diff --cached --name-only skills/*/refs/ | sed 's|.*/refs/||' | sort -u | tr '\n' ', ' | sed 's/,$//')
+          VERSION=$(jq -r .version .claude-plugin/plugin.json)
+
+          git commit -m "chore: update claude-code refs → v${VERSION}
+
+          Updated refs: ${CHANGED}"
           git push
+
+      - name: No changes
+        if: steps.check.outputs.changed != 'true'
+        run: echo "No upstream changes detected"

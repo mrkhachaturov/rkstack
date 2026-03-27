@@ -129,9 +129,47 @@ function processTemplate(tmplRel: string): string {
   return content;
 }
 
+// ─── Refs Copy ────────────────────────────────────────────
+
+const UPSTREAM_DOCS = path.join(ROOT, '.upstreams', 'claude-code-docs', 'docs');
+
+/** Skills that get refs/ copied from upstream claude-code-docs */
+const SKILL_REFS: Record<string, string[]> = {
+  'writing-skills': [
+    'skills.md', 'hooks.md', 'hooks-guide.md', 'sub-agents.md',
+    'memory.md', 'permissions.md', 'best-practices.md',
+  ],
+};
+
+function copyRefs() {
+  if (!fs.existsSync(UPSTREAM_DOCS)) {
+    console.log('WARNING: .upstreams/claude-code-docs/docs/ not found — skipping refs');
+    return;
+  }
+
+  for (const [skill, docs] of Object.entries(SKILL_REFS)) {
+    const refsDir = path.join(ROOT, 'skills', skill, 'refs');
+    fs.mkdirSync(refsDir, { recursive: true });
+    let copied = 0;
+    for (const doc of docs) {
+      const src = path.join(UPSTREAM_DOCS, doc);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, path.join(refsDir, doc));
+        copied++;
+      }
+    }
+    console.log(`Refs: skills/${skill}/refs/ — ${copied}/${docs.length} docs`);
+  }
+}
+
 // ─── Main ──────────────────────────────────────────────────
 
 function main() {
+  // Copy refs from upstream before generating (skip in dry-run)
+  if (!DRY_RUN) {
+    copyRefs();
+  }
+
   const templates = discoverTemplates(ROOT);
 
   if (templates.length === 0) {
