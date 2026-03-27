@@ -1,0 +1,44 @@
+name: Update Claude Code Docs Refs
+
+on:
+  schedule:
+    # Every 6 hours — claude-code-docs updates every 3h, we check twice as often
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  update-refs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Update claude-code-docs submodule
+        run: git submodule update --remote .upstreams/claude-code-docs
+
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --quiet .upstreams/claude-code-docs; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit submodule update
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .upstreams/claude-code-docs
+          git commit -m "chore: update claude-code-docs submodule
+
+          Auto-updated by CI. Run 'just dev-build' locally to refresh
+          .claude/skills/*/refs/ with the latest docs."
+          git push
