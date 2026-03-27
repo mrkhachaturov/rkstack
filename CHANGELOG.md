@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.2.0] - 2026-03-27
+
+Skills now aligned with official Claude Code spec and auto-updated reference docs.
+
+### What's new
+
+- **Official Claude Code docs** ship with the plugin — `writing-skills` includes
+  `refs/` with the latest skill, hooks, agents, memory, and permissions docs from
+  Anthropic. Updated automatically by CI when upstream changes.
+- **Brainstorming visual companion** now works — browser-based mockup server
+  scripts (start, stop, frame template) included.
+- **Skills follow the official spec** — `disable-model-invocation` on side-effect
+  skills, `argument-hint` for retro/cso/freeze, `user-invocable: false` on root
+  skill, `$ARGUMENTS` support, explicit `CLAUDE_PLUGIN_ROOT` paths.
+- **Framework detection expanded** — preamble now detects Ansible, Docker Compose,
+  justfile, and mise alongside existing language/framework hints.
+
+### CI & automation
+
+- **Daily ref updates** — CI pulls latest Claude Code docs, copies to `refs/`,
+  bumps patch version, tags release — all automatic.
+- **Check workflow** — freshness, skill health, and 75 tests run on every push/PR.
+- **Release workflow** — GitHub releases with changelog body from tags.
+
+### Quality
+
+- Skills audited for cross-skill consistency: intent mapping covers all 21 skills,
+  workflow chain documented, tier assignments verified.
+- Descriptions trimmed to triggering conditions only (no workflow summaries that
+  cause Claude to skip skill content).
+- Namespaced output paths: `docs/rkstack/specs/`, `docs/rkstack/plans/`,
+  `.rkstack/brainstorm/` — no collisions with project docs.
+
+### For contributors
+
+- `dev/skills/` template system for project-local skills — `just dev-build`
+  generates `.claude/skills/` with fresh refs from upstream.
+- `writing-rkstack-skills` contributor skill with 14 official Claude Code docs
+  as references, contextualized ref pointers in every section.
+- Run `just dev-build` before writing new skills to ensure refs are current.
+
 ## [0.1.0] - 2026-03-27
 
 Initial release. Complete AI development workflow as a single plugin.
