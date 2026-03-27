@@ -12,12 +12,12 @@ setup:
 [group("build")]
 [doc("Generate all SKILL.md from templates")]
 build:
-  ./scripts/gen-skill-docs
+  bun scripts/gen-skill-docs.ts
 
 [group("build")]
 [doc("Check that generated SKILL.md files are up to date")]
 check:
-  ./scripts/gen-skill-docs --check
+  bun scripts/gen-skill-docs.ts --dry-run
 
 [group("detect")]
 [doc("Detect project stack via scc")]

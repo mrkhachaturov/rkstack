@@ -1,7 +1,14 @@
-## Preamble (run first)
+import type { TemplateContext } from './types';
 
-```bash
-# === RKstack Preamble ===
+/**
+ * Generates the preamble bash block that runs at the start of every skill.
+ * Collects project context: tech stack (scc), repo mode, branch, framework hints.
+ */
+export function generatePreamble(ctx: TemplateContext): string {
+  return `## Preamble (run first)
+
+\`\`\`bash
+# === RKstack Preamble (${ctx.skillName}) ===
 
 # Project detection via scc
 _TOP_LANGS=$(scc --format wide --no-cocomo . 2>/dev/null | head -8 || echo "scc not available")
@@ -27,7 +34,7 @@ echo "BRANCH: $_BRANCH"
 # Project config
 _HAS_CLAUDE_MD=$([ -f CLAUDE.md ] && echo "yes" || echo "no")
 echo "CLAUDE_MD: $_HAS_CLAUDE_MD"
-```
+\`\`\`
 
 Use the preamble output to adapt your behavior:
 
@@ -38,4 +45,5 @@ Use the preamble output to adapt your behavior:
 - **Dockerfile + Terraform** → infrastructure. Extra caution with state, suggest plan before apply.
 - **Solo repo** → be proactive, fix issues directly.
 - **Collaborative repo** → flag issues, document findings, don't assume ownership.
-- **CLAUDE.md exists** → read it for project-specific commands and conventions.
+- **CLAUDE.md exists** → read it for project-specific commands and conventions.`;
+}

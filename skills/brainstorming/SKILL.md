@@ -12,7 +12,7 @@ Start by understanding the current project context, then ask questions one at a 
 ## Preamble (run first)
 
 ```bash
-# === RKstack Preamble ===
+# === RKstack Preamble (brainstorming) ===
 
 # Project detection via scc
 _TOP_LANGS=$(scc --format wide --no-cocomo . 2>/dev/null | head -8 || echo "scc not available")

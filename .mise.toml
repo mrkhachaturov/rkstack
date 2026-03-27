@@ -1,3 +1,4 @@
 [tools]
+bun = "latest"
 just = "1.46.0"
-scc = "3.7.0"
+"aqua:boyter/scc" = "3.7.0"
