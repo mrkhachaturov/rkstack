@@ -12,7 +12,7 @@
     "check": "bun scripts/gen-skill-docs.ts --dry-run",
     "skill:check": "bun scripts/skill-check.ts",
     "dev:skill": "bun scripts/dev-skill.ts",
-    "test": "echo 'TODO: bun test'"
+    "test": "bun test"
   },
   "engines": {
     "bun": ">=1.0.0"
