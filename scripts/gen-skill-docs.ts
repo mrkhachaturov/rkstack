@@ -40,22 +40,30 @@ const HOST: Host = (() => {
 
 const PLACEHOLDER_RE = /\{\{([A-Z_]+)\}\}/g;
 
+/** Extract the YAML frontmatter block (between --- delimiters) */
+function extractFrontmatter(content: string): string {
+  if (!content.startsWith('---')) return '';
+  const fmEnd = content.indexOf('\n---', 4);
+  if (fmEnd === -1) return '';
+  return content.slice(4, fmEnd);
+}
+
 /** Extract `name:` from YAML frontmatter */
-function extractName(content: string): string {
-  const match = content.match(/^name:\s*(.+)$/m);
+function extractName(fm: string): string {
+  const match = fm.match(/^name:\s*(.+)$/m);
   return match ? match[1].trim() : '';
 }
 
 /** Extract `preamble-tier:` from YAML frontmatter (1-4) */
-function extractPreambleTier(content: string): number | undefined {
-  const match = content.match(/^preamble-tier:\s*(\d+)$/m);
+function extractPreambleTier(fm: string): number | undefined {
+  const match = fm.match(/^preamble-tier:\s*(\d+)$/m);
   return match ? parseInt(match[1], 10) : undefined;
 }
 
 /** Extract `benefits-from:` list from YAML frontmatter */
-function extractBenefitsFrom(content: string): string[] | undefined {
+function extractBenefitsFrom(fm: string): string[] | undefined {
   // Inline: benefits-from: [a, b, c]
-  const inlineMatch = content.match(/^benefits-from:\s*\[([^\]]*)\]/m);
+  const inlineMatch = fm.match(/^benefits-from:\s*\[([^\]]*)\]/m);
   if (inlineMatch) {
     return inlineMatch[1].split(',').map(s => s.trim()).filter(Boolean);
   }
@@ -63,7 +71,7 @@ function extractBenefitsFrom(content: string): string[] | undefined {
   // benefits-from:
   //   - a
   //   - b
-  const blockMatch = content.match(/^benefits-from:\s*\n((?:\s+-\s+.+\n?)*)/m);
+  const blockMatch = fm.match(/^benefits-from:\s*\n((?:\s+-\s+.+\n?)*)/m);
   if (blockMatch) {
     return blockMatch[1]
       .split('\n')
@@ -75,15 +83,16 @@ function extractBenefitsFrom(content: string): string[] | undefined {
 
 // ─── Template Processing ──────────────────────────────────
 
-function processTemplate(tmplRel: string, _outputRel: string): string {
+function processTemplate(tmplRel: string): string {
   const tmplPath = path.join(ROOT, tmplRel);
   const tmplContent = fs.readFileSync(tmplPath, 'utf-8');
 
-  // Extract metadata from frontmatter
-  const extractedName = extractName(tmplContent);
+  // Extract metadata from frontmatter block only (not the entire file)
+  const fm = extractFrontmatter(tmplContent);
+  const extractedName = extractName(fm);
   const skillName = extractedName || path.basename(path.dirname(tmplPath));
-  const preambleTier = extractPreambleTier(tmplContent);
-  const benefitsFrom = extractBenefitsFrom(tmplContent);
+  const preambleTier = extractPreambleTier(fm);
+  const benefitsFrom = extractBenefitsFrom(fm);
 
   const ctx: TemplateContext = {
     skillName,
@@ -138,7 +147,7 @@ function main() {
 
     let generated: string;
     try {
-      generated = processTemplate(tmpl, output);
+      generated = processTemplate(tmpl);
     } catch (err: any) {
       console.error(`ERROR: ${err.message}`);
       errorCount++;
