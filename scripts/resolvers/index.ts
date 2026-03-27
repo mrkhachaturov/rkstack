@@ -1,5 +1,6 @@
 import type { Resolver } from './types';
-import { generatePreamble } from './preamble';
+import { generatePreamble, generateTestFailureTriage } from './preamble';
+import { generateBaseBranchDetect } from './utility';
 
 /**
  * Registry of all placeholder resolvers.
@@ -12,4 +13,6 @@ import { generatePreamble } from './preamble';
  */
 export const RESOLVERS: Record<string, Resolver> = {
   PREAMBLE: generatePreamble,
+  TEST_FAILURE_TRIAGE: generateTestFailureTriage,
+  BASE_BRANCH_DETECT: generateBaseBranchDetect,
 };
