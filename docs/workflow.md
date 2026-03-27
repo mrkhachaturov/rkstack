@@ -210,6 +210,32 @@ dispatching-parallel-agents (T2)    using-git-worktrees (T2)
   Review for conflicts after          Cleanup on completion
 ```
 
+## Post-Ship & Analysis
+
+```
+PR merged
+  │
+  ├──▶ document-release (T2)    — audit .md files against diff, auto-update
+  │                                factual content, gate risky changes,
+  │                                polish CHANGELOG, cross-doc consistency
+  │
+  └──▶ retro (T2)               — weekly engineering retrospective
+                                   commit analysis, session detection,
+                                   focus scoring, team breakdown, trends
+```
+
+## Security
+
+```
+cso (T3) — Chief Security Officer audit
+  │
+  Phases 0-12: architecture model → attack surface → secrets →
+  supply chain → CI/CD → infrastructure → webhooks → LLM security →
+  OWASP Top 10 → STRIDE → data classification → FP filter → report
+  │
+  Modes: /cso (full), --diff (branch), --owasp, --infra, --code
+```
+
 ## Meta Skills
 
 | Skill | Tier | Purpose |
@@ -217,7 +243,13 @@ dispatching-parallel-agents (T2)    using-git-worktrees (T2)
 | writing-skills | T2 | Create/edit skills — template system, frontmatter, tiers, testing |
 | receiving-code-review | T2 | Respond to review feedback with technical rigor, not blind agreement |
 
-## All 17 Skills
+## Library
+
+| Module | File | Purpose |
+|--------|------|---------|
+| WorktreeManager | lib/worktree.ts | Git worktree isolation: create, harvest patches, cleanup, dedup |
+
+## All 21 Skills
 
 | Skill | Tier | Source | Category |
 |-------|------|--------|----------|
@@ -226,6 +258,7 @@ dispatching-parallel-agents (T2)    using-git-worktrees (T2)
 | careful | T1 | gstack | Safety |
 | freeze | T1 | gstack | Safety |
 | guard | T1 | gstack | Safety |
+| unfreeze | T1 | gstack | Safety |
 | systematic-debugging | T2 | gstack /investigate + superpowers | Quality |
 | writing-plans | T2 | superpowers (enriched) | Planning |
 | verification-before-completion | T2 | superpowers (enriched) | Quality |
@@ -235,6 +268,9 @@ dispatching-parallel-agents (T2)    using-git-worktrees (T2)
 | using-git-worktrees | T2 | superpowers (adapted) | Utility |
 | receiving-code-review | T2 | superpowers (adapted) | Quality |
 | writing-skills | T2 | superpowers + rkstack | Meta |
+| document-release | T2 | gstack (adapted) | Post-ship |
+| retro | T2 | gstack (core adapted) | Analysis |
 | test-driven-development | T3 | superpowers (enriched) | Quality |
-| requesting-code-review | T3 | gstack /review + superpowers | Quality |
-| finishing-a-development-branch | T3 | gstack /ship + superpowers | Shipping |
+| cso | T3 | gstack (adapted) | Security |
+| requesting-code-review | T4 | gstack /review + superpowers | Quality |
+| finishing-a-development-branch | T4 | gstack /ship + superpowers | Shipping |
