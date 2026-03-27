@@ -1,11 +1,12 @@
 ---
 name: requesting-code-review
-preamble-tier: 3
+preamble-tier: 4
 version: 1.0.0
 description: |
-  Request and manage code reviews. Use when completing tasks, implementing
-  major features, or before merging. Dispatches code-reviewer agent with
-  two-pass review: CRITICAL first, then INFORMATIONAL. Fix-first paradigm.
+  Gate-quality pre-landing review. Dispatches code-reviewer agent with
+  checklist-driven two-pass review (CRITICAL then INFORMATIONAL), adversarial
+  analysis, test coverage audit, documentation staleness check, and TODOS
+  cross-reference. Fix-first paradigm.
 allowed-tools:
   - Bash
   - Read
@@ -220,11 +221,19 @@ Before reviewing code quality, check: **did they build what was requested -- not
    [If missing: list each unaddressed requirement]
    ```
 
-7. This is **INFORMATIONAL** -- does not block the review. Proceed to Step 3.
+7. This is **INFORMATIONAL** -- does not block the review. Proceed to Step 3 (checklist).
 
 ---
 
-## Step 3: Get the Diff
+## Step 3: Read the Checklist
+
+If `skills/requesting-code-review/checklist.md` exists in the RKstack plugin directory, read it before reviewing. The checklist provides review categories, severity classification, fix-first heuristics, and suppressions that the code-reviewer agent must follow.
+
+**If the checklist cannot be read:** Proceed without it -- the code-reviewer.md already contains the core review categories. The checklist adds depth (crypto/entropy, time window safety, type coercion, distribution/CI) but is not a hard blocker.
+
+---
+
+## Step 4: Get the Diff
 
 Fetch the latest base branch to avoid false positives from stale local state:
 
@@ -249,15 +258,15 @@ echo "HEAD_SHA: $HEAD_SHA"
 
 ---
 
-## Step 4: Dispatch Code-Reviewer Agent
+## Step 5: Dispatch Code-Reviewer Agent
 
 Use the Agent tool to dispatch the code-reviewer agent with the review context. Fill in the template from `requesting-code-review/code-reviewer.md`:
 
 **Placeholders to fill:**
 - `{WHAT_WAS_IMPLEMENTED}` -- Summary of what was built (from scope drift analysis)
 - `{PLAN_OR_REQUIREMENTS}` -- The stated intent, plan file reference, or requirements
-- `{BASE_SHA}` -- Starting commit SHA from Step 3
-- `{HEAD_SHA}` -- Ending commit SHA from Step 3
+- `{BASE_SHA}` -- Starting commit SHA from Step 4
+- `{HEAD_SHA}` -- Ending commit SHA from Step 4
 - `{DESCRIPTION}` -- Brief summary of the changes
 - `{SCOPE_CHECK_RESULT}` -- The scope check output from Step 2
 
@@ -265,13 +274,13 @@ The agent performs the two-pass review and returns structured findings. See `cod
 
 ---
 
-## Step 5: Act on Feedback -- Fix-First Paradigm
+## Step 6: Act on Feedback -- Fix-First Paradigm
 
 **Every finding gets action -- not just critical ones.**
 
 Output a summary header: `Pre-Landing Review: N issues (X critical, Y informational)`
 
-### Step 5a: Classify each finding
+### Step 6a: Classify each finding
 
 For each finding from the reviewer, classify as AUTO-FIX or ASK:
 
@@ -293,12 +302,12 @@ For each finding from the reviewer, classify as AUTO-FIX or ASK:
 
 Critical findings lean toward ASK; informational findings lean toward AUTO-FIX.
 
-### Step 5b: Auto-fix all AUTO-FIX items
+### Step 6b: Auto-fix all AUTO-FIX items
 
 Apply each fix directly. For each one, output a one-line summary:
 `[AUTO-FIXED] [file:line] Problem -> what you did`
 
-### Step 5c: Batch-ask about ASK items
+### Step 6c: Batch-ask about ASK items
 
 If there are ASK items remaining, present them in ONE AskUserQuestion:
 
@@ -323,7 +332,7 @@ RECOMMENDATION: Fix both -- #1 is a real race condition, #2 prevents silent data
 
 If 3 or fewer ASK items, you may use individual AskUserQuestion calls instead of batching.
 
-### Step 5d: Apply user-approved fixes
+### Step 6d: Apply user-approved fixes
 
 Apply fixes for items where the user chose "Fix." Output what was fixed.
 
@@ -331,9 +340,77 @@ If no ASK items exist (everything was AUTO-FIX), skip the question entirely.
 
 ---
 
-## Step 6: Review Report
+## Step 7: Test Coverage Audit
 
-After all fixes are applied, output the final structured report:
+After the two-pass review and fix-first handling, check test coverage for changed files.
+
+1. Identify all files changed in the diff (`git diff origin/<base>...HEAD --name-only`).
+2. For each changed source file, check if a corresponding test file exists. Use the project's test naming convention (read from CLAUDE.md if available, otherwise infer from existing test files).
+3. For files with tests, scan the test file for coverage of the code paths changed in the diff. Flag code paths that have no test coverage.
+4. If CLAUDE.md defines a `test:coverage` command (or equivalent), run it and report the results.
+5. Output:
+   ```
+   Test Coverage: N changed files, M with tests, K with gaps
+   [For each gap: file:line -- code path with no test coverage]
+   ```
+
+This is **INFORMATIONAL** -- test gaps are flagged as findings but do not block the review. They follow the same Fix-First flow (lean toward ASK since writing tests changes behavior contracts).
+
+---
+
+## Step 8: Adversarial Review
+
+After fix-first handling, assume the code is wrong and try to break it. This is a deliberate red-team pass -- not a repeat of the two-pass review.
+
+For each significant code change in the diff, ask:
+
+1. **Input attacks:** What inputs cause failures? Empty strings, null values, negative numbers, Unicode edge cases, extremely long strings, special characters in paths. What happens if the input is valid but unexpected (e.g., a date in the year 2099)?
+
+2. **Concurrency attacks:** What concurrent access patterns cause races? Two users hitting the same endpoint simultaneously. A background job running while a user request modifies the same data. A deploy happening mid-transaction.
+
+3. **Failure path attacks:** What error paths are untested? Network timeouts, disk full, out-of-memory, permission denied. What happens when an external service returns garbage instead of an error code?
+
+4. **State attacks:** What state transitions are invalid? Can the system reach a state the code doesn't handle? What if the database has stale data from a previous version?
+
+5. **Boundary attacks:** What happens at zero, one, MAX_INT, empty collection, single-element collection? What about timestamps at midnight, month boundaries, DST transitions?
+
+For each plausible attack vector found, add it as a finding:
+- **If exploitable** (concrete scenario leads to data loss, crash, or security issue): CRITICAL finding, classified as ASK.
+- **If theoretical** (plausible but requires unlikely conditions): INFORMATIONAL finding, include the scenario description.
+
+**Do not invent impossible scenarios.** Every attack vector must be grounded in the actual code paths from the diff.
+
+---
+
+## Step 9: TODOS Cross-Reference
+
+Read `TODOS.md` in the repository root (if it exists). Cross-reference the diff against open TODOs:
+
+- **Does this branch close any open TODOs?** If yes, note which items: "This branch addresses TODO: <title>"
+- **Does this branch create work that should become a TODO?** If yes, flag it as an INFORMATIONAL finding: "New deferred work detected that should be tracked in TODOS.md: <description>"
+- **Are there related TODOs that provide context for this review?** If yes, reference them when discussing related findings.
+
+If TODOS.md does not exist, skip this step silently.
+
+---
+
+## Step 10: Documentation Staleness Check
+
+Cross-reference the diff against documentation files. For each `.md` file in the repo root (`README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `CLAUDE.md`, etc.):
+
+1. Check if code changes in the diff affect features, components, or workflows described in that doc file.
+2. If the doc file was NOT updated in this branch but the code it describes WAS changed, flag it as an INFORMATIONAL finding:
+   ```
+   Documentation may be stale: <file> describes <feature/component> but code changed in this branch.
+   ```
+
+This is informational only -- never critical. Skip silently if no documentation files exist.
+
+---
+
+## Step 11: Review Report
+
+After all steps complete, output the final structured report:
 
 ```
 ## Review Summary
@@ -356,6 +433,18 @@ After all fixes are applied, output the final structured report:
 
 #### Minor (Nice to Have)
 [Code style, optimization opportunities, documentation -- with file:line]
+
+### Adversarial Findings
+[Attack vectors discovered in Step 8 -- with scenario and severity]
+
+### Test Coverage
+[Summary from Step 7 -- files with gaps, untested paths]
+
+### TODOS
+[Items from Step 9 -- closed TODOs, new deferred work]
+
+### Documentation
+[Stale docs from Step 10 -- files that need updates]
 
 ### Actions Taken
 - [AUTO-FIXED] N items (list each)
@@ -389,3 +478,4 @@ Before producing the final review output:
 - **Only flag real problems.** Skip anything that's fine.
 - **Cite file:line for every finding.** Never give vague feedback like "improve error handling."
 - **Two passes always.** CRITICAL first (blockers), then INFORMATIONAL (improvements). Never mix severity levels.
+- **Adversarial review is a separate pass.** Do not mix adversarial findings into the two-pass review. They go in Step 8 after fix-first handling.
