@@ -138,9 +138,11 @@ Writing something humans will read? These constraints shape every sentence as yo
 - Blog posts, articles, reports
 - Any text a human reads and judges
 
+**Lightweight mode (subset of constraints — no voice calibration, just clarity):**
+- Commit messages — no significance inflation, no filler hedging, no em-dash overuse. Keep imperative mood, be specific, avoid "various improvements" and "enhance functionality."
+
 **Does not apply to:**
 - Code
-- Commit messages
 - Terminal output
 - Internal notes and scratch files
 - Config files, JSON, YAML

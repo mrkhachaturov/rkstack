@@ -2,11 +2,11 @@
 
 > 🤖 AI development workflow plugin for Claude Code, Codex, and Gemini.
 >
-> One plugin. 21 skills. Install once, adapts to your project.
+> One plugin. 22 skills. Install once, adapts to your project.
 
 [![Check](https://github.com/mrkhachaturov/rkstack/actions/workflows/check.yml/badge.svg)](https://github.com/mrkhachaturov/rkstack/actions/workflows/check.yml)
 [![Docs](https://github.com/mrkhachaturov/rkstack/actions/workflows/update-refs.yml/badge.svg)](https://github.com/mrkhachaturov/rkstack/actions/workflows/update-refs.yml)
-![Skills](https://img.shields.io/badge/skills-21-0f766e)
+![Skills](https://img.shields.io/badge/skills-22-0f766e)
 ![Tiers](https://img.shields.io/badge/preamble%20tiers-T1--T4-6366f1)
 ![License](https://img.shields.io/badge/license-MIT-3b82f6)
 
@@ -86,6 +86,7 @@ Each step uses **test-driven-development** (RED → GREEN → REFACTOR). Bugs tr
 | 📝 | **document-release** | Post-ship documentation audit and sync. |
 | 📊 | **retro** | Weekly retrospective with commit analysis and trends. |
 | 💬 | **receiving-code-review** | Respond to feedback with technical rigor. |
+| ✍️ | **humanizer** | Write like a human. 35 anti-AI constraints active during composition. |
 
 ### 🚧 Safety Guardrails
 

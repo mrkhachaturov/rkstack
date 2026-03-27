@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0] - 2026-03-27
+
+New humanizer skill — write like a human, not like an AI pretending to be one.
+
+### What's new
+
+- **humanizer** — 35 anti-AI-pattern constraints active during composition, not as
+  a post-edit pass. Tiered priority (T1 instant tells through T4 holistic). Voice
+  calibration, rhythm variation, opinion injection, three-pass verification.
+  Lightweight mode for commit messages. Referenced by brainstorming, document-release,
+  finishing-branch, and retro — same pattern as how TDD is used across execution skills.
+- **Brainstorming visual companion scripts** — browser-based mockup server now
+  included (start-server.sh, stop-server.sh, frame template, helper).
+- **Commit message quality** — humanizer applies in lightweight mode to commit
+  messages: no significance inflation, no filler hedging, no em-dash overuse.
+
 ## [0.2.0] - 2026-03-27
 
 Skills now aligned with official Claude Code spec and auto-updated reference docs.
