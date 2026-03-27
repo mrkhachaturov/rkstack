@@ -1,132 +1,141 @@
-# gstack Scripts & Lib — What We're Missing
+# gstack Scripts & Lib — Reference for RKstack
+
+How gstack organizes its build tooling, resolvers, and shared infrastructure.
+Before writing any script or resolver for RKstack, check this document and then
+look at the actual source in `.upstreams/gstack/scripts/`.
 
 ## scripts/ — Build & DX Tooling
 
 ### discover-skills.ts
-Dynamic filesystem scanning — finds all SKILL.md and .tmpl files automatically.
-No hardcoded lists. Skips node_modules/.git/dist.
+Dynamic filesystem scanning. Finds all SKILL.md and .tmpl files by walking the
+repo root + one level of subdirs. Skips node_modules/.git/dist. Returns arrays
+of `{tmpl, output}` pairs. Used by gen-skill-docs, skill-check, and dev-skill.
 
-**We need this.** Currently our gen-skill-docs walks skills/ but doesn't have a
-separate discovery module.
+### gen-skill-docs.ts
+Template engine. Reads .tmpl → finds `{{PLACEHOLDERS}}` → resolves via RESOLVERS
+registry → writes .md. Supports `--dry-run` (exit 1 if stale) and `--host codex`
+(generate for Codex format). ~44K tokens — this is a substantial script.
 
 ### skill-check.ts
-Health dashboard — validates all SKILL.md files, checks template freshness
-(runs gen-skill-docs --dry-run), reports per-skill status with emoji feedback.
-
-**We need this.** `just check` only verifies freshness, not content validity.
+Health dashboard. Validates all SKILL.md files: checks template freshness (calls
+gen-skill-docs --dry-run), validates commands referenced in skills, reports per-skill
+status with color + emoji. Exit code 1 if any issues.
 
 ### dev-skill.ts
-Watch mode — watches .tmpl files, auto-regenerates and validates on change.
-Zero-second feedback loop for skill authoring.
-
-**We need this.** Currently have to manually run `just build` after each edit.
+Watch mode. Uses `fs.watch()` on .tmpl files and source dependencies. On change:
+auto-regenerates SKILL.md and validates immediately. Reports with timestamps
+`[watch]`, `[gen]`, `[check]`. Zero-second feedback loop.
 
 ### analytics.ts
-Reads ~/.gstack/analytics/skill-usage.jsonl, displays invocation stats per repo.
-JSONL append-only format.
-
-**Later.** Not critical for MVP.
+Reads `~/.gstack/analytics/skill-usage.jsonl`. Displays invocation stats, per-repo
+breakdown, safety hook events. JSONL append-only format with period filtering
+(7d, 30d, all).
 
 ## scripts/resolvers/ — Template Code Generation
 
-### types.ts (gstack)
+Each `{{PLACEHOLDER}}` in a .tmpl maps to a resolver function that takes
+`TemplateContext` and returns a string.
+
+### types.ts
+Central type definitions:
+
 ```typescript
 type Host = 'claude' | 'codex';
-interface HostPaths { skillRoot, localSkillRoot, binDir, browseDir }
+
+interface HostPaths {
+  skillRoot: string;          // ~/.claude/skills/gstack
+  localSkillRoot: string;     // .claude/skills/gstack
+  binDir: string;             // ${skillRoot}/bin
+  browseDir: string;          // ${skillRoot}/browse/dist
+}
+
 interface TemplateContext {
-  skillName, tmplPath, benefitsFrom?, host, paths, preambleTier?
+  skillName: string;
+  tmplPath: string;
+  benefitsFrom?: string[];    // dependency tracking between skills
+  host: Host;
+  paths: HostPaths;
+  preambleTier?: number;      // 1-4, controls preamble detail level
 }
 ```
 
-**We're missing:** `benefitsFrom` (skill dependencies), `preambleTier` (tier system),
-`paths` (host-specific paths). Our TemplateContext is simpler.
+### index.ts
+Central resolver registry. 50+ entries mapping placeholder names to generator
+functions. Single source of truth. Consistent naming: UPPER_SNAKE_CASE for
+placeholders, `generateCamelCase` for functions.
 
-### index.ts (gstack)
-50+ resolver entries. Ours has 1 (PREAMBLE).
-As we add skills, new resolvers will appear naturally.
+### preamble.ts — KEY FILE
+Multi-section generator with tier system. NOT a single bash block — it's a
+composition of sections controlled by preamble-tier:
 
-### preamble.ts (gstack) — KEY FILE
-Not just a bash block. It's a **multi-section generator** with tier system:
+| Tier | Includes |
+|------|----------|
+| T1 | Core bash (branch, sessions, config) + upgrade check + lake intro + telemetry + contributor + completion principle |
+| T2 | T1 + AskUserFormat + Completeness effort table |
+| T3 | T2 + RepoMode (solo/collaborative) + SearchBeforeBuilding |
+| T4 | T3 (fullest — for shipping/QA/deploy skills) |
 
-- T1: core bash + upgrade + lake intro + telemetry + contributor + completion
-- T2: T1 + AskUserFormat + Completeness table
-- T3: T2 + RepoMode + SearchBeforeBuilding
-- T4: T3 (fullest)
-
-**Key functions we're missing:**
-- `generateAskUserFormat()` — standardized question structure
-- `generateCompletenessSection()` — effort compression table
-- `generateRepoModeSection()` — solo vs collaborative handling
+Key generator functions inside preamble.ts:
+- `generatePreambleBash(ctx)` — the bash code block
+- `generateUpgradeCheck(ctx)` — version upgrade handling
 - `generateLakeIntro()` — "Boil the Lake" one-time intro
+- `generateTelemetryPrompt(ctx)` — user consent workflow
+- `generateProactivePrompt(ctx)` — opt-in for auto-invocation
+- `generateAskUserFormat(ctx)` — standardized AskUserQuestion structure
+- `generateCompletenessSection()` — effort compression reference table
+- `generateRepoModeSection()` — solo vs collaborative handling
 - `generateTestFailureTriage()` — test ownership logic
+- `generatePreamble(ctx)` — combines all sections by tier
 
-**We should NOT copy these as standalone placeholders ({{ASK_FORMAT}} etc).
-They should be PART of the preamble, controlled by tier level.**
+**Pattern:** AskUserFormat, Completeness, Escalation, RepoMode are all
+SECTIONS WITHIN the preamble, not separate `{{PLACEHOLDER}}`s.
 
 ### constants.ts
-Shared constants: AI_SLOP_BLACKLIST (10 design anti-patterns),
-OPENAI_HARD_REJECTIONS, OPENAI_LITMUS_CHECKS.
-
-**Later** — when we add design review skills.
+Shared design constants: AI_SLOP_BLACKLIST (10 anti-patterns), OPENAI_HARD_REJECTIONS,
+OPENAI_LITMUS_CHECKS, codexErrorHandling(). Used by design review skills.
 
 ### utility.ts
 - `generateBaseBranchDetect()` — detect GitHub/GitLab/git-native base branch
-- `generateDeployBootstrap()` — detect deploy platform (fly, render, vercel...)
+- `generateDeployBootstrap()` — detect deploy platform (fly, render, vercel, netlify, heroku, railway)
 - `generateQAMethodology()` — 4 QA modes (diff-aware, full, quick, regression)
-
-**We need `generateBaseBranchDetect()` soon** — any skill that works with PRs needs it.
+- `generateSlugEval()` — project namespace evaluation
 
 ### codex-helpers.ts
-YAML generation for Codex skill format. Frontmatter transformation per host.
-`transformFrontmatter(content, host)` strips fields for Codex.
-
-**We need this** when we generate for Codex host.
+Codex format support:
+- `extractNameAndDescription(content)` — parse frontmatter
+- `condenseOpenAIShortDescription(desc)` — truncate to 120 chars
+- `generateOpenAIYaml(name, desc)` — Codex skill YAML
+- `transformFrontmatter(content, host)` — strip fields for Codex (keep only name + description)
+- `extractHookSafetyProse(tmplContent)` — safety advisory from hook config
 
 ### design.ts
-Design review methodology — 4 modes, letter grades, regression detection.
-**Later** — when we add design skills.
+Design review methodology generators: design review lite (code-level), full design
+methodology (4 modes), design hard rules, design outside voices (Codex critique),
+design sketch (early-stage visualization). Used by design-review and plan-design-review skills.
 
 ### review.ts
-Code review methodology, review readiness dashboard (5 dimensions),
-plan file integration, staleness detection.
-**Later** — when we add review skills.
+Code review methodology: review readiness dashboard (5 dimensions), plan file review,
+spec review loop, Codex second opinion, adversarial testing (auto-scales by diff size),
+plan completion audit. Used by review, ship, and autoplan skills.
 
 ### testing.ts
-Test framework bootstrap (8 steps), test coverage audit (3 modes).
-Codepath tracing with ASCII diagrams. Coverage gate (60% min, 80% target).
-**Later** — when we add testing/QA skills.
+Test framework bootstrap (8 steps from zero to CI), test coverage audit (3 modes:
+plan, ship, review). Codepath tracing with ASCII diagrams, coverage gate (60% min,
+80% target). Used by ship and qa skills.
 
 ### browse.ts
-Browser automation command reference. gstack-specific, skip.
+Browser command reference and snapshot flags, generated from `browse/src/commands.ts`
+and `browse/src/snapshot.ts`. gstack-specific (Playwright headless browser).
 
 ## lib/ — Reusable Infrastructure
 
-### worktree.ts — HIGHLY REUSABLE
-Git worktree management for isolated test execution:
+### worktree.ts
+Git worktree management for isolated execution:
 - `create(testName)` — creates detached worktree at HEAD
-- `harvest(testName)` — extracts all changes as patch
-- `cleanup()` — removes worktrees, auto-cleanup on exit
-- SHA256 deduplication of harvested patches
+- `harvest(testName)` — extracts all changes as patch (staged + untracked)
+- `cleanup()` / `cleanupAll()` — removes worktrees, auto-cleanup on exit
+- SHA256 deduplication via `~/.gstack-dev/harvests/dedup.json`
+- `pruneStale()` — removes worktrees from previous runs
 
-**We should adopt this** for any skill that needs isolated execution
-(TDD, debugging, parallel agents).
-
-## What rkstack is Missing Right Now
-
-### Immediate (needed for Phase 1)
-1. **discover-skills.ts** — separate discovery module
-2. **Preamble tier system** — T1/T2/T3/T4 instead of flat preamble
-3. **AskUserFormat as part of preamble** (not a separate placeholder)
-4. **Completeness section as part of preamble**
-5. **`<!-- AUTO-GENERATED -->` header** ✓ done
-
-### Soon (needed for Phase 2)
-6. **skill-check.ts** — health dashboard
-7. **dev-skill.ts** — watch mode for template authoring
-8. **generateBaseBranchDetect()** — for PR-related skills
-9. **Host-aware generation** — Codex output from same templates
-
-### Later (Phase 3+)
-10. **worktree.ts** — isolated execution
-11. **analytics** — usage tracking
-12. **Design/review/testing resolvers** — when those skills are added
+General-purpose, not gstack-specific. Useful for any skill that needs isolated
+execution (TDD, debugging, parallel agents, E2E testing).
