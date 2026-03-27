@@ -12,14 +12,14 @@ setup:
 [group("build")]
 [doc("Generate all SKILL.md from templates")]
 build:
-  echo "TODO: gen-skill-docs"
+  ./scripts/gen-skill-docs
 
 [group("build")]
 [doc("Check that generated SKILL.md files are up to date")]
 check:
-  echo "TODO: gen-skill-docs --check"
+  ./scripts/gen-skill-docs --check
 
 [group("detect")]
 [doc("Detect project stack via scc")]
 detect:
-  scc --format json --no-cocomo .
+  scc --format wide --no-cocomo .
