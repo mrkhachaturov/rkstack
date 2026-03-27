@@ -45,13 +45,7 @@ You should see a symlink (or junction on Windows) pointing to:
 cd ~/.codex/rkstack && git pull
 ```
 
-Then rebuild the generated plugin:
-
-```bash
-cd ~/.codex/rkstack && just build rkstack-base
-```
-
-The symlink continues to point at the rebuilt skills directory.
+Skills update instantly through the symlink.
 
 ## Uninstalling
 

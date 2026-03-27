@@ -1,10 +1,8 @@
-# rkstack
+# RKstack
 
-Curated AI development workflow — unified skill packs for Claude Code.
+Curated AI development workflow — unified skill packs for Claude Code, Codex, and Gemini.
 
-Combines the best of [superpowers](https://github.com/obra/superpowers),
-[gstack](https://github.com/garrytan/gstack), and
-[Anthropic skills](https://github.com/anthropics/skills) into per-project
+Combines the best of multiple upstream skill sources into per-project
 skill packs with consistent naming and controlled flow.
 
 ## Install
