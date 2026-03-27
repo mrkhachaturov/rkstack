@@ -1,8 +1,4 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
-set dotenv-load := false
-
-default:
-  @just --list
 
 [group("setup")]
 [doc("Install pinned tools via mise")]
@@ -18,6 +14,16 @@ build:
 [doc("Check that generated SKILL.md files are up to date")]
 check:
   bun scripts/gen-skill-docs.ts --dry-run
+
+[group("build")]
+[doc("Health dashboard for all skills")]
+skill-check:
+  bun scripts/skill-check.ts
+
+[group("dev")]
+[doc("Watch mode: auto-regen + validate on change")]
+dev:
+  bun scripts/dev-skill.ts
 
 [group("detect")]
 [doc("Detect project stack via scc")]

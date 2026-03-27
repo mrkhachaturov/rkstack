@@ -3,26 +3,29 @@
  * Generate SKILL.md files from .tmpl templates.
  *
  * Pipeline:
- *   read .tmpl → find {{PLACEHOLDERS}} → resolve via RESOLVERS → write .md
+ *   discover .tmpl → parse frontmatter → build TemplateContext → resolve {{PLACEHOLDERS}} → write .md
  *
  * Supports --dry-run: generate to memory, exit 1 if different from committed file.
- * Used by `just check` and CI freshness checks.
+ * Supports --host: generate for claude (default), codex, or gemini.
  *
  * Usage:
  *   bun scripts/gen-skill-docs.ts              # generate all
  *   bun scripts/gen-skill-docs.ts --dry-run    # check freshness
+ *   bun scripts/gen-skill-docs.ts --host codex # generate for Codex
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { RESOLVERS } from './resolvers/index';
+import { HOST_PATHS } from './resolvers/types';
 import type { Host, TemplateContext } from './resolvers/types';
+import { discoverTemplates } from './discover-skills';
 
 const ROOT = path.resolve(import.meta.dir, '..');
-const SKILLS_DIR = path.join(ROOT, 'skills');
 const DRY_RUN = process.argv.includes('--dry-run');
+const GENERATED_HEADER = '<!-- AUTO-GENERATED from {{SOURCE}} — do not edit directly -->\n<!-- Regenerate: just build -->';
 
-// Host detection (for future multi-host support)
+// Host detection
 const HOST: Host = (() => {
   const hostArg = process.argv.find(a => a.startsWith('--host'));
   if (!hostArg) return 'claude';
@@ -33,81 +36,103 @@ const HOST: Host = (() => {
   throw new Error(`Unknown host: ${val}. Use claude, codex, or gemini.`);
 })();
 
-// ─── Template Discovery ────────────────────────────────────
-
-function discoverTemplates(dir: string): string[] {
-  const templates: string[] = [];
-
-  function walk(current: string) {
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        walk(full);
-      } else if (entry.name.endsWith('.tmpl')) {
-        templates.push(full);
-      }
-    }
-  }
-
-  if (fs.existsSync(dir)) walk(dir);
-
-  // Also check root SKILL.md.tmpl
-  const rootTmpl = path.join(ROOT, 'SKILL.md.tmpl');
-  if (fs.existsSync(rootTmpl)) {
-    templates.push(rootTmpl);
-  }
-
-  return templates.sort();
-}
-
-// ─── Placeholder Resolution ────────────────────────────────
+// ─── Frontmatter Parsing ──────────────────────────────────
 
 const PLACEHOLDER_RE = /\{\{([A-Z_]+)\}\}/g;
 
-function resolveTemplate(templatePath: string, content: string): string {
-  // Derive skill name from path
-  const relative = path.relative(ROOT, templatePath);
-  const parts = relative.split(path.sep);
-  // skills/brainstorming/SKILL.md.tmpl → skillName = "brainstorming"
-  // SKILL.md.tmpl (root) → skillName = "rkstack"
-  const skillName = parts[0] === 'skills' && parts.length >= 2
-    ? parts[1]
-    : 'rkstack';
+/** Extract the YAML frontmatter block (between --- delimiters) */
+function extractFrontmatter(content: string): string {
+  if (!content.startsWith('---')) return '';
+  const fmEnd = content.indexOf('\n---', 4);
+  if (fmEnd === -1) return '';
+  return content.slice(4, fmEnd);
+}
 
-  const skillDir = path.dirname(templatePath);
+/** Extract `name:` from YAML frontmatter */
+function extractName(fm: string): string {
+  const match = fm.match(/^name:\s*(.+)$/m);
+  return match ? match[1].trim() : '';
+}
+
+/** Extract `preamble-tier:` from YAML frontmatter (1-4) */
+function extractPreambleTier(fm: string): number | undefined {
+  const match = fm.match(/^preamble-tier:\s*(\d+)$/m);
+  return match ? parseInt(match[1], 10) : undefined;
+}
+
+/** Extract `benefits-from:` list from YAML frontmatter */
+function extractBenefitsFrom(fm: string): string[] | undefined {
+  // Inline: benefits-from: [a, b, c]
+  const inlineMatch = fm.match(/^benefits-from:\s*\[([^\]]*)\]/m);
+  if (inlineMatch) {
+    return inlineMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+  }
+  // Block:
+  // benefits-from:
+  //   - a
+  //   - b
+  const blockMatch = fm.match(/^benefits-from:\s*\n((?:\s+-\s+.+\n?)*)/m);
+  if (blockMatch) {
+    return blockMatch[1]
+      .split('\n')
+      .map(l => l.replace(/^\s+-\s+/, '').trim())
+      .filter(Boolean);
+  }
+  return undefined;
+}
+
+// ─── Template Processing ──────────────────────────────────
+
+function processTemplate(tmplRel: string): string {
+  const tmplPath = path.join(ROOT, tmplRel);
+  const tmplContent = fs.readFileSync(tmplPath, 'utf-8');
+
+  // Extract metadata from frontmatter block only (not the entire file)
+  const fm = extractFrontmatter(tmplContent);
+  const extractedName = extractName(fm);
+  const skillName = extractedName || path.basename(path.dirname(tmplPath));
+  const preambleTier = extractPreambleTier(fm);
+  const benefitsFrom = extractBenefitsFrom(fm);
 
   const ctx: TemplateContext = {
-    host: HOST,
     skillName,
-    skillDir,
-    repoRoot: ROOT,
+    tmplPath,
+    benefitsFrom,
+    host: HOST,
+    paths: HOST_PATHS[HOST],
+    preambleTier,
   };
 
-  // Resolve placeholders
-  let result = content.replace(PLACEHOLDER_RE, (match, name: string) => {
+  // Resolve placeholders — fail on unknown
+  let content = tmplContent.replace(PLACEHOLDER_RE, (match: string, name: string) => {
     const resolver = RESOLVERS[name];
     if (!resolver) {
-      console.error(`WARNING: unknown placeholder ${match} in ${relative}`);
-      return match;
+      throw new Error(`Unresolved placeholder ${match} in ${tmplRel}`);
     }
     return resolver(ctx);
   });
 
-  // Inject AUTO-GENERATED comment after frontmatter
-  const frontmatterEnd = result.indexOf('---', result.indexOf('---') + 3);
-  if (frontmatterEnd !== -1) {
-    const insertPos = frontmatterEnd + 3;
-    const comment = `\n<!-- AUTO-GENERATED from ${path.basename(templatePath)} — do not edit directly -->\n<!-- Regenerate: just build -->`;
-    result = result.slice(0, insertPos) + comment + result.slice(insertPos);
+  // Validate no remaining placeholders
+  const remaining = [...content.matchAll(PLACEHOLDER_RE)].map(m => m[0]);
+  if (remaining.length > 0) {
+    throw new Error(`Unresolved placeholders in ${tmplRel}: ${remaining.join(', ')}`);
   }
 
-  return result;
+  // Inject AUTO-GENERATED header after frontmatter
+  const header = GENERATED_HEADER.replace('{{SOURCE}}', path.basename(tmplPath));
+  const fmEnd = content.indexOf('---', content.indexOf('---') + 3);
+  if (fmEnd !== -1) {
+    const insertPos = fmEnd + 3;
+    content = content.slice(0, insertPos) + '\n' + header + content.slice(insertPos);
+  }
+
+  return content;
 }
 
 // ─── Main ──────────────────────────────────────────────────
 
 function main() {
-  const templates = discoverTemplates(SKILLS_DIR);
+  const templates = discoverTemplates(ROOT);
 
   if (templates.length === 0) {
     console.error('No .tmpl files found');
@@ -115,36 +140,45 @@ function main() {
   }
 
   let staleCount = 0;
+  let errorCount = 0;
 
-  for (const tmpl of templates) {
-    const outputPath = tmpl.replace(/\.tmpl$/, '');
-    const relative = path.relative(ROOT, outputPath);
+  for (const { tmpl, output } of templates) {
+    const outputPath = path.join(ROOT, output);
 
-    const raw = fs.readFileSync(tmpl, 'utf-8');
-    const generated = resolveTemplate(tmpl, raw);
+    let generated: string;
+    try {
+      generated = processTemplate(tmpl);
+    } catch (err: any) {
+      console.error(`ERROR: ${err.message}`);
+      errorCount++;
+      continue;
+    }
 
     if (DRY_RUN) {
-      // Check mode
       if (fs.existsSync(outputPath)) {
         const existing = fs.readFileSync(outputPath, 'utf-8');
         if (existing !== generated) {
-          console.log(`STALE: ${relative}`);
+          console.log(`STALE: ${output}`);
           staleCount++;
         }
       } else {
-        console.log(`MISSING: ${relative}`);
+        console.log(`MISSING: ${output}`);
         staleCount++;
       }
     } else {
-      // Generate mode
       fs.writeFileSync(outputPath, generated);
-      console.log(`Generated: ${relative}`);
+      console.log(`Generated: ${output}`);
     }
+  }
+
+  if (errorCount > 0) {
+    console.error(`\n${errorCount} template(s) had errors`);
+    process.exit(1);
   }
 
   if (DRY_RUN) {
     if (staleCount > 0) {
-      console.error(`\nERROR: ${staleCount} file(s) out of date. Run: just build`);
+      console.error(`\n${staleCount} file(s) out of date. Run: just build`);
       process.exit(1);
     } else {
       console.log('OK: all generated files up to date');
