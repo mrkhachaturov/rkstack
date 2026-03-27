@@ -31,13 +31,15 @@ bun scripts/gen-skill-docs.ts --host codex # generate for Codex
 ## Verification
 
 ```bash
-just build && just check    # run before every commit
+bun test                    # run before every commit — 75 tests, <6s
+just build && just check    # run before every commit — verify generated files are fresh
 just skill-check            # run before shipping — validates frontmatter, coverage, freshness
 ```
 
-`just check` verifies all generated SKILL.md files match their templates. `just skill-check`
-validates frontmatter fields, template coverage, and freshness. Both must pass before
-creating a PR.
+`bun test` runs hook script tests (careful/freeze patterns, edge cases), gen-skill-docs
+quality checks (discovery, frontmatter, placeholder resolution, tier gating), and worktree
+unit tests. `just check` verifies generated files match templates. `just skill-check`
+validates frontmatter and coverage. All three must pass before creating a PR.
 
 ## Repository Structure
 
