@@ -1,11 +1,13 @@
 ---
 name: finishing-a-development-branch
-preamble-tier: 3
-version: 1.0.0
+preamble-tier: 4
+version: 2.0.0
 description: |
   Complete development work by presenting structured options for merge,
   PR, or cleanup. Use when implementation is complete and all tests pass.
   Guides the final steps: verify, choose integration method, execute.
+  Includes shipping gates: base-branch merge before tests, verification
+  gate, CHANGELOG/TODOS auto-update, bisectable commit check, rich PR body.
 allowed-tools:
   - Bash
   - Read
@@ -162,7 +164,7 @@ Use `_BASE` (the value printed above) as the base branch for all diff operations
 
 Guide completion of development work by presenting clear options and handling the chosen workflow.
 
-**Core principle:** Verify tests -> Present options -> Execute choice -> Clean up.
+**Core principle:** Merge base -> Verify tests -> Present options -> Execute choice -> Clean up.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
@@ -199,7 +201,30 @@ If there are uncommitted changes, present them and use AskUserQuestion:
 > B) Stash changes -- keep them separate from this branch -- Completeness: 7/10
 > C) Discard uncommitted changes -- Completeness: 5/10
 
-### 1.3 Run tests
+### 1.3 Merge base branch into feature branch (BEFORE tests)
+
+Fetch and merge the base branch so tests run against the merged state — not just the feature branch in isolation:
+
+```bash
+git fetch origin <base> && git merge origin/<base> --no-edit
+```
+
+**If already up to date:** Continue silently.
+
+**If there are merge conflicts:**
+- Simple conflicts (whitespace, import ordering, lock files): auto-resolve and commit.
+- Complex or ambiguous conflicts: **STOP** and use AskUserQuestion:
+
+> **Re-ground:** Merging `<base>` into `<branch>` produced conflicts in <N> files.
+>
+> **Simplify:** The base branch has changes that overlap with your work. Some conflicts need your judgment to resolve correctly.
+>
+> **RECOMMENDATION:** Choose A to resolve together. Completeness: 9/10.
+>
+> A) Show conflicts and resolve together (recommended) -- Completeness: 9/10
+> B) Abort merge and keep branch as-is -- Completeness: 5/10
+
+### 1.4 Run tests (on merged code)
 
 Read the test command from CLAUDE.md (look for a `## Testing` section). If no test command is configured, auto-detect the project's test framework:
 
@@ -273,9 +298,9 @@ Use AskUserQuestion:
 
 **After triage:** If any in-branch failures remain unfixed, **STOP**. Do not proceed to Step 2. If all failures were pre-existing and handled (fixed, TODOed, assigned, or skipped), continue.
 
-**If all tests pass:** Continue to Step 2.
+**If all tests pass:** Continue to Step 1.5.
 
-### 1.4 Gather branch summary
+### 1.5 Gather branch summary
 
 ```bash
 # Commit count on this branch
@@ -339,21 +364,18 @@ Check `REPO_MODE` from the preamble:
 
 ### Option A: Merge Locally
 
-1. Fetch and merge base into feature branch first (catch conflicts early):
-   ```bash
-   git fetch origin <base> && git merge origin/<base> --no-edit
-   ```
+1. Check commit history for bisectability (see Step 4.5 below).
 
-2. If merge conflicts arise, resolve them. If complex, **STOP** and show conflicts.
-
-3. Switch to base branch and merge:
+2. Switch to base branch and merge:
    ```bash
    git checkout <base>
    git pull origin <base>
    git merge <branch> --no-edit
    ```
 
-4. Verify tests pass on the merged result. Use the same test command from Step 1. If tests fail, **STOP** -- do not push broken code.
+3. Verify tests pass on the merged result. Use the same test command from Step 1.4. If tests fail, **STOP** -- do not push broken code.
+
+4. Update CHANGELOG and TODOS (see Steps 4.6 and 4.7 below).
 
 5. Push:
    ```bash
@@ -364,20 +386,34 @@ Check `REPO_MODE` from the preamble:
 
 ### Option B: Push + Create PR
 
-1. Push the branch with upstream tracking:
+1. Check commit history for bisectability (see Step 4.5 below).
+
+2. Update CHANGELOG (see Step 4.6 below).
+
+3. Update TODOS.md (see Step 4.7 below).
+
+4. Run the Verification Gate (see Step 4.8 below).
+
+5. Push the branch with upstream tracking:
    ```bash
    git push -u origin <branch>
    ```
 
-2. Create a PR using `gh pr create` with a structured body:
+6. Create a PR using `gh pr create` with a rich body:
+
    ```bash
    gh pr create --base <base> --title "<type>: <summary>" --body "$(cat <<'EOF'
    ## Summary
    <bullet points of what changed -- infer from commits and diff>
 
-   ## Test plan
-   - [ ] All tests pass
-   - [ ] <additional verification steps relevant to the changes>
+   ## Test Results
+   <test suite name>: <N> tests passed, 0 failures
+
+   ## Files Changed
+   <output of git diff <base>...HEAD --stat, summarized>
+
+   ## TODOS Completed
+   <list of TODO items completed by this branch, or "None">
 
    Generated with [Claude Code](https://claude.com/claude-code)
    EOF
@@ -386,11 +422,19 @@ Check `REPO_MODE` from the preamble:
 
    For the title, use conventional commit format: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:` based on the nature of the changes.
 
-   For the summary, use `git log <base>..HEAD --oneline` and `git diff <base>...HEAD --stat` to write concise bullet points describing what changed.
+   For the Summary section, use `git log <base>..HEAD --oneline` and `git diff <base>...HEAD --stat` to write concise bullet points describing what changed.
 
-3. Output the PR URL.
+   For the Test Results section, include the test command used and its pass/fail counts from Step 1.4.
 
-4. Continue to Step 5 (Cleanup).
+   For the Files Changed section, summarize `git diff <base>...HEAD --stat` (total files, insertions, deletions).
+
+   For the TODOS Completed section, include any items marked done in Step 4.7, or "None" if no items were completed.
+
+7. Output the PR URL.
+
+8. Suggest next step: "Consider running `/document-release` to update project documentation for these changes."
+
+9. Continue to Step 5 (Cleanup).
 
 ### Option C: Keep Branch As-Is
 
@@ -437,6 +481,137 @@ Continue to Step 5 (Cleanup).
 
 ---
 
+## Step 4.5: Bisectable Commits Check
+
+Before pushing (for Options A and B), check if the branch has a clean commit history:
+
+```bash
+git log <base>..HEAD --oneline
+```
+
+Look for WIP commits, fixup commits, or disorganized history. Signs of a messy history:
+- Commit messages starting with `wip`, `WIP`, `fixup!`, `squash!`, `temp`, `tmp`
+- Multiple commits that touch the same file with incremental fixes
+- Messages like `fix typo`, `oops`, `forgot to add`
+
+**If the history is clean:** Continue silently.
+
+**If WIP/fixup commits exist:** Use AskUserQuestion:
+
+> **Re-ground:** Branch `<branch>` has <N> commits, some of which appear to be WIP or fixup commits: <list problematic commit messages>.
+>
+> **Simplify:** A clean commit history makes it easier to review changes and use `git bisect` to find bugs later. You can squash these into logical commits.
+>
+> **RECOMMENDATION:** Choose A for a cleaner history. Completeness: 9/10.
+>
+> A) Squash into logical commits (recommended) -- interactive rebase to clean up -- Completeness: 9/10
+> B) Keep as-is -- ship with current history -- Completeness: 7/10
+
+If user chooses A: perform a non-interactive rebase to squash fixup/WIP commits into their logical parent commits. Each resulting commit should represent one coherent change. After rebasing, re-run tests to verify nothing broke.
+
+---
+
+## Step 4.6: Auto-generate CHANGELOG Entry
+
+**Only if `CHANGELOG.md` exists** in the repository root.
+
+```bash
+ls CHANGELOG.md 2>/dev/null
+```
+
+**If CHANGELOG.md does not exist:** Skip this step silently.
+
+**If CHANGELOG.md exists:**
+
+1. Read the CHANGELOG header to understand the existing format:
+   ```bash
+   head -20 CHANGELOG.md
+   ```
+
+2. Auto-generate an entry from ALL commits on the branch:
+   - Use `git log <base>..HEAD --oneline` to see every commit being shipped
+   - Use `git diff <base>...HEAD` to understand the full scope of changes
+   - The entry must cover ALL changes, not just recent ones
+   - Write for **users**, not contributors: describe what changed in plain language
+   - Categorize into applicable sections:
+     - `### Added` -- new features
+     - `### Changed` -- changes to existing functionality
+     - `### Fixed` -- bug fixes
+     - `### Removed` -- removed features
+   - Format: `## [Unreleased] - YYYY-MM-DD` (or match the project's existing format)
+   - Insert after the file header, before existing entries
+
+3. Commit the CHANGELOG update:
+   ```bash
+   git add CHANGELOG.md && git commit -m "docs: update CHANGELOG for branch <branch>"
+   ```
+
+**Do NOT ask the user to describe changes.** Infer everything from the diff and commit history.
+
+---
+
+## Step 4.7: TODOS.md Auto-update
+
+**Only if `TODOS.md` exists** in the repository root.
+
+```bash
+ls TODOS.md 2>/dev/null
+```
+
+**If TODOS.md does not exist:** Skip this step silently.
+
+**If TODOS.md exists:**
+
+1. Read the current TODOS.md.
+
+2. Cross-reference against the changes being shipped. Use the diff and commit history already gathered:
+   - `git diff <base>...HEAD` (full diff against the base branch)
+   - `git log <base>..HEAD --oneline` (all commits being shipped)
+
+3. For each TODO item, check if the changes on this branch complete it by:
+   - Matching commit messages against the TODO title and description
+   - Checking if files referenced in the TODO appear in the diff
+   - Checking if the TODO's described work matches the functional changes
+
+4. **Be conservative:** Only mark a TODO as completed if there is clear evidence in the diff. If uncertain, leave it alone.
+
+5. Move completed items to a `## Completed` section (create it if it does not exist). Append: `**Completed:** <branch> (YYYY-MM-DD)`
+
+6. Commit the TODOS update:
+   ```bash
+   git add TODOS.md && git commit -m "docs: mark completed TODOs for branch <branch>"
+   ```
+
+7. Output summary:
+   - `TODOS.md: N items marked complete (item1, item2, ...). M items remaining.`
+   - Or: `TODOS.md: No completed items detected. M items remaining.`
+
+**Defensive:** If TODOS.md cannot be written (permission error, parse issue), warn the user and continue. Never stop the workflow for a TODOS failure.
+
+---
+
+## Step 4.8: Verification Gate
+
+**IRON LAW: If any code was changed after tests passed, re-run tests before proceeding. Never ship unverified code.**
+
+Before pushing, check if code changed during Steps 4.5-4.7:
+
+1. **Were any source files modified** after Step 1.4's test run? (CHANGELOG and TODOS edits do not count -- only code, test, or config files.)
+
+2. **If yes:** Re-run the test suite. Use the same test command from Step 1.4. Paste fresh output.
+
+3. **If tests fail:** STOP. Do not push. Fix the issue and re-run tests.
+
+4. **Rationalization prevention:**
+   - "Should work now" -- RUN IT.
+   - "I'm confident" -- Confidence is not evidence.
+   - "I already tested earlier" -- Code changed since then. Test again.
+   - "It's a trivial change" -- Trivial changes break production.
+
+Claiming work is complete without verification is dishonesty, not efficiency.
+
+---
+
 ## Step 5: Cleanup
 
 **For Options A, B, D only.** Skip for Option C.
@@ -475,18 +650,20 @@ Branch completion: DONE
 - Worktree: <removed | not applicable>
 - Local branch: <deleted | kept for PR>
 <PR URL if Option B>
+<CHANGELOG updated: yes/no>
+<TODOS updated: N items completed / no changes / not applicable>
 ```
 
 ---
 
 ## Quick Reference
 
-| Option | Tests | Merge | Push | PR | Keep Worktree | Cleanup Branch |
-|--------|-------|-------|------|----|---------------|----------------|
-| A. Merge locally | verify post-merge | yes | yes (base) | no | no | yes (delete) |
-| B. Push + create PR | pre-verified | no | yes (branch) | yes | yes | no (keep) |
-| C. Keep as-is | pre-verified | no | no | no | yes | no |
-| D. Discard | n/a | no | no | no | no | yes (force) |
+| Option | Tests | Merge Base First | Bisect Check | Push | PR | CHANGELOG | TODOS | Cleanup Branch |
+|--------|-------|-----------------|--------------|------|----|-----------|-------|----------------|
+| A. Merge locally | verify post-merge | yes (Step 1.3) | yes | yes (base) | no | yes (if exists) | yes (if exists) | yes (delete) |
+| B. Push + create PR | pre-verified | yes (Step 1.3) | yes | yes (branch) | yes (rich body) | yes (if exists) | yes (if exists) | no (keep) |
+| C. Keep as-is | pre-verified | yes (Step 1.3) | no | no | no | no | no | no |
+| D. Discard | n/a | n/a | no | no | no | no | no | yes (force) |
 
 ---
 
@@ -494,9 +671,13 @@ Branch completion: DONE
 
 - **Never skip test verification.** If tests fail, stop.
 - **Never merge without verifying tests on the result.** Post-merge test run is mandatory for Option A.
+- **Never ship unverified code.** If code changed after tests passed, re-run tests (Verification Gate).
 - **Never force-push.** Use regular `git push` only.
 - **Never delete work without explicit confirmation.** Option D requires typed confirmation.
 - **Never hardcode test commands.** Read from CLAUDE.md or auto-detect.
+- **Always merge base branch before running tests.** Tests must run on the merged state, not the feature branch in isolation.
 - **Always present exactly 4 options.** Keep them structured and concise.
 - **Always use AskUserQuestion format** with re-ground, simplify, recommend, and lettered options.
 - **Clean up worktree for Options A and D only.** Keep for B and C.
+- **CHANGELOG entries are for users, not contributors.** Write what changed in plain language.
+- **TODOS completion must be conservative.** Only mark items done when the diff clearly shows the work is done.
