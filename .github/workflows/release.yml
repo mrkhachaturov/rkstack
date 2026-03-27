@@ -15,26 +15,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract version and changelog
-        id: info
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Extract version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-          # Extract changelog entry (between ## headers)
-          NOTES=$(awk "/^## ${VERSION}/,/^## [0-9]/" CHANGELOG.md | sed '$ d')
-          # Write multiline to output
-          {
-            echo "notes<<NOTES_EOF"
-            echo "$NOTES"
-            echo "NOTES_EOF"
-          } >> "$GITHUB_OUTPUT"
+      - name: Read changelog entry
+        id: changelog
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          version: ${{ steps.version.outputs.version }}
+          path: ./CHANGELOG.md
+          validation_level: warn
 
       - name: Create GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "v${{ steps.info.outputs.version }}" \
-            --notes "${{ steps.info.outputs.notes }}" \
-            --latest
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: v${{ steps.version.outputs.version }}
+          body: ${{ steps.changelog.outputs.changes }}
+          makeLatest: true

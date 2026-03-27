@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — 2026-03-27
+## [0.1.0] - 2026-03-27
 
 Initial release. Complete AI development workflow as a single plugin.
 

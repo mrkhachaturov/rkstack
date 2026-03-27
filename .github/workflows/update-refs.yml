@@ -93,7 +93,7 @@ jobs:
           # Prepend entry after the first line (# Changelog)
           sed -i "1a\\
           \\
-          ## ${VERSION} — ${DATE}\\
+          ## [${VERSION}] - ${DATE}\\
           \\
           Updated Claude Code reference docs: ${CHANGED}" CHANGELOG.md
 
@@ -126,23 +126,23 @@ jobs:
           git tag "v${VERSION}"
           git push origin "v${VERSION}"
 
+      - name: Read changelog entry
+        if: steps.refs-changed.outputs.refs_changed == 'true'
+        id: changelog
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          version: ${{ steps.version.outputs.version }}
+          path: ./CHANGELOG.md
+          validation_level: warn
+
       - name: Create GitHub release
         if: steps.refs-changed.outputs.refs_changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-
-          # Extract changelog entry for this version (between ## headers)
-          NOTES=$(awk "/^## ${VERSION}/,/^## [0-9]/" CHANGELOG.md | sed '$ d')
-          if [ -z "$NOTES" ]; then
-            NOTES="Updated Claude Code reference docs to v${VERSION}"
-          fi
-
-          gh release create "v${VERSION}" \
-            --title "v${VERSION}" \
-            --notes "$NOTES" \
-            --latest=false
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          body: ${{ steps.changelog.outputs.changes }}
+          makeLatest: false
 
       - name: No changes
         if: steps.check.outputs.changed != 'true'
