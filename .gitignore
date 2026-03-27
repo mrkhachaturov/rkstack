@@ -1,6 +1,16 @@
 .DS_Store
 node_modules/
 *.log
+bun.lock
 
 # Generated project-local skills (from dev/skills/ via just dev-build)
 .claude/skills/
+
+# Worktree directories (lib/worktree.ts creates these, cleaned on exit)
+.rkstack-worktrees/
+
+# Local state (freeze boundary, brainstorm sessions)
+.rkstack/
+
+# Temporary files
+tmp/
