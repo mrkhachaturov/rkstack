@@ -12,9 +12,10 @@ no intermediate layers. Claude Code reads `skills/` directly.
 ## Commands
 
 ```bash
-just build         # generate all SKILL.md from templates
+just build         # pull latest docs + generate all SKILL.md from templates
 just check         # verify generated files are up to date (--dry-run)
 just skill-check   # health dashboard for all skills
+just dev-build     # generate project-local skills (dev/ → .claude/skills/)
 just dev           # watch mode: auto-regen + validate on change
 just detect        # run scc on current directory
 just setup         # install tools via mise
@@ -26,6 +27,7 @@ Bun equivalents:
 bun scripts/gen-skill-docs.ts              # generate all
 bun scripts/gen-skill-docs.ts --dry-run    # check freshness
 bun scripts/gen-skill-docs.ts --host codex # generate for Codex
+bun scripts/gen-dev-skills.ts              # generate dev skills
 ```
 
 ## Verification
@@ -49,7 +51,7 @@ rkstack/
 ├── hooks/                        # SessionStart + hook scripts
 │   ├── hooks.json                # SessionStart declaration
 │   └── session-start             # injects using-rkstack at session start
-├── skills/                       # all 21 skills (templates + generated)
+├── skills/                       # 21 shipped skills (templates + generated)
 │   ├── brainstorming/
 │   │   ├── SKILL.md.tmpl         # template (human-authored)
 │   │   ├── SKILL.md              # generated (committed)
@@ -58,15 +60,25 @@ rkstack/
 │   │   ├── SKILL.md.tmpl
 │   │   ├── SKILL.md
 │   │   └── bin/check-careful.sh  # PreToolUse hook script
-│   ├── freeze/
+│   ├── writing-skills/
 │   │   ├── SKILL.md.tmpl
 │   │   ├── SKILL.md
-│   │   └── bin/check-freeze.sh   # PreToolUse hook script
+│   │   └── refs/                 # official Claude Code docs (copied from upstream by build)
 │   └── ...                       # 18 more skills
+├── dev/                          # contributor-only (not shipped to users)
+│   └── skills/
+│       └── writing-rkstack-skills/
+│           ├── SKILL.md.tmpl     # template for project-local skill
+│           └── *.md              # companion files
+├── .claude/skills/               # generated project-local skills (gitignored)
+│   └── writing-rkstack-skills/
+│       ├── SKILL.md              # generated from dev/skills/
+│       └── refs/                 # official Claude Code docs (14 files)
 ├── agents/                       # agent definitions
 │   └── code-reviewer.md          # two-pass review agent
 ├── scripts/                      # build tooling (Bun/TypeScript)
-│   ├── gen-skill-docs.ts         # .tmpl → SKILL.md generator
+│   ├── gen-skill-docs.ts         # .tmpl → SKILL.md generator + refs copy
+│   ├── gen-dev-skills.ts         # dev/skills/ → .claude/skills/ generator
 │   ├── discover-skills.ts        # filesystem scanner for skills
 │   ├── skill-check.ts            # health dashboard
 │   ├── dev-skill.ts              # watch mode
@@ -78,15 +90,17 @@ rkstack/
 ├── lib/                          # reusable infrastructure
 │   └── worktree.ts               # git worktree isolation
 ├── .upstreams/                   # git submodules (read-only reference)
-│   ├── superpowers/
-│   └── gstack/
+│   ├── superpowers/              # obra/superpowers — skill content reference
+│   ├── gstack/                   # garrytan/gstack — architecture reference
+│   └── claude-code-docs/         # Claude Code official docs (auto-updated)
+├── .github/workflows/
+│   ├── check.yml                 # CI: freshness + skill health + tests (push/PR)
+│   ├── update-refs.yml           # CI: daily upstream docs pull + version bump
+│   └── release.yml               # CI: GitHub release from tag
 ├── docs/
-│   ├── workflow.md               # how skills connect end-to-end
-│   ├── analysis/                 # upstream study notes
-│   ├── design/                   # architecture decisions
-│   └── plans/                    # implementation plans
+│   └── workflow.md               # how skills connect end-to-end
 ├── VERSION                       # single source of truth for version
-├── CHANGELOG.md                  # user-facing release notes
+├── CHANGELOG.md                  # user-facing release notes (Keep a Changelog format)
 ├── ETHOS.md                      # builder philosophy
 ├── ARCHITECTURE.md               # why rkstack is built this way
 ├── CONTRIBUTING.md               # how to contribute
@@ -134,6 +148,16 @@ drops the other side's template changes.
 Files like `spec-document-reviewer-prompt.md`, `visual-companion.md`,
 `testing-anti-patterns.md` are hand-authored and live alongside the template.
 
+### Refs pipeline
+
+`skills/writing-skills/refs/` contains official Claude Code documentation copied
+from `.upstreams/claude-code-docs/docs/` by `gen-skill-docs.ts` during build.
+These are committed and shipped to users. CI (`update-refs.yml`) checks daily
+for upstream changes, copies updated refs, and bumps the patch version.
+
+`dev/skills/*/` templates get refs from the same upstream but output to
+`.claude/skills/*/refs/` (gitignored, contributor-only) via `gen-dev-skills.ts`.
+
 ## Preamble
 
 The preamble is a bash block injected at the top of every generated SKILL.md.
@@ -141,7 +165,7 @@ It runs first when Claude loads a skill, collecting project context.
 
 | Tier | Skills | What it includes |
 |------|--------|-----------------|
-| T1 | using-rkstack, careful, freeze, guard, unfreeze | Core: scc detection, branch, repo-mode, CLAUDE.md check |
+| T1 | using-rkstack, careful, freeze, guard, unfreeze | Core: scc detection, branch, repo-mode, framework hints, CLAUDE.md check |
 | T2 | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, dispatching-parallel, worktrees, receiving-review, writing-skills, document-release, retro, cso | T1 + AskUserFormat + Completeness table |
 | T3 | TDD | T2 + RepoMode section + SearchBeforeBuilding |
 | T4 | requesting-code-review, finishing-a-development-branch | T3 + full context (gate-quality skills) |
@@ -196,6 +220,9 @@ Examples of good bisection:
 **VERSION and CHANGELOG are branch-scoped.** Every feature branch that ships gets
 its own version bump and CHANGELOG entry. The entry describes what THIS branch
 adds — not what was already on main.
+
+**Format:** Keep a Changelog (`## [a.b.c] - YYYY-MM-DD`). CI bumps patch (`c`)
+automatically when refs update. We bump minor (`b`) or major (`a`) manually.
 
 **When to write the CHANGELOG entry:**
 - At `/finishing-a-development-branch` time, not during development or mid-branch.
@@ -283,21 +310,40 @@ template/preamble pattern.
 `.upstreams/` are git submodules — pinned, read-only references.
 
 ```
-.upstreams/superpowers/   ← obra/superpowers, skill content reference
-.upstreams/gstack/        ← garrytan/gstack, architecture reference
+.upstreams/superpowers/       ← obra/superpowers, skill content reference
+.upstreams/gstack/            ← garrytan/gstack, architecture reference
+.upstreams/claude-code-docs/  ← official Claude Code docs (auto-updated daily by CI)
 ```
 
 **Do not copy files from upstreams.** Study them, understand the pattern, then
 write your own version following that pattern.
 
+## CI Workflows
+
+| Workflow | Trigger | What it does |
+|----------|---------|-------------|
+| `check.yml` | Push/PR to main | Freshness check, skill health, `bun test` |
+| `update-refs.yml` | Daily + manual | Pull claude-code-docs, copy refs, bump patch version, CHANGELOG, tag, GitHub release |
+| `release.yml` | Tag `va.b.0` | GitHub release from CHANGELOG (manual releases only) |
+
+CI bumps only the patch version (`a.b.c` → `a.b.c+1`). We own `a.b`.
+
 ## How to Work in This Repo
+
+### Before writing a new skill
+
+Run `just dev-build` first. This pulls the latest Claude Code documentation
+and generates the `writing-rkstack-skills` project-local skill with up-to-date
+refs. Then invoke the skill for guidance on template format, frontmatter,
+preamble tiers, and the build workflow.
 
 ### Adding or editing a skill
 
-1. Edit `skills/{name}/SKILL.md.tmpl` (never edit SKILL.md directly)
-2. Run `just build` to regenerate
-3. Verify with `just check` and `just skill-check`
-4. Commit both .tmpl and generated .md
+1. Run `just dev-build` to ensure refs are fresh
+2. Edit `skills/{name}/SKILL.md.tmpl` (never edit SKILL.md directly)
+3. Run `just build` to regenerate
+4. Verify with `just check` and `just skill-check`
+5. Commit both .tmpl and generated .md
 
 ### Adding a new placeholder
 
@@ -308,11 +354,12 @@ write your own version following that pattern.
 
 ### Adding a new skill
 
-1. Check if gstack has this skill — if yes, study their version first
-2. Check if superpowers has this skill — if yes, use as content reference
-3. Create `skills/{name}/SKILL.md.tmpl` with proper frontmatter
-4. Add `{{PREAMBLE}}` as first placeholder after frontmatter
-5. Run `just build`, verify, commit
+1. Run `just dev-build` (ensures writing-rkstack-skills refs are current)
+2. Check if gstack has this skill — if yes, study their version first
+3. Check if superpowers has this skill — if yes, use as content reference
+4. Create `skills/{name}/SKILL.md.tmpl` with proper frontmatter
+5. Add `{{PREAMBLE}}` as first placeholder after frontmatter
+6. Run `just build`, verify, commit
 
 ### Adding infrastructure (scripts, bin, lib)
 
@@ -338,20 +385,24 @@ write your own version following that pattern.
 - discover-skills.ts (dynamic skill scanning)
 - skill-check.ts (health dashboard)
 - dev-skill.ts (watch mode)
+- gen-dev-skills.ts (dev/ → .claude/skills/ with refs from upstream)
 - Preamble tier system (T1-T4) with AskUserFormat, Completeness, RepoMode, Escalation
 - Resolvers: PREAMBLE, TEST_FAILURE_TRIAGE, BASE_BRANCH_DETECT
-- 21 skills at gstack depth:
+- 21 shipped skills at gstack depth:
   - T1: using-rkstack, careful, freeze, guard, unfreeze
   - T2: brainstorming, systematic-debugging, writing-plans, verification,
     executing-plans, subagent-driven, parallel-agents, worktrees,
     receiving-review, writing-skills, document-release, retro, cso
   - T3: TDD
   - T4: requesting-code-review, finishing-a-development-branch
+- 1 dev skill: writing-rkstack-skills (contributor-only, in dev/skills/)
 - Hooks: session-start (injects using-rkstack), PreToolUse (careful/freeze/guard)
 - Agent: code-reviewer
 - Library: lib/worktree.ts (git worktree isolation)
-- Root docs: VERSION, LICENSE, AGENTS.md, CHANGELOG.md, ETHOS.md, ARCHITECTURE.md,
-  CONTRIBUTING.md, TODOS.md
+- Refs pipeline: upstream claude-code-docs → skills/*/refs/ (shipped) + .claude/skills/*/refs/ (dev)
+- CI: check (push/PR), update-refs (daily + version bump), release (manual tags)
+- Root docs: VERSION, LICENSE, CHANGELOG.md, ETHOS.md, ARCHITECTURE.md,
+  CONTRIBUTING.md, AGENTS.md, TODOS.md, docs/workflow.md
 
 **Next:**
 1. bin/ utilities (rkstack-detect, rkstack-repo-mode, rkstack-config)
@@ -367,3 +418,4 @@ Study these before making changes:
 - `docs/workflow.md` — how skills connect end-to-end
 - `.upstreams/gstack/CLAUDE.md` — how gstack instructs Claude to work
 - `.upstreams/gstack/ETHOS.md` — Boil the Lake, Search Before Building
+- `.upstreams/claude-code-docs/docs/skills.md` — official Claude Code skill spec

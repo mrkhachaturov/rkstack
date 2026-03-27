@@ -4,8 +4,9 @@
 >
 > One plugin. 21 skills. Install once, adapts to your project.
 
+[![Check](https://github.com/mrkhachaturov/rkstack/actions/workflows/check.yml/badge.svg)](https://github.com/mrkhachaturov/rkstack/actions/workflows/check.yml)
+[![Docs](https://github.com/mrkhachaturov/rkstack/actions/workflows/update-refs.yml/badge.svg)](https://github.com/mrkhachaturov/rkstack/actions/workflows/update-refs.yml)
 ![Skills](https://img.shields.io/badge/skills-21-0f766e)
-![Tests](https://img.shields.io/badge/tests-75%20passing-22c55e)
 ![Tiers](https://img.shields.io/badge/preamble%20tiers-T1--T4-6366f1)
 ![License](https://img.shields.io/badge/license-MIT-3b82f6)
 
@@ -101,7 +102,7 @@ Each step uses **test-driven-development** (RED → GREEN → REFACTOR). Bugs tr
 |---|-------|-------------|
 | 🌳 | **using-git-worktrees** | Isolated workspaces for feature work. |
 | ⚡ | **dispatching-parallel-agents** | Run independent tasks in parallel. |
-| ✏️ | **writing-skills** | Create or edit skills with the template system. |
+| ✏️ | **writing-skills** | Create skills for your project. TDD for documentation. |
 
 ---
 
@@ -147,17 +148,20 @@ skills/{name}/SKILL.md.tmpl     ← human writes (content + {{PLACEHOLDERS}})
 skills/{name}/SKILL.md          ← generated, committed, read by Claude
 ```
 
+Skills that reference official Claude Code docs (like `writing-skills`) include a `refs/` directory with auto-updated documentation from Anthropic. CI checks daily for upstream changes and bumps the plugin version when refs update — so your plugin stays current.
+
 ---
 
 ## 🧰 For Contributors
 
 ```bash
-just build         # 🔨 generate all SKILL.md from templates
+just setup         # 📦 install tools via mise
+just build         # 🔨 pull docs + generate all SKILL.md from templates
+just dev-build     # 🔧 generate project-local dev skills with refs
 just check         # ✅ verify generated files are fresh
 just skill-check   # 🩺 health dashboard for all skills
 just dev           # 👀 watch mode: auto-regen on change
 bun test           # 🧪 run 75 tests (<6s)
-just setup         # 📦 install tools via mise
 ```
 
 | | Tool | Purpose |

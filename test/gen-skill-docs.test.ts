@@ -43,9 +43,10 @@ describe('Template Discovery', () => {
     expect(templates.length).toBe(21);
   });
 
-  test('discoverSkillFiles finds all 21 generated SKILL.md files', () => {
+  test('discoverSkillFiles finds all 21 shipped SKILL.md files', () => {
     const skillFiles = discoverSkillFiles(ROOT);
-    expect(skillFiles.length).toBe(21);
+    const shippedSkills = skillFiles.filter(f => f.startsWith('skills/'));
+    expect(shippedSkills.length).toBe(21);
   });
 
   test('discoverTemplates returns sorted results', () => {
