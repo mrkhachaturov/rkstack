@@ -213,11 +213,11 @@ Use AskUserQuestion:
 // T4: same as T3 (TEST_FAILURE_TRIAGE is a separate {{}} placeholder)
 //
 // Skills by tier:
-//   T1: using-rkstack, brainstorming, careful, freeze, guard, unfreeze
-//   T2: systematic-debugging, writing-plans, verification, executing-plans,
-//       subagent-driven, parallel-agents, worktrees, receiving-review,
-//       writing-skills, document-release, retro
-//   T3: test-driven-development, cso
+//   T1: using-rkstack, careful, freeze, guard, unfreeze
+//   T2: brainstorming, systematic-debugging, writing-plans, verification,
+//       executing-plans, subagent-driven, parallel-agents, worktrees,
+//       receiving-review, writing-skills, document-release, retro, cso
+//   T3: test-driven-development
 //   T4: requesting-code-review, finishing-a-development-branch
 
 export function generatePreamble(ctx: TemplateContext): string {

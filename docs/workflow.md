@@ -113,9 +113,9 @@ Every skill gets a preamble injected at the top. The tier controls how much cont
 
 | Tier | Sections Included | Skills |
 |------|------------------|--------|
-| T1 | Core bash (scc, branch, repo-mode) + Completion Status + Escalation | using-rkstack, brainstorming, careful, freeze, guard, unfreeze |
-| T2 | T1 + AskUserQuestion Format + Completeness Principle | systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, parallel-agents, worktrees, receiving-review, writing-skills, document-release, retro |
-| T3 | T2 + Repo Ownership + Search Before Building | TDD, cso |
+| T1 | Core bash (scc, branch, repo-mode) + Completion Status + Escalation | using-rkstack, careful, freeze, guard, unfreeze |
+| T2 | T1 + AskUserQuestion Format + Completeness Principle | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, parallel-agents, worktrees, receiving-review, writing-skills, document-release, retro, cso |
+| T3 | T2 + Repo Ownership + Search Before Building | TDD |
 | T4 | T3 (gate-quality skills) | requesting-code-review, finishing-a-development-branch |
 
 **AskUserQuestion Format** (T2+): re-ground → simplify → recommend → options with Completeness scoring
@@ -254,7 +254,7 @@ cso (T3) — Chief Security Officer audit
 | Skill | Tier | Source | Category |
 |-------|------|--------|----------|
 | using-rkstack | T1 | superpowers + gstack | Root / session entry |
-| brainstorming | T1 | superpowers | Design |
+| brainstorming | T2 | superpowers | Design |
 | careful | T1 | gstack | Safety |
 | freeze | T1 | gstack | Safety |
 | guard | T1 | gstack | Safety |
@@ -271,6 +271,6 @@ cso (T3) — Chief Security Officer audit
 | document-release | T2 | gstack (adapted) | Post-ship |
 | retro | T2 | gstack (core adapted) | Analysis |
 | test-driven-development | T3 | superpowers (enriched) | Quality |
-| cso | T3 | gstack (adapted) | Security |
+| cso | T2 | gstack (adapted) | Security |
 | requesting-code-review | T4 | gstack /review + superpowers | Quality |
 | finishing-a-development-branch | T4 | gstack /ship + superpowers | Shipping |
