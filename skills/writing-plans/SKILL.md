@@ -131,7 +131,7 @@ Assume they are a skilled developer, but know almost nothing about the toolset o
 
 ## Save Plans To
 
-`docs/plans/YYYY-MM-DD-<feature-name>.md`
+`docs/rkstack/plans/YYYY-MM-DD-<feature-name>.md`
 - User preferences for plan location override this default
 - If CLAUDE.md specifies a plan directory, use that instead
 
@@ -266,7 +266,7 @@ For automated plan review, dispatch a subagent using the prompt template in `pla
 
 After saving the plan, offer execution choice:
 
-**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+**"Plan complete and saved to `docs/rkstack/plans/<filename>.md`. Two execution options:**
 
 **1. Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review between tasks, fast iteration
 

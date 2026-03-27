@@ -59,7 +59,7 @@ You are running the `/requesting-code-review` workflow. Dispatch a focused code-
 Before reviewing code quality, check: **did they build what was requested -- nothing more, nothing less?**
 
 1. Read commit messages: `git log origin/<base>..HEAD --oneline`
-2. Read plan file if it exists: look for `docs/plans/*.md` referencing this feature. Read PR description: `gh pr view --json body --jq .body 2>/dev/null || true`.
+2. Read plan file if it exists: look for `docs/rkstack/plans/*.md` referencing this feature. Read PR description: `gh pr view --json body --jq .body 2>/dev/null || true`.
    **If no PR exists:** rely on commit messages and plan files for stated intent -- this is the common case since review runs before a PR is created.
 3. Identify the **stated intent** -- what was this branch supposed to accomplish?
 4. Run `git diff origin/<base>...HEAD --stat` and compare the files changed against the stated intent.

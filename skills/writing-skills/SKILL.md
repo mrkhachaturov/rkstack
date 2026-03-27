@@ -384,7 +384,7 @@ Make it easy for agents to self-check:
 
 1. **Check upstreams first**
    - Does gstack have this skill? If yes, study their version — use their pattern.
-   - Does superpowers have this skill? If yes, use as content reference.
+   - Does the upstream (.upstreams/superpowers/) have this skill? If yes, use as content reference.
 
 2. **Create the template**
    - `skills/{name}/SKILL.md.tmpl` with proper frontmatter
