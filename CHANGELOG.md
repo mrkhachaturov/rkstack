@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.1] - 2026-03-27
+
+Preamble now derives language frameworks from scc output instead of hardcoded file checks. scc scans recursively — catches Go in subdirectories, Python without pyproject.toml, and any language scc detects. File checks remain only for non-language tooling (Docker, Ansible, Compose, justfile, mise).
+
 ## [0.3.0] - 2026-03-27
 
 New humanizer skill — write like a human, not like an AI pretending to be one.

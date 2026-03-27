@@ -25,23 +25,30 @@ allowed-tools:
 ```bash
 # === RKstack Preamble (subagent-driven-development) ===
 
-# Project detection via scc (respects .gitignore, also skip 3rdparty-src)
-_TOP_LANGS=$(scc --format wide --no-cocomo --exclude-dir 3rdparty-src . 2>/dev/null | head -8 || echo "scc not available")
+# Project detection via scc — single source of truth for languages AND frameworks
+_SCC_OUT=$(scc --format wide --no-cocomo --exclude-dir 3rdparty-src . 2>/dev/null | head -15 || echo "scc not available")
 echo "STACK:"
-echo "$_TOP_LANGS"
+echo "$_SCC_OUT"
 
-# Framework hints
-_HAS_PACKAGE_JSON=$([ -f package.json ] && echo "yes" || echo "no")
-_HAS_CARGO_TOML=$([ -f Cargo.toml ] && echo "yes" || echo "no")
-_HAS_GO_MOD=$([ -f go.mod ] && echo "yes" || echo "no")
-_HAS_PYPROJECT=$([ -f pyproject.toml ] && echo "yes" || echo "no")
-_HAS_DOCKERFILE=$([ -f Dockerfile ] && echo "yes" || echo "no")
-_HAS_TERRAFORM=$(find . -maxdepth 2 -name "*.tf" -print -quit 2>/dev/null | grep -q . && echo "yes" || echo "no")
-_HAS_ANSIBLE=$([ -d ansible ] || [ -f ansible.cfg ] && echo "yes" || echo "no")
-_HAS_COMPOSE=$([ -f docker-compose.yml ] || [ -f docker-compose.yaml ] || [ -f compose.yml ] || [ -f compose.yaml ] && echo "yes" || echo "no")
-_HAS_JUSTFILE=$([ -f justfile ] || [ -f Justfile ] && echo "yes" || echo "no")
-_HAS_MISE=$([ -f .mise.toml ] || [ -f mise.toml ] && echo "yes" || echo "no")
-echo "FRAMEWORKS: pkg=$_HAS_PACKAGE_JSON cargo=$_HAS_CARGO_TOML go=$_HAS_GO_MOD py=$_HAS_PYPROJECT docker=$_HAS_DOCKERFILE tf=$_HAS_TERRAFORM ansible=$_HAS_ANSIBLE compose=$_HAS_COMPOSE just=$_HAS_JUSTFILE mise=$_HAS_MISE"
+# Derive language frameworks from scc output (recursive, catches subdirs/submodules)
+_HAS_TS=$( echo "$_SCC_OUT" | grep -qi "TypeScript"  && echo "yes" || echo "no")
+_HAS_JS=$( echo "$_SCC_OUT" | grep -qi "JavaScript"  && echo "yes" || echo "no")
+_HAS_PY=$( echo "$_SCC_OUT" | grep -qi "Python"      && echo "yes" || echo "no")
+_HAS_GO=$( echo "$_SCC_OUT" | grep -qi "^Go "         && echo "yes" || echo "no")
+_HAS_RS=$( echo "$_SCC_OUT" | grep -qi "Rust"         && echo "yes" || echo "no")
+_HAS_JAVA=$(echo "$_SCC_OUT" | grep -qi "Java "       && echo "yes" || echo "no")
+_HAS_CS=$( echo "$_SCC_OUT" | grep -qi "C#"           && echo "yes" || echo "no")
+_HAS_RB=$( echo "$_SCC_OUT" | grep -qi "Ruby"         && echo "yes" || echo "no")
+echo "LANGS: ts=$_HAS_TS js=$_HAS_JS py=$_HAS_PY go=$_HAS_GO rs=$_HAS_RS java=$_HAS_JAVA cs=$_HAS_CS rb=$_HAS_RB"
+
+# Tooling hints (non-language markers — scc doesn't detect these)
+_HAS_DOCKER=$(  [ -f Dockerfile ] && echo "yes" || echo "no")
+_HAS_TF=$(      echo "$_SCC_OUT" | grep -qi "Terraform\|HCL" && echo "yes" || echo "no")
+_HAS_ANSIBLE=$( echo "$_SCC_OUT" | grep -qi "Ansible\|YAML" && { [ -d ansible ] || [ -f ansible.cfg ] || find . -maxdepth 2 -name "*.yml" -path "*/playbooks/*" -print -quit 2>/dev/null | grep -q .; } && echo "yes" || echo "no")
+_HAS_COMPOSE=$( [ -f docker-compose.yml ] || [ -f docker-compose.yaml ] || [ -f compose.yml ] || [ -f compose.yaml ] && echo "yes" || echo "no")
+_HAS_JUST=$(    [ -f justfile ] || [ -f Justfile ] && echo "yes" || echo "no")
+_HAS_MISE=$(    [ -f .mise.toml ] || [ -f mise.toml ] && echo "yes" || echo "no")
+echo "TOOLS: docker=$_HAS_DOCKER tf=$_HAS_TF ansible=$_HAS_ANSIBLE compose=$_HAS_COMPOSE just=$_HAS_JUST mise=$_HAS_MISE"
 
 # Repo mode (solo vs collaborative)
 _AUTHOR_COUNT=$(git shortlog -sn --no-merges --since="90 days ago" 2>/dev/null | wc -l | tr -d ' ')
@@ -56,14 +63,16 @@ echo "CLAUDE_MD: $_HAS_CLAUDE_MD"
 ```
 
 Use the preamble output to adapt your behavior:
-- **TypeScript/JavaScript + package.json** — web/fullstack project. Check for React/Vue/Svelte patterns.
-- **Python + pyproject.toml** — backend/ML. Check PEP8 conventions.
-- **Rust + Cargo.toml** — systems. Check ownership patterns.
-- **Go + go.mod** — backend/infra. Check error handling patterns.
-- **Dockerfile + Terraform** — infrastructure. Extra caution with state, plan before apply.
-- **Ansible** — configuration management. Check inventory structure, role conventions, vault usage.
-- **Docker Compose** — multi-container app. Check service dependencies, .env patterns, volume mounts.
-- **justfile** — task runner present. Use `just` commands instead of raw shell where available.
+- **TypeScript/JavaScript** — web/fullstack project. Check for React/Vue/Svelte patterns.
+- **Python** — backend/ML/scripts. Check PEP8 conventions, pytest for testing.
+- **Go** — backend/infra. Check error handling patterns, go test.
+- **Rust** — systems. Check ownership patterns, cargo test.
+- **Java/C#** — enterprise. Check build tool (Maven/Gradle/.NET), framework conventions.
+- **Ruby** — web/scripting. Check Gemfile, Rails conventions if present.
+- **Terraform/HCL** — infrastructure as code. Plan before apply, extra caution with state.
+- **Ansible** — configuration management. Check inventory, role conventions, vault usage.
+- **Docker/Compose** — containerized. Check service dependencies, .env patterns.
+- **justfile** — task runner present. Use `just` commands instead of raw shell.
 - **mise** — tool version manager. Versions are pinned — don't suggest global installs.
 - **CLAUDE.md exists** — read it for project-specific commands and conventions.
 
