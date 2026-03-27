@@ -504,7 +504,7 @@ Look for WIP commits, fixup commits, or disorganized history. Signs of a messy h
 >
 > **RECOMMENDATION:** Choose A for a cleaner history. Completeness: 9/10.
 >
-> A) Squash into logical commits (recommended) -- interactive rebase to clean up -- Completeness: 9/10
+> A) Squash into logical commits (recommended) -- non-interactive squash to clean up -- Completeness: 9/10
 > B) Keep as-is -- ship with current history -- Completeness: 7/10
 
 If user chooses A: perform a non-interactive rebase to squash fixup/WIP commits into their logical parent commits. Each resulting commit should represent one coherent change. After rebasing, re-run tests to verify nothing broke.

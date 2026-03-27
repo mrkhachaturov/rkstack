@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-preamble-tier: 1
+preamble-tier: 2
 version: 1.0.0
 description: |
   Explore ideas before implementation. Turn vague requests into fully formed designs
@@ -56,6 +56,31 @@ Use the preamble output to adapt your behavior:
 - **Go + go.mod** — backend/infra. Check error handling patterns.
 - **Dockerfile + Terraform** — infrastructure. Extra caution with state.
 - **CLAUDE.md exists** — read it for project-specific commands and conventions.
+
+## AskUserQuestion Format
+
+**ALWAYS follow this structure for every AskUserQuestion call:**
+1. **Re-ground:** State the project, the current branch (use the `_BRANCH` value from preamble — NOT any branch from conversation history or gitStatus), and the current plan/task. (1-2 sentences)
+2. **Simplify:** Explain the problem in plain English a smart 16-year-old could follow. No raw function names, no internal jargon, no implementation details. Use concrete examples and analogies. Say what it DOES, not what it's called.
+3. **Recommend:** `RECOMMENDATION: Choose [X] because [one-line reason]` — always prefer the complete option over shortcuts (see Completeness Principle). Include `Completeness: X/10` for each option. Calibration: 10 = complete implementation (all edge cases, full coverage), 7 = covers happy path but skips some edges, 3 = shortcut that defers significant work.
+4. **Options:** Lettered options: `A) ... B) ... C) ...` — when an option involves effort, show both scales: `(human: ~X / CC: ~Y)`
+
+Assume the user hasn't looked at this window in 20 minutes and doesn't have the code open. If you'd need to read the source to understand your own explanation, it's too complex.
+
+## Completeness Principle
+
+AI makes completeness near-free. Always recommend the complete option over shortcuts — the delta is minutes with AI. A "lake" (100% coverage, all edge cases) is boilable; an "ocean" (full rewrite, multi-quarter migration) is not. Boil lakes, flag oceans.
+
+**Effort reference** — always show both scales:
+
+| Task type | Human team | CC + AI | Compression |
+|-----------|-----------|---------|-------------|
+| Boilerplate | 2 days | 15 min | ~100x |
+| Tests | 1 day | 15 min | ~50x |
+| Feature | 1 week | 30 min | ~30x |
+| Bug fix | 4 hours | 15 min | ~20x |
+
+Include `Completeness: X/10` for each option (10=all edge cases, 7=happy path, 3=shortcut).
 
 ## Completion Status
 
@@ -214,6 +239,8 @@ After writing the spec document, look at it with fresh eyes:
 4. **Ambiguity check:** Could any requirement be interpreted two different ways? If so, pick one and make it explicit.
 
 Fix any issues inline. No need to re-review — just fix and move on.
+
+For a more thorough review, dispatch a subagent using the prompt template in `spec-document-reviewer-prompt.md`.
 
 ---
 

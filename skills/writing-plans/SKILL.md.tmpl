@@ -30,7 +30,7 @@ Assume they are a skilled developer, but know almost nothing about the toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**Context:** This should be run in a dedicated worktree when available (created by brainstorming skill).
+**Context:** This should be run in a dedicated worktree when available (use the **using-git-worktrees** skill to create one before starting).
 
 ## Save Plans To
 
@@ -100,7 +100,7 @@ def test_specific_behavior():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/path/test.py::test_name -v`
+Run: `[test command from CLAUDE.md] tests/path/test.py::test_name -v`
 Expected: FAIL with "function not defined"
 
 - [ ] **Step 3: Write minimal implementation**
@@ -112,7 +112,7 @@ def function(input):
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/path/test.py::test_name -v`
+Run: `[test command from CLAUDE.md] tests/path/test.py::test_name -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -162,6 +162,8 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 Flag any task below **7/10**. For each flagged task, decide: is the missing work a "lake" (achievable in minutes with AI) or an "ocean" (multi-quarter effort)? If it's a lake — expand the task now. Don't recommend shortcuts when the complete implementation is cheap.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
+
+For automated plan review, dispatch a subagent using the prompt template in `plan-document-reviewer-prompt.md`.
 
 ## Execution Handoff
 

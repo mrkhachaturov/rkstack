@@ -1,6 +1,6 @@
 ---
 name: cso
-preamble-tier: 3
+preamble-tier: 2
 version: 1.0.0
 description: |
   Infrastructure-first security audit. OWASP Top 10, STRIDE threat modeling,
@@ -84,23 +84,6 @@ AI makes completeness near-free. Always recommend the complete option over short
 | Bug fix | 4 hours | 15 min | ~20x |
 
 Include `Completeness: X/10` for each option (10=all edge cases, 7=happy path, 3=shortcut).
-
-## Repo Ownership
-
-`REPO_MODE` (from preamble) controls how to handle issues outside your branch:
-- **`solo`** — You own everything. Investigate and offer to fix proactively.
-- **`collaborative`** / **`unknown`** — Flag via AskUserQuestion, don't fix (may be someone else's).
-
-Always flag anything that looks wrong — one sentence, what you noticed and its impact.
-
-## Search Before Building
-
-Before building anything unfamiliar, **search first.**
-- **Layer 1** (tried and true) — standard patterns, built-in to the runtime/framework. Don't reinvent.
-- **Layer 2** (new and popular) — blog posts, trending approaches. Scrutinize — people follow hype.
-- **Layer 3** (first principles) — your own reasoning about the specific problem. Prize above all.
-
-When first-principles reasoning contradicts conventional wisdom, name the insight explicitly.
 
 ## Completion Status
 

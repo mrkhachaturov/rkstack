@@ -176,9 +176,9 @@ It runs first when Claude loads a skill, collecting project context.
 
 | Tier | Skills | What it includes |
 |------|--------|-----------------|
-| T1 | using-rkstack, brainstorming, careful, freeze, guard, unfreeze | Core: scc detection, branch, repo-mode, CLAUDE.md check |
-| T2 | systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, dispatching-parallel, worktrees, receiving-review, writing-skills, document-release, retro | T1 + AskUserFormat + Completeness table |
-| T3 | TDD, cso | T2 + RepoMode section + SearchBeforeBuilding |
+| T1 | using-rkstack, careful, freeze, guard, unfreeze | Core: scc detection, branch, repo-mode, CLAUDE.md check |
+| T2 | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, dispatching-parallel, worktrees, receiving-review, writing-skills, document-release, retro, cso | T1 + AskUserFormat + Completeness table |
+| T3 | TDD | T2 + RepoMode section + SearchBeforeBuilding |
 | T4 | requesting-code-review, finishing-a-development-branch | T3 + full context (gate-quality skills) |
 
 AskUserFormat, Completeness, Escalation, RepoMode are **sections within the
@@ -265,11 +265,11 @@ bun scripts/gen-skill-docs.ts --host codex # generate for Codex
 - Preamble tier system (T1-T4) with AskUserFormat, Completeness, RepoMode, Escalation
 - Resolvers: PREAMBLE, TEST_FAILURE_TRIAGE, BASE_BRANCH_DETECT
 - 21 skills at gstack depth:
-  - T1: using-rkstack, brainstorming, careful, freeze, guard, unfreeze
-  - T2: systematic-debugging, writing-plans, verification, executing-plans,
-    subagent-driven, parallel-agents, worktrees, receiving-review,
-    writing-skills, document-release, retro
-  - T3: TDD, cso
+  - T1: using-rkstack, careful, freeze, guard, unfreeze
+  - T2: brainstorming, systematic-debugging, writing-plans, verification,
+    executing-plans, subagent-driven, parallel-agents, worktrees,
+    receiving-review, writing-skills, document-release, retro, cso
+  - T3: TDD
   - T4: requesting-code-review, finishing-a-development-branch
 - Hooks: session-start (injects using-rkstack), PreToolUse (careful/freeze/guard)
 - Agent: code-reviewer
