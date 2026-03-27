@@ -9,113 +9,87 @@ safety guardrails, and verification.
 The repo root IS the plugin — there are no sub-packages, no build output directories,
 no intermediate layers. Claude Code reads `skills/` directly.
 
-## The Approach: Follow gstack, Adapt superpowers Content
+## Commands
 
-**gstack** (`garrytan/gstack`) is our reference architecture. Every script, every
-pattern, every design decision in RKstack should follow how gstack does it — or have
-a clear reason for diverging. gstack is battle-tested, well-engineered, and solves
-the same class of problems we solve.
-
-**superpowers** (`obra/superpowers`) is our primary content source for skills. The
-process skills (brainstorming, planning, TDD, debugging, verification) are universal
-and well-written. We adapt them into the gstack template/preamble pattern.
-
-**Concrete rules:**
-
-- Before writing any script, check how gstack does it in `scripts/`. Use their
-  pattern, not your own.
-- Before adding a resolver, check `scripts/resolvers/` in gstack. Follow their
-  naming, structure, and context model.
-- Before designing a preamble feature, check `scripts/resolvers/preamble.ts` in
-  gstack. They have a tier system (T1-T4), AskUserFormat, Completeness, RepoMode,
-  SearchBeforeBuilding — all INSIDE the preamble, not as separate placeholders.
-- Before creating a utility, check gstack `lib/`. They have `worktree.ts` for
-  isolated execution — reusable as-is.
-- If gstack has a working solution, bring it (or adapt it minimally). Do not
-  reinvent from scratch.
-- If superpowers has better skill content for a domain, take the content but wrap
-  it in gstack's infrastructure (templates, preamble, frontmatter format).
-
-**What we take from each upstream:**
-
-| From gstack (architecture) | From superpowers (content) |
-|---|---|
-| Template system (.tmpl → SKILL.md) | Brainstorming workflow |
-| Preamble with tier system (T1-T4) | Writing plans methodology |
-| gen-skill-docs.ts in Bun/TypeScript | TDD (Red-Green-Refactor) |
-| skill-check.ts (health dashboard) | Systematic debugging |
-| dev-skill.ts (watch mode) | Verification before completion |
-| discover-skills.ts (dynamic scanning) | Git worktree usage |
-| Frontmatter format (preamble-tier, version, allowed-tools) | Subagent-driven development |
-| `<!-- AUTO-GENERATED -->` comment | Code review prompts |
-| PreToolUse hooks (guard/careful/freeze) | Writing skills methodology |
-| Platform-agnostic design (read CLAUDE.md, never hardcode) | — |
-| AskUserQuestion format (re-ground → simplify → recommend) | — |
-| Completeness principle (Boil the Lake) | — |
-| Escalation protocol (3 attempts → BLOCKED) | — |
-| JSONL analytics | — |
-| worktree.ts for isolation | — |
-
-**If gstack has a skill we also need** (e.g. investigate, review, guard), take
-it from gstack — it already follows the right pattern. No need to reinvent from
-superpowers when gstack has it in the correct format.
-
-## Upstreams
-
-`.upstreams/` are git submodules — pinned, read-only references.
-
-```
-.upstreams/superpowers/   ← obra/superpowers, skill content reference
-.upstreams/gstack/        ← garrytan/gstack, architecture reference
+```bash
+just build         # generate all SKILL.md from templates
+just check         # verify generated files are up to date (--dry-run)
+just skill-check   # health dashboard for all skills
+just dev           # watch mode: auto-regen + validate on change
+just detect        # run scc on current directory
+just setup         # install tools via mise
 ```
 
-Use them for:
-- Studying what changed between upstream versions (`git diff v5.0.6..v5.1.0`)
-- Comparing our implementation vs their implementation
-- Checking how gstack solves a problem before writing our version
+Bun equivalents:
 
-**Do not copy files from upstreams.** Study them, understand the pattern, then
-write your own version following that pattern.
+```bash
+bun scripts/gen-skill-docs.ts              # generate all
+bun scripts/gen-skill-docs.ts --dry-run    # check freshness
+bun scripts/gen-skill-docs.ts --host codex # generate for Codex
+```
+
+## Verification
+
+```bash
+just build && just check    # run before every commit
+just skill-check            # run before shipping — validates frontmatter, coverage, freshness
+```
+
+`just check` verifies all generated SKILL.md files match their templates. `just skill-check`
+validates frontmatter fields, template coverage, and freshness. Both must pass before
+creating a PR.
 
 ## Repository Structure
 
 ```text
 rkstack/
 ├── .claude-plugin/plugin.json    # plugin manifest — "rkstack"
-├── hooks/                        # SessionStart + PreToolUse
-│   ├── hooks.json
-│   ├── session-start
-│   └── guard/                    # destructive operation warnings
-├── skills/                       # all skills (templates + generated)
+├── hooks/                        # SessionStart + hook scripts
+│   ├── hooks.json                # SessionStart declaration
+│   └── session-start             # injects using-rkstack at session start
+├── skills/                       # all 21 skills (templates + generated)
 │   ├── brainstorming/
 │   │   ├── SKILL.md.tmpl         # template (human-authored)
 │   │   ├── SKILL.md              # generated (committed)
 │   │   └── *.md                  # companion files (hand-authored)
-│   ├── writing-plans/
-│   ├── test-driven-development/
-│   └── ...
-├── agents/                       # agent definitions (code-reviewer etc.)
-├── bin/                          # CLI utilities
-│   ├── rkstack-detect            # scc wrapper → project profile
-│   ├── rkstack-repo-mode         # solo vs collaborative
-│   └── rkstack-config            # user preferences
+│   ├── careful/
+│   │   ├── SKILL.md.tmpl
+│   │   ├── SKILL.md
+│   │   └── bin/check-careful.sh  # PreToolUse hook script
+│   ├── freeze/
+│   │   ├── SKILL.md.tmpl
+│   │   ├── SKILL.md
+│   │   └── bin/check-freeze.sh   # PreToolUse hook script
+│   └── ...                       # 18 more skills
+├── agents/                       # agent definitions
+│   └── code-reviewer.md          # two-pass review agent
 ├── scripts/                      # build tooling (Bun/TypeScript)
 │   ├── gen-skill-docs.ts         # .tmpl → SKILL.md generator
 │   ├── discover-skills.ts        # filesystem scanner for skills
 │   ├── skill-check.ts            # health dashboard
-│   ├── dev-skill.ts              # watch mode (auto-regen on change)
+│   ├── dev-skill.ts              # watch mode
 │   └── resolvers/                # {{PLACEHOLDER}} → content
-│       ├── types.ts
+│       ├── types.ts              # TemplateContext, HostPaths, Resolver
 │       ├── index.ts              # resolver registry
-│       └── preamble.ts           # preamble generator (tier-based)
+│       ├── preamble.ts           # preamble generator (tier-based)
+│       └── utility.ts            # BASE_BRANCH_DETECT
 ├── lib/                          # reusable infrastructure
 │   └── worktree.ts               # git worktree isolation
 ├── .upstreams/                   # git submodules (read-only reference)
 │   ├── superpowers/
 │   └── gstack/
 ├── docs/
+│   ├── workflow.md               # how skills connect end-to-end
 │   ├── analysis/                 # upstream study notes
-│   └── design/                   # architecture decisions
+│   ├── design/                   # architecture decisions
+│   └── plans/                    # implementation plans
+├── VERSION                       # single source of truth for version
+├── CHANGELOG.md                  # user-facing release notes
+├── ETHOS.md                      # builder philosophy
+├── ARCHITECTURE.md               # why rkstack is built this way
+├── CONTRIBUTING.md               # how to contribute
+├── AGENTS.md                     # skill catalog for all AI agents
+├── TODOS.md                      # structured roadmap
 ├── package.json                  # bun scripts
 ├── justfile                      # human-friendly commands
 └── .mise.toml                    # tool versions (bun, just, scc)
@@ -123,20 +97,18 @@ rkstack/
 
 ## Template System
 
-Following gstack's pattern exactly:
-
 ```
 skills/{name}/SKILL.md.tmpl       ← human writes template + {{PLACEHOLDERS}}
 scripts/gen-skill-docs.ts         ← reads .tmpl, resolves placeholders, writes .md
 skills/{name}/SKILL.md            ← generated, committed, tagged AUTO-GENERATED
 ```
 
-### Frontmatter (gstack format)
+### Frontmatter
 
 ```yaml
 ---
 name: brainstorming
-preamble-tier: 1
+preamble-tier: 2
 version: 1.0.0
 description: |
   Multi-line description of when to use this skill.
@@ -147,20 +119,13 @@ allowed-tools:
 ---
 ```
 
-### Generated output includes
+### Merge conflicts on SKILL.md files
 
-```markdown
----
-[frontmatter passed through]
----
-<!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
-<!-- Regenerate: just build -->
-
-## Preamble (run first)
-[generated bash block with project detection]
-
-[rest of skill content]
-```
+NEVER resolve conflicts on generated SKILL.md files by accepting either side.
+Instead: (1) resolve conflicts on the `.tmpl` templates and resolver source files
+(the sources of truth), (2) run `just build` to regenerate all SKILL.md files,
+(3) stage the regenerated files. Accepting one side's generated output silently
+drops the other side's template changes.
 
 ### Companion files are NOT templated
 
@@ -172,8 +137,6 @@ Files like `spec-document-reviewer-prompt.md`, `visual-companion.md`,
 The preamble is a bash block injected at the top of every generated SKILL.md.
 It runs first when Claude loads a skill, collecting project context.
 
-**Follow gstack's tier system** (see `scripts/resolvers/preamble.ts` in gstack):
-
 | Tier | Skills | What it includes |
 |------|--------|-----------------|
 | T1 | using-rkstack, careful, freeze, guard, unfreeze | Core: scc detection, branch, repo-mode, CLAUDE.md check |
@@ -184,36 +147,146 @@ It runs first when Claude loads a skill, collecting project context.
 AskUserFormat, Completeness, Escalation, RepoMode are **sections within the
 preamble** — not separate `{{PLACEHOLDER}}`s. This matches gstack's design.
 
+## Platform-Agnostic Design
+
+Skills must NEVER hardcode framework-specific commands, file patterns, or directory
+structures. Instead:
+
+1. **Read CLAUDE.md** for project-specific config (test commands, build commands, etc.)
+2. **If missing, AskUserQuestion** — let the user tell you
+3. **Persist the answer to CLAUDE.md** so we never have to ask again
+
+This applies to test commands, build commands, deploy commands, and any other
+project-specific behavior. The project owns its config; rkstack reads it.
+
 ## Skill Authoring Rules
 
-From gstack's CLAUDE.md, adapted for RKstack:
+SKILL.md.tmpl files are **prompt templates read by Claude**, not bash scripts.
+Each bash code block runs in a separate shell — variables do not persist between blocks.
 
-- **Natural language for logic, bash for execution.** Each bash block runs in a
-  separate shell. Pass state through prose, not shell variables.
-- **Numbered decision steps, not nested if/else.** LLM parses prose better than
-  nested bash.
-- **One decision per AskUserQuestion.** Never batch multiple decisions.
-- **Never hardcode framework commands.** Read from CLAUDE.md of the target project,
-  or ask the user and persist the answer.
-- **SKILL.md.tmpl files are prompt templates, not bash scripts.** Use natural
-  language for logic and `<placeholder>` tokens for runtime values.
+Rules:
+- **Use natural language for logic and state.** Don't use shell variables to pass
+  state between code blocks. Instead, tell Claude what to remember and reference
+  it in prose (e.g., "the base branch detected in Step 0").
+- **Don't hardcode branch names.** Detect `main`/`master`/etc dynamically.
+  Use `{{BASE_BRANCH_DETECT}}` for PR-targeting skills. Use "the base branch"
+  in prose, `<base>` in code block placeholders.
+- **Keep bash blocks self-contained.** Each code block should work independently.
+  If a block needs context from a previous step, restate it in the prose above.
+- **Express conditionals as English.** Instead of nested `if/elif/else` in bash,
+  write numbered decision steps: "1. If X, do Y. 2. Otherwise, do Z."
 
-## Commands
+## Commit Style
 
-```bash
-just build       # generate all SKILL.md from templates
-just check       # verify generated files are up to date (--dry-run)
-just detect      # run scc on current directory
-just setup       # install tools via mise
+**Always bisect commits.** Every commit should be a single logical change. When
+you've made multiple changes (e.g., a rename + a rewrite + new tests), split them
+into separate commits. Each commit should be independently understandable and
+revertable.
+
+Examples of good bisection:
+- Template changes separate from generated file regeneration
+- Resolver changes separate from skill content changes
+- Mechanical refactors separate from new features
+- Hook scripts separate from skill templates
+
+## CHANGELOG + VERSION Style
+
+**VERSION and CHANGELOG are branch-scoped.** Every feature branch that ships gets
+its own version bump and CHANGELOG entry. The entry describes what THIS branch
+adds — not what was already on main.
+
+**When to write the CHANGELOG entry:**
+- At `/finishing-a-development-branch` time, not during development or mid-branch.
+- The entry covers ALL commits on this branch vs the base branch.
+- Never fold new work into an existing entry from a prior version on main.
+
+CHANGELOG.md is **for users**, not contributors:
+- Lead with what the user can now **do** that they couldn't before.
+- Use plain language, not implementation details. "You can now..." not "Refactored the..."
+- Never mention TODOS.md, internal tracking, or contributor-facing details.
+- Every entry should make someone think "oh nice, I want to try that."
+
+## AI Effort Compression
+
+When estimating or discussing effort, always show both human-team and AI-assisted time:
+
+| Task type | Human team | AI-assisted | Compression |
+|-----------|-----------|-------------|-------------|
+| Boilerplate / scaffolding | 2 days | 15 min | ~100x |
+| Test writing | 1 day | 15 min | ~50x |
+| Feature implementation | 1 week | 30 min | ~30x |
+| Bug fix + regression test | 4 hours | 15 min | ~20x |
+| Architecture / design | 2 days | 4 hours | ~5x |
+| Research / exploration | 1 day | 3 hours | ~3x |
+
+Completeness is cheap. Don't recommend shortcuts when the complete implementation
+is a "lake" (achievable) not an "ocean" (multi-quarter migration). See ETHOS.md.
+
+## Search Before Building
+
+Before designing any solution that involves concurrency, unfamiliar patterns,
+infrastructure, or anything where the runtime/framework might have a built-in:
+
+1. Search for "{runtime} {thing} built-in"
+2. Search for "{thing} best practice {current year}"
+3. Check official runtime/framework docs
+
+Three layers: tried-and-true (Layer 1), new-and-popular (Layer 2),
+first-principles (Layer 3). Prize Layer 3 above all. See ETHOS.md.
+
+## Long-Running Tasks
+
+When running builds, test suites, or any long-running background task, **poll until
+completion**. Never say "I'll be notified when it completes" and stop checking.
+Report progress at each check (what passed, what's running, any failures so far).
+The user wants to see the task complete, not a promise to check later.
+
+## The Approach: Follow gstack, Adapt superpowers Content
+
+**gstack** (`garrytan/gstack`) is our reference architecture. Every script, every
+pattern, every design decision should follow how gstack does it — or have a clear
+reason for diverging.
+
+**superpowers** (`obra/superpowers`) is our primary content source for skills. The
+process skills are universal and well-written. We adapt them into the gstack
+template/preamble pattern.
+
+**Concrete rules:**
+
+- Before writing any script, check how gstack does it in `scripts/`.
+- Before adding a resolver, check `scripts/resolvers/` in gstack.
+- Before creating a utility, check gstack `lib/`.
+- If gstack has a working solution, bring it (or adapt it minimally).
+- If superpowers has better skill content, take the content but wrap it in
+  gstack's infrastructure.
+
+| From gstack (architecture) | From superpowers (content) |
+|---|---|
+| Template system (.tmpl → SKILL.md) | Brainstorming workflow |
+| Preamble with tier system (T1-T4) | Writing plans methodology |
+| gen-skill-docs.ts in Bun/TypeScript | TDD (Red-Green-Refactor) |
+| skill-check.ts (health dashboard) | Systematic debugging |
+| dev-skill.ts (watch mode) | Verification before completion |
+| discover-skills.ts (dynamic scanning) | Git worktree usage |
+| Frontmatter format (preamble-tier, version, allowed-tools) | Subagent-driven development |
+| PreToolUse hooks (guard/careful/freeze) | Code review prompts |
+| Platform-agnostic design (read CLAUDE.md, never hardcode) | Writing skills methodology |
+| AskUserQuestion format (re-ground → simplify → recommend) | — |
+| Completeness principle | — |
+| Escalation protocol (3 attempts → BLOCKED) | — |
+| worktree.ts for isolation | — |
+
+## Upstreams
+
+`.upstreams/` are git submodules — pinned, read-only references.
+
+```
+.upstreams/superpowers/   ← obra/superpowers, skill content reference
+.upstreams/gstack/        ← garrytan/gstack, architecture reference
 ```
 
-Bun equivalents (for scripts that call gen-skill-docs directly):
-
-```bash
-bun scripts/gen-skill-docs.ts              # generate all
-bun scripts/gen-skill-docs.ts --dry-run    # check freshness
-bun scripts/gen-skill-docs.ts --host codex # generate for Codex
-```
+**Do not copy files from upstreams.** Study them, understand the pattern, then
+write your own version following that pattern.
 
 ## How to Work in This Repo
 
@@ -221,7 +294,7 @@ bun scripts/gen-skill-docs.ts --host codex # generate for Codex
 
 1. Edit `skills/{name}/SKILL.md.tmpl` (never edit SKILL.md directly)
 2. Run `just build` to regenerate
-3. Verify with `just check`
+3. Verify with `just check` and `just skill-check`
 4. Commit both .tmpl and generated .md
 
 ### Adding a new placeholder
@@ -253,6 +326,7 @@ bun scripts/gen-skill-docs.ts --host codex # generate for Codex
 - Do not hardcode project-specific commands in skills
 - Do not hand-edit .upstreams/
 - Do not create separate placeholders for things that belong inside the preamble
+- Do not resolve merge conflicts on generated SKILL.md by accepting either side
 
 ## Current State
 
@@ -274,7 +348,8 @@ bun scripts/gen-skill-docs.ts --host codex # generate for Codex
 - Hooks: session-start (injects using-rkstack), PreToolUse (careful/freeze/guard)
 - Agent: code-reviewer
 - Library: lib/worktree.ts (git worktree isolation)
-- Design docs, gstack analysis, workflow doc
+- Root docs: VERSION, LICENSE, AGENTS.md, CHANGELOG.md, ETHOS.md, ARCHITECTURE.md,
+  CONTRIBUTING.md, TODOS.md
 
 **Next:**
 1. bin/ utilities (rkstack-detect, rkstack-repo-mode, rkstack-config)
@@ -284,8 +359,11 @@ bun scripts/gen-skill-docs.ts --host codex # generate for Codex
 
 Study these before making changes:
 
+- `ETHOS.md` — builder philosophy (completeness, search, evidence, escalate)
+- `ARCHITECTURE.md` — why rkstack is built this way
+- `CONTRIBUTING.md` — how to add skills and work with templates
+- `docs/workflow.md` — how skills connect end-to-end
 - `docs/analysis/gstack-architecture.md` — gstack philosophy and flow
 - `docs/analysis/gstack-scripts-and-lib.md` — every gstack script/resolver analyzed
-- `docs/design/monorepo-skill-system.md` — our design decisions
 - `.upstreams/gstack/CLAUDE.md` — how gstack instructs Claude to work
 - `.upstreams/gstack/ETHOS.md` — Boil the Lake, Search Before Building
