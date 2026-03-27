@@ -365,7 +365,5 @@ Study these before making changes:
 - `ARCHITECTURE.md` — why rkstack is built this way
 - `CONTRIBUTING.md` — how to add skills and work with templates
 - `docs/workflow.md` — how skills connect end-to-end
-- `docs/analysis/gstack-architecture.md` — gstack philosophy and flow
-- `docs/analysis/gstack-scripts-and-lib.md` — every gstack script/resolver analyzed
 - `.upstreams/gstack/CLAUDE.md` — how gstack instructs Claude to work
 - `.upstreams/gstack/ETHOS.md` — Boil the Lake, Search Before Building
