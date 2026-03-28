@@ -40,3 +40,8 @@ detect:
 [doc("Compile the rkstack binary for the current platform")]
 build-bin:
   bun build --compile --define "VERSION=\"$(cat VERSION)\"" bin/src/main.ts --outfile bin/rkstack
+
+[group("build")]
+[doc("Compile the rkstack-browse binary for the current platform")]
+build-browse:
+  bun build --compile browse/src/cli.ts --outfile browse/dist/rkstack-browse
