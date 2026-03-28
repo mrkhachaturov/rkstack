@@ -41,15 +41,15 @@ function extractPreambleTier(fm: string): number | undefined {
 // ─── Template Discovery ────────────────────────────────────────────────────────
 
 describe('Template Discovery', () => {
-  test('discoverTemplates finds all 23 skill templates', () => {
+  test('discoverTemplates finds all 24 skill templates', () => {
     const templates = discoverTemplates(ROOT);
-    expect(templates.length).toBe(23);
+    expect(templates.length).toBe(24);
   });
 
-  test('discoverSkillFiles finds all 23 shipped SKILL.md files', () => {
+  test('discoverSkillFiles finds all 24 shipped SKILL.md files', () => {
     const skillFiles = discoverSkillFiles(ROOT);
     const shippedSkills = skillFiles.filter(f => f.startsWith('skills/'));
-    expect(shippedSkills.length).toBe(23);
+    expect(shippedSkills.length).toBe(24);
   });
 
   test('discoverTemplates returns sorted results', () => {
