@@ -121,6 +121,17 @@ else
   PROJECT_TYPE_RESULT="PROJECT_TYPE=general"
 fi
 
+# === Service detection (Supabase, etc.) ===
+HAS_SUPABASE="no"
+# Check for Supabase MCP server in .mcp.json
+if [ -f .mcp.json ] && grep -qi '"supabase"' .mcp.json 2>/dev/null; then
+  HAS_SUPABASE="yes"
+fi
+# Check for supabase directory (migrations, client code)
+if [ -d supabase ] || find . -maxdepth 3 -type d -name supabase -print -quit 2>/dev/null | grep -q .; then
+  HAS_SUPABASE="yes"
+fi
+
 # Read using-rkstack content
 using_rkstack_content=$(cat "${PLUGIN_ROOT}/skills/using-rkstack/SKILL.md" 2>&1 || echo "Error reading using-rkstack skill")
 
@@ -152,6 +163,9 @@ fi
 if [ -n "$PROJECT_TYPE_RESULT" ]; then
   ptype_escaped=$(escape_for_json "$PROJECT_TYPE_RESULT")
   bootstrap_prefix="${bootstrap_prefix}${ptype_escaped}\n"
+fi
+if [ "$HAS_SUPABASE" = "yes" ]; then
+  bootstrap_prefix="${bootstrap_prefix}HAS_SUPABASE=yes\n"
 fi
 if [ -n "$bootstrap_prefix" ]; then
   bootstrap_prefix="${bootstrap_prefix}\n"
