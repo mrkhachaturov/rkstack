@@ -16,7 +16,7 @@
 | 🛡️ | Safety | PreToolUse hooks block destructive commands and scope-lock edits |
 | 🔍 | Detection | scc detects your stack, preamble adapts behavior automatically |
 | 🌐 | Web-aware | Browser daemon, visual QA, design review, responsive checks |
-| 📐 | Platform-agnostic | Reads CLAUDE.md for commands — works with any stack |
+| 📐 | Platform-agnostic | Reads CLAUDE.md for commands, works with any stack |
 
 > [!IMPORTANT]
 > RKstack enforces discipline that prevents common AI agent failures:
@@ -25,7 +25,7 @@
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Quick start
 
 ```bash
 # Claude Code
@@ -36,7 +36,7 @@ That's it. Skills activate automatically based on what you're doing.
 
 ---
 
-## 🗺️ The Flow
+## 🗺️ The flow
 
 ```mermaid
 graph LR
@@ -67,9 +67,9 @@ Each step uses **test-driven-development** (RED → GREEN → REFACTOR). Bugs tr
 
 ---
 
-## 🔍 Project-Aware: Same Flow, Different Depth
+## 🔍 Project-aware: same flow, different depth
 
-At session start, `scc` scans your project and classifies it. The workflow stays the same — but **web projects get visual verification built into every step**, automatically.
+At session start, `scc` scans your project and classifies it. The workflow stays the same, but **web projects get visual verification built into every step**, automatically.
 
 ```mermaid
 graph TD
@@ -109,15 +109,15 @@ graph TD
     style SF fill:#64748b,color:#fff
 ```
 
-**No config needed.** scc detects TypeScript + CSS + `next.config.ts`? You get browser-based QA, annotated screenshots, responsive checks, and design review — injected into the same brainstorming → plans → execute → verify → ship flow.
+**No config needed.** scc detects TypeScript + CSS + `next.config.ts`? You get browser-based QA, annotated screenshots, responsive checks, and design review, all injected into the same brainstorming → plans → execute → verify → ship flow.
 
-Supabase detected (`.mcp.json` or `supabase/` directory)? Skills also verify data via MCP after browser actions — checking that what the user sees matches what the database stored.
+Supabase detected (`.mcp.json` or `supabase/` directory)? Skills also verify data via MCP after browser actions, checking that what the user sees matches what the database stored.
 
 Non-web projects (Go, Python, Terraform, DevOps) get the standard workflow with zero web-specific behavior.
 
 ---
 
-## 🔄 Dual-Review: Claude Writes, Codex Reviews
+## 🔄 Dual-review: Claude writes, Codex reviews
 
 Specs and plans go through a multi-round review loop before you approve them. Claude self-reviews first, then Codex reviews independently against the source code. Claude evaluates each finding, fixes valid ones, rejects false positives with evidence. Rounds repeat until Codex comes back clean or max rounds are reached.
 
@@ -149,7 +149,7 @@ graph TD
     style M fill:#0f766e,color:#fff
 ```
 
-**Real example** — reviewing a CLI distribution plan:
+**Real example.** Reviewing a CLI distribution plan:
 
 |   | Round 1    | Round 2    | Round 3 |
 | --- | ---------- | ---------- | ------- |
@@ -169,7 +169,7 @@ Each round gets tighter. Codex catches real issues Claude missed (missing CI pat
 
 ## 📦 Skills
 
-### 🧠 Core Workflow
+### 🧠 Core workflow
 
 | | Skill | What it does |
 |---|-------|-------------|
@@ -182,7 +182,7 @@ Each round gets tighter. Codex catches real issues Claude missed (missing CI pat
 | 🔍 | **requesting-code-review** | Two-pass review (CRITICAL → INFORMATIONAL). Fix-first. |
 | 🚀 | **finishing-a-development-branch** | Test triage → merge/PR → cleanup. |
 
-### 🔧 Quality & Security
+### 🔧 Quality & security
 
 | | Skill | What it does |
 |---|-------|-------------|
@@ -194,7 +194,7 @@ Each round gets tighter. Codex catches real issues Claude missed (missing CI pat
 | ✍️ | **humanizer** | Write like a human. 35 anti-AI constraints active during composition. |
 | 🔄 | **dual-review** | Claude writes, Codex reviews. Sequential rounds until clean. Source code is truth. |
 
-### 🚧 Safety Guardrails
+### 🚧 Safety guardrails
 
 | | Skill | What it does |
 |---|-------|-------------|
@@ -207,16 +207,16 @@ Each round gets tighter. Codex catches real issues Claude missed (missing CI pat
 
 | | Skill | What it does |
 |---|-------|-------------|
-| 🌐 | **browse** | Headless browser — navigate, interact, screenshot, refs. |
-| 🧪 | **qa** | Web QA — test + fix bugs with before/after evidence. |
-| 📋 | **qa-only** | Report-only web QA — bugs documented, never fixed. |
-| 🎨 | **design-review** | Visual QA — spacing, hierarchy, alignment + fixes. |
+| 🌐 | **browse** | Headless browser: navigate, interact, screenshot, refs. |
+| 🧪 | **qa** | Web QA: test + fix bugs with before/after evidence. |
+| 📋 | **qa-only** | Report-only web QA: bugs documented, never fixed. |
+| 🎨 | **design-review** | Visual QA: spacing, hierarchy, alignment + fixes. |
 | 📐 | **plan-design-review** | Design review before implementation, rates 0-10. |
-| 🖌️ | **design-consultation** | Create DESIGN.md — typography, color, layout, motion. |
+| 🖌️ | **design-consultation** | Create DESIGN.md with typography, color, layout, motion. |
 | 🍪 | **setup-browser-cookies** | Import auth cookies from real browser. |
-| ⏱️ | **benchmark** | Performance regression detection — Core Web Vitals. |
-| 📡 | **canary** | Post-deploy monitoring — console errors, regressions. |
-| 🗄️ | **supabase-qa** | Supabase testing — auth, RLS, data consistency. |
+| ⏱️ | **benchmark** | Performance regression detection. Core Web Vitals. |
+| 📡 | **canary** | Post-deploy monitoring. Console errors, regressions. |
+| 🗄️ | **supabase-qa** | Supabase testing: auth, RLS, data consistency. |
 
 ### 🔩 Utility
 
@@ -230,7 +230,7 @@ Each round gets tighter. Codex catches real issues Claude missed (missing CI pat
 
 ## 🏛️ Architecture
 
-### 🔄 Session Lifecycle
+### 🔄 Session lifecycle
 
 ```mermaid
 graph TD
@@ -248,9 +248,9 @@ graph TD
     style C fill:#6366f1,color:#fff
 ```
 
-### 📐 Preamble Tier System
+### 📐 Preamble tier system
 
-Every skill gets a preamble — a bash block collecting project facts. Tiers control context depth:
+Every skill gets a preamble, a bash block collecting project facts. Tiers control context depth:
 
 | | Tier | Sections | Skills |
 |---|------|----------|--------|
@@ -259,7 +259,7 @@ Every skill gets a preamble — a bash block collecting project facts. Tiers con
 | 🟣 | T3 | + Repo Ownership + Search Before Building | test-driven-development |
 | 🔴 | T4 | Full context (gate-quality) | requesting-code-review, finishing-branch |
 
-### 🔧 Template System
+### 🔧 Template system
 
 ```
 skills/{name}/SKILL.md.tmpl     ← human writes (content + {{PLACEHOLDERS}})
@@ -270,11 +270,11 @@ skills/{name}/SKILL.md.tmpl     ← human writes (content + {{PLACEHOLDERS}})
 skills/{name}/SKILL.md          ← generated, committed, read by Claude
 ```
 
-Skills that reference official Claude Code docs (like `writing-skills`) include a `refs/` directory with auto-updated documentation from Anthropic. CI checks daily for upstream changes and bumps the plugin version when refs update — so your plugin stays current.
+Skills that reference official Claude Code docs (like `writing-skills`) include a `refs/` directory with auto-updated documentation from Anthropic. CI checks daily for upstream changes and bumps the plugin version when refs update, so your plugin stays current.
 
 ---
 
-## 🧰 For Contributors
+## 🧰 For contributors
 
 ```bash
 just setup         # 📦 install tools via mise
@@ -318,5 +318,5 @@ See [ETHOS.md](ETHOS.md) for the full builder philosophy:
 MIT. See [LICENSE](LICENSE).
 
 Upstream skills adapted from [gstack](https://github.com/garrytan/gstack)
-and [superpowers](https://github.com/obra/superpowers) — see
+and [superpowers](https://github.com/obra/superpowers). See
 THIRD_PARTY_NOTICES.md for their licenses.
