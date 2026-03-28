@@ -43,12 +43,16 @@ jobs:
         include:
           - os: macos-14
             artifact: rkstack-darwin-arm64
-          - os: macos-13-large
+            target: ''
+          - os: macos-14
             artifact: rkstack-darwin-x86_64
+            target: bun-darwin-x64
           - os: ubuntu-latest
             artifact: rkstack-linux-x86_64
+            target: ''
           - os: ubuntu-24.04-arm
             artifact: rkstack-linux-aarch64
+            target: ''
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -63,7 +67,8 @@ jobs:
       - name: Build binary
         run: |
           VERSION=$(cat VERSION)
-          bun build --compile --define "VERSION=\"${VERSION}\"" bin/src/main.ts --outfile bin/${{ matrix.artifact }}
+          TARGET_FLAG="${{ matrix.target && format('--target={0}', matrix.target) || '' }}"
+          bun build --compile --define "VERSION=\"${VERSION}\"" $TARGET_FLAG bin/src/main.ts --outfile bin/${{ matrix.artifact }}
 
       - name: Attach binary to release
         uses: ncipollo/release-action@v1
