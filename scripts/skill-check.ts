@@ -8,7 +8,7 @@
  *   - Freshness check (generated files match committed files)
  */
 
-import { discoverTemplates, discoverSkillFiles } from './discover-skills';
+import { discoverTemplates, discoverDevTemplates, discoverSkillFiles } from './discover-skills';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
@@ -17,6 +17,7 @@ const ROOT = path.resolve(import.meta.dir, '..');
 
 const SKILL_FILES = discoverSkillFiles(ROOT);
 const TEMPLATES = discoverTemplates(ROOT);
+const DEV_TEMPLATES = discoverDevTemplates(ROOT);
 
 let hasErrors = false;
 
@@ -70,10 +71,10 @@ for (const { tmpl, output } of TEMPLATES) {
   console.log(`  \u2705 ${tmpl.padEnd(40)} \u2192 ${output}`);
 }
 
-// Skills without templates
+// Skills without templates (exclude dev skills — they're generated from dev/skills/ via gen-dev-skills.ts)
 for (const file of SKILL_FILES) {
   const tmplPath = path.join(ROOT, file + '.tmpl');
-  if (!fs.existsSync(tmplPath) && !TEMPLATES.some(t => t.output === file)) {
+  if (!fs.existsSync(tmplPath) && !TEMPLATES.some(t => t.output === file) && !DEV_TEMPLATES.some(t => t.output === file)) {
     console.log(`  \u26a0\ufe0f  ${file.padEnd(40)} — no template (hand-authored)`);
   }
 }
