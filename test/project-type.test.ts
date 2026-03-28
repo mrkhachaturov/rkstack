@@ -6,6 +6,9 @@ import { spawnSync } from 'child_process';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 
+/** Check if scc is available on this machine. */
+const HAS_SCC = spawnSync('command', ['-v', 'scc'], { shell: true, encoding: 'utf8' }).status === 0;
+
 /** Extract the project type detection section from session-start hook. */
 function extractDetectionBlock(): string {
   const hookPath = path.join(ROOT, 'hooks', 'session-start');
@@ -16,7 +19,7 @@ function extractDetectionBlock(): string {
   return content.substring(start, end);
 }
 
-describe('project type detection', () => {
+describe.skipIf(!HAS_SCC)('project type detection', () => {
   let tmpDir: string;
   let detectionScript: string;
 
