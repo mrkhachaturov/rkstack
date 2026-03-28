@@ -136,8 +136,11 @@ export async function handleMetaCommand(
       }
 
       // Separate target (selector/@ref) from output path
+      // A file path contains '/' or ends with an image extension; everything else is a selector
       for (const arg of remaining) {
-        if (arg.startsWith('@e') || arg.startsWith('@c') || arg.startsWith('.') || arg.startsWith('#') || arg.includes('[')) {
+        if (arg.includes('/') || /\.(png|jpg|jpeg|pdf)$/i.test(arg)) {
+          outputPath = arg;
+        } else if (arg.startsWith('@e') || arg.startsWith('@c') || arg.startsWith('.') || arg.startsWith('#') || arg.includes('[')) {
           targetSelector = arg;
         } else {
           outputPath = arg;
@@ -179,7 +182,15 @@ export async function handleMetaCommand(
 
     case 'responsive': {
       const page = bm.getPage();
-      const prefix = args[0] || `${TEMP_DIR}/browse-responsive`;
+      // Parse -o flag for output prefix
+      let prefix = `${TEMP_DIR}/browse-responsive`;
+      for (let i = 0; i < args.length; i++) {
+        if ((args[i] === '-o' || args[i] === '--output') && args[i + 1]) {
+          prefix = args[++i];
+        } else if (!args[i].startsWith('-')) {
+          prefix = args[i];
+        }
+      }
       validateOutputPath(prefix);
       const viewports = [
         { name: 'mobile', width: 375, height: 812 },
