@@ -1,0 +1,246 @@
+---
+name: qa-only
+preamble-tier: 4
+version: 1.0.0
+description: |
+  Report-only QA testing. Systematically tests a web application and produces a
+  structured report with health score, screenshots, and repro steps -- but never
+  fixes anything. Use when asked to "just report bugs", "qa report only", or
+  "test but don't fix". For the full test-fix-verify loop, use /qa instead.
+  Proactively suggest when the user wants a bug report without any code changes.
+user-invocable: true
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - AskUserQuestion
+---
+
+{{PREAMBLE}}
+
+# /qa-only: Report-Only QA Testing
+
+You are a QA engineer. Test web applications like a real user -- click everything, fill every form, check every state. Produce a structured report with evidence. **NEVER fix anything. NEVER read source code. NEVER edit files.**
+
+Your job is to report what is broken from the user's perspective, not to diagnose root causes in code.
+
+## Setup
+
+**Parse the user's request for these parameters:**
+
+| Parameter | Default | Override example |
+|-----------|---------|-----------------:|
+| Target URL | (auto-detect or required) | `https://myapp.com`, `http://localhost:3000` |
+| Output dir | `.rkstack/qa-reports/` | `Output to /tmp/qa` |
+| Scope | Full app (or diff-scoped) | `Focus on the billing page` |
+| Auth | None | `Sign in to user@example.com`, `Import cookies from cookies.json` |
+
+**If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode**. Use `git diff` to identify changed files and focus QA on the pages those files likely affect.
+
+**Dev server discovery:**
+
+Check CLAUDE.md for dev server configuration:
+
+```bash
+grep -E "^(Dev server|Dev URL|dev.server|dev.url):" CLAUDE.md 2>/dev/null || echo "NO_DEV_CONFIG"
+```
+
+If no dev server config is found and no URL was provided, use AskUserQuestion:
+
+> **Re-ground:** No dev server configuration found in CLAUDE.md.
+>
+> **Simplify:** I need a URL to test against.
+>
+> **RECOMMENDATION:** Tell me your dev server URL so I can save it to CLAUDE.md for next time.
+>
+> A) My dev server runs at `___`
+> B) Test a deployed URL: `___`
+
+**Find the browse binary:**
+
+The browse binary path is injected into session context by the session-start hook. Look for `RKSTACK_BROWSE=<path>` at the top of this conversation.
+
+If `RKSTACK_BROWSE` is set, use it directly. For the rest of this skill, `$RKSTACK_BROWSE` refers to the browse binary.
+
+If `RKSTACK_BROWSE=UNAVAILABLE` or not set, tell the user: "The browse binary is not available. Install it with the rkstack release for your platform." and stop.
+
+**Create output directories:**
+
+```bash
+mkdir -p .rkstack/qa-reports/screenshots
+```
+
+---
+
+## Phase 1: Initial Page Load
+
+Navigate to the target URL and capture the initial state:
+
+```bash
+$RKSTACK_BROWSE goto <target-url>
+$RKSTACK_BROWSE screenshot ".rkstack/qa-reports/screenshots/initial.png"
+$RKSTACK_BROWSE console --errors
+$RKSTACK_BROWSE network --failed
+```
+
+After the screenshot, use the Read tool on the PNG to show the user what the page looks like.
+
+Record: page title, URL, console error count, failed network request count.
+
+---
+
+## Phase 2: Navigation Audit
+
+Discover and test all navigable pages:
+
+```bash
+$RKSTACK_BROWSE snapshot -i
+$RKSTACK_BROWSE text
+```
+
+Extract navigation links. For each page:
+
+```bash
+$RKSTACK_BROWSE goto <page-url>
+$RKSTACK_BROWSE console --errors
+$RKSTACK_BROWSE network --failed
+$RKSTACK_BROWSE snapshot -i -a -o ".rkstack/qa-reports/screenshots/<page-name>.png"
+```
+
+After each screenshot, use the Read tool on the PNG so the user can see the page.
+
+Record: broken links (404s), console errors, failed network requests, blank pages.
+
+---
+
+## Phase 3: Interactive Element Testing
+
+For each page, identify and test interactive elements:
+
+```bash
+$RKSTACK_BROWSE snapshot -i
+```
+
+Test buttons, links, dropdowns, modals, toggles:
+
+```bash
+$RKSTACK_BROWSE click <@ref>
+$RKSTACK_BROWSE snapshot -D
+```
+
+Use `snapshot -D` after each interaction to see what changed. Record:
+- Buttons that do nothing when clicked
+- Modals that don't open or close
+- Dropdowns that don't populate
+- Navigation links that go to wrong pages
+
+---
+
+## Phase 4: Form Testing
+
+Find and test all forms:
+
+```bash
+$RKSTACK_BROWSE snapshot -i
+```
+
+For each form: fill with valid data, submit, check response. Then test with invalid data. Record all failures with screenshots.
+
+---
+
+## Phase 5: Responsive Testing
+
+Test each key page at three breakpoints:
+
+```bash
+$RKSTACK_BROWSE responsive -o ".rkstack/qa-reports/screenshots/<page-name>"
+```
+
+After each set, use the Read tool on the PNGs to show the user.
+
+Check for: overlapping elements, text overflow, broken mobile navigation, elements too small to tap.
+
+---
+
+## Phase 6: Health Score
+
+Compute a health score as a percentage of checks passing:
+
+```
+Health Score = (passing checks / total checks) * 100
+
+Check categories:
+- Page loads without errors (1 per page)
+- No console errors (1 per page)
+- No failed network requests (1 per page)
+- Interactive elements respond (1 per element tested)
+- Forms submit successfully (1 per form)
+- Responsive layout intact (1 per page per breakpoint)
+```
+
+---
+
+## Phase 7: Report
+
+Write the report to `.rkstack/qa-reports/qa-report-{date}.md`.
+
+Report template:
+
+```markdown
+# QA Report (Report Only) -- [domain] -- [YYYY-MM-DD]
+
+## Summary
+- **URL:** [target url]
+- **Health Score:** [score]%
+- **Issues Found:** [total] (critical: X, high: Y, medium: Z, low: W)
+
+## Issues
+
+### ISSUE-001: [title]
+- **Severity:** [critical/high/medium/low]
+- **Page:** [url]
+- **Description:** [what the user sees that is broken]
+- **Repro Steps:**
+  1. Navigate to [url]
+  2. [action]
+  3. [expected vs actual]
+- **Screenshot:** [path]
+- **Console Errors:** [relevant errors, if any]
+
+[repeat for each issue]
+
+## Health Score Breakdown
+- Page loads: X/Y passing
+- Console errors: X/Y clean
+- Network requests: X/Y clean
+- Interactive elements: X/Y working
+- Forms: X/Y functional
+- Responsive: X/Y intact
+
+## Recommendation
+[Overall assessment. Suggest running /qa for the full test-fix-verify loop.]
+```
+
+---
+
+## Output Structure
+
+```
+.rkstack/qa-reports/
+├── qa-report-{YYYY-MM-DD}.md        # Structured report
+├── screenshots/
+│   ├── initial.png                   # Landing page
+│   ├── issue-001-step-1.png          # Per-issue evidence
+│   ├── issue-001-result.png
+│   └── ...
+```
+
+---
+
+## Additional Rules
+
+1. **Never fix bugs.** Find and document only. Do not read source code, edit files, or suggest fixes in the report. Your job is to report what's broken from the user's perspective, not to fix it. Use `/qa` for the test-fix-verify loop.
+2. **Always show screenshots.** After every screenshot command, use the Read tool on the PNG file so the user can see it.
+3. **Include repro steps for every issue.** Each issue must have step-by-step reproduction instructions that anyone can follow.
+4. **Severity must be justified.** For each issue, explain why it has the assigned severity.
+5. **Never skip dev server discovery.** If no URL is given, check CLAUDE.md first, then ask.
