@@ -331,6 +331,8 @@ In addition to the test suite, run visual verification:
 
 4. **Dev server required.** If the dev server is not running, note it as a limitation: "Visual verification skipped — dev server not running."
 
+5. **Supabase data check.** If `HAS_SUPABASE=yes`, use Supabase MCP tools to verify that any data mutations from this feature are correctly reflected in the database. Check that new tables/columns have appropriate RLS policies.
+
 If `PROJECT_TYPE` is not `web`, skip this section entirely.
 
 ---

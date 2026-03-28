@@ -553,6 +553,18 @@ Report template:
 
 ---
 
+## Supabase data verification
+
+If `HAS_SUPABASE=yes` (from session context), the project uses Supabase as its backend. After testing actions that modify data (form submissions, cart operations, account changes):
+
+1. Use the Supabase MCP tools to verify the data was written correctly to the database
+2. Check that RLS (Row Level Security) policies are enforced — try accessing data as an unauthenticated user via MCP and verify it's blocked
+3. After testing auth flows, verify the session exists in Supabase auth tables
+
+This bridges browser testing (what the user sees) with database verification (what actually happened).
+
+---
+
 ## Additional Rules
 
 1. **Clean working tree required.** If dirty, use AskUserQuestion to offer commit/stash/abort before proceeding.
