@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.1] - 2026-03-28
+
+Fixed `-o` flag parsing in the browse daemon. `screenshot -o path/to/file.png` was treating paths starting with `.` as CSS selectors. `responsive -o prefix` was ignoring the prefix entirely. Both now work correctly.
+
 ## [0.6.0] - 2026-03-28
 
 RKstack now understands web projects. When you open a Next.js, Vite, or any TypeScript+CSS project, the workflow adapts automatically: brainstorming suggests design system creation, plans include visual verification steps, executing-plans checks screenshots and console errors after each UI task, verification runs responsive checks, and finishing-branch gates on QA before shipping. For non-web projects, nothing changes.
