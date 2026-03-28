@@ -30,6 +30,8 @@ Skills live in `skills/`. Invoke them by name (e.g., `/brainstorming`).
 | `/document-release` | Post-ship documentation audit. Auto-update factual content. |
 | `/retro` | Weekly retrospective with commit analysis and trend tracking. |
 | `/receiving-code-review` | Respond to review feedback with technical rigor. |
+| `/humanizer` | Write like a human. 35 anti-AI constraints active during composition. |
+| `/dual-review` | Claude writes, Codex reviews. Sequential rounds until clean. Source code is truth. |
 
 ### Safety Guardrails
 

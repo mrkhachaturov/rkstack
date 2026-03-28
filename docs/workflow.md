@@ -27,15 +27,31 @@ Idea / request
   │
   ▼
 ┌─────────────────┐
-│  brainstorming   │  T1 — explore ideas, propose approaches, write design spec
-│                  │  Output: docs/specs/YYYY-MM-DD-<topic>-design.md
+│  brainstorming   │  T2 — explore ideas, propose approaches, write design spec
+│                  │  Output: docs/rkstack/specs/YYYY-MM-DD-<topic>-design.md
+│                  │  humanizer constraints active during spec writing
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  dual-review     │  T2 — Claude self-reviews, then Codex reviews spec
+│  (spec)          │  Sequential rounds until clean or max 3 reached
+│                  │  Source code is truth — both check against real codebase
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
 │  writing-plans   │  T2 — create implementation plan from spec
-│                  │  Output: docs/plans/YYYY-MM-DD-<feature>-plan.md
+│                  │  Output: docs/rkstack/plans/YYYY-MM-DD-<feature>.md
 │                  │  Bite-sized TDD tasks, exact file paths, no placeholders
+│                  │  Smart decomposition: split only when real dependencies exist
+│                  │  humanizer constraints active for plan header prose
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  dual-review     │  T2 — Claude self-reviews, then Codex reviews plan
+│  (plan)          │  Checks plan against spec + source code
 └────────┬────────┘
          │
          ▼
@@ -44,6 +60,7 @@ Idea / request
 │                  │  - subagent-driven-development (fresh agent per task)
 │                  │  - executing-plans (inline, same session)
 │                  │  Each task uses test-driven-development (T3)
+│                  │  Commits reference plan ID in conventional commit format
 └────────┬────────┘
          │
          ▼
@@ -58,6 +75,7 @@ Idea / request
 │  requesting-     │  T4 — two-pass review (CRITICAL then INFORMATIONAL)
 │  code-review     │  Dispatches code-reviewer agent
 │                  │  Fix-first: AUTO-FIX safe issues, ASK for design decisions
+│                  │  Suggests finishing-a-development-branch as next step
 └────────┬────────┘
          │
          ▼
@@ -65,6 +83,8 @@ Idea / request
 │  finishing-a-    │  T4 — merge, PR, or cleanup
 │  development-    │  Pre-flight: test triage, base branch detection
 │  branch          │  Options: merge locally / push+PR / keep / discard
+│                  │  humanizer constraints active for CHANGELOG + PR description
+│                  │  Suggests document-release after PR
 └─────────────────┘
 ```
 
@@ -114,7 +134,7 @@ Every skill gets a preamble injected at the top. The tier controls how much cont
 | Tier | Sections Included | Skills |
 |------|------------------|--------|
 | T1 | Core bash (scc, branch, repo-mode) + Completion Status + Escalation | using-rkstack, careful, freeze, guard, unfreeze |
-| T2 | T1 + AskUserQuestion Format + Completeness Principle | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, parallel-agents, worktrees, receiving-review, writing-skills, document-release, retro, cso |
+| T2 | T1 + AskUserQuestion Format + Completeness Principle | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, parallel-agents, worktrees, receiving-review, writing-skills, document-release, retro, cso, humanizer, dual-review |
 | T3 | T2 + Repo Ownership + Search Before Building | TDD |
 | T4 | T3 (gate-quality skills) | requesting-code-review, finishing-a-development-branch |
 
@@ -167,6 +187,8 @@ Hand-authored files that live alongside templates. NOT processed by gen-skill-do
 | test-driven-development | testing-anti-patterns.md | 5 anti-patterns with gate functions |
 | requesting-code-review | code-reviewer.md | Prompt template for reviewer agent |
 | writing-plans | plan-document-reviewer-prompt.md | Plan review prompt |
+| dual-review | spec-review-prompt.md | Codex prompt for spec review |
+| dual-review | plan-review-prompt.md | Codex prompt for plan review |
 
 ## Agent Definitions
 
@@ -176,12 +198,21 @@ Hand-authored files that live alongside templates. NOT processed by gen-skill-do
 
 ## Cross-Skill References
 
-- **brainstorming** → invokes **writing-plans** on completion
-- **writing-plans** → offers **subagent-driven-development** or **executing-plans** for execution
-- **systematic-debugging** → uses **freeze** hooks for scope locking
-- **guard** → chains **careful** (Bash) + **freeze** (Edit/Write)
+- **brainstorming** → runs **dual-review** on spec, then invokes **writing-plans**
+- **brainstorming** → applies **humanizer** constraints during spec writing
+- **writing-plans** → runs **dual-review** on plan, then offers **subagent-driven-development** or **executing-plans**
+- **writing-plans** → applies **humanizer** constraints for plan header prose
+- **executing-plans** → references **test-driven-development** for TDD tasks, **verification-before-completion** before completion
+- **subagent-driven-development** → runs **verification-before-completion** gate before final review
+- **requesting-code-review** → dispatches **code-reviewer** agent, suggests **finishing-a-development-branch**
+- **finishing-a-development-branch** → applies **humanizer** for CHANGELOG/PR, suggests **document-release**
 - **finishing-a-development-branch** → uses **TEST_FAILURE_TRIAGE** from preamble
-- **requesting-code-review** → dispatches **code-reviewer** agent
+- **document-release** → applies **humanizer** constraints for doc prose
+- **retro** → applies **humanizer** constraints for narrative output
+- **systematic-debugging** → uses **freeze** hooks for scope locking, references **TDD** and **verification**
+- **guard** → chains **careful** (Bash) + **freeze** (Edit/Write)
+- **dispatching-parallel-agents** → references **verification-before-completion**
+- **receiving-code-review** → references **verification-before-completion**
 
 ## Execution Skills
 
@@ -196,7 +227,8 @@ Plan ready
              code-quality-reviewer-prompt.md
 
 Both use: test-driven-development for each task
-Both end with: verification → code-review → finishing-branch
+Both use: verification-before-completion before claiming done
+Both end with: requesting-code-review → finishing-branch
 ```
 
 ## Parallel & Isolation
@@ -227,7 +259,7 @@ PR merged
 ## Security
 
 ```
-cso (T3) — Chief Security Officer audit
+cso (T2) — Chief Security Officer audit
   │
   Phases 0-12: architecture model → attack surface → secrets →
   supply chain → CI/CD → infrastructure → webhooks → LLM security →
@@ -249,7 +281,7 @@ cso (T3) — Chief Security Officer audit
 |--------|------|---------|
 | WorktreeManager | lib/worktree.ts | Git worktree isolation: create, harvest patches, cleanup, dedup |
 
-## All 21 Skills
+## All 23 Skills
 
 | Skill | Tier | Source | Category |
 |-------|------|--------|----------|
@@ -270,6 +302,8 @@ cso (T3) — Chief Security Officer audit
 | writing-skills | T2 | superpowers + rkstack | Meta |
 | document-release | T2 | gstack (adapted) | Post-ship |
 | retro | T2 | gstack (core adapted) | Analysis |
+| humanizer | T2 | rkstack (original) | Quality |
+| dual-review | T2 | rkstack (original, inspired by gstack /codex) | Quality |
 | test-driven-development | T3 | superpowers (enriched) | Quality |
 | cso | T2 | gstack (adapted) | Security |
 | requesting-code-review | T4 | gstack /review + superpowers | Quality |

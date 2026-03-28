@@ -105,7 +105,7 @@ To add one:
 rkstack/
 ├── .claude-plugin/plugin.json    # plugin manifest
 ├── hooks/                        # SessionStart + scripts
-├── skills/                       # all skills (21 total)
+├── skills/                       # all skills (23 total)
 │   └── {name}/
 │       ├── SKILL.md.tmpl         # template (edit this)
 │       ├── SKILL.md              # generated (commit this)

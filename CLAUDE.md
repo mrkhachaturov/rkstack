@@ -166,7 +166,7 @@ It runs first when Claude loads a skill, collecting project context.
 | Tier | Skills | What it includes |
 |------|--------|-----------------|
 | T1 | using-rkstack, careful, freeze, guard, unfreeze | Core: scc detection, branch, repo-mode, framework hints, CLAUDE.md check |
-| T2 | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, dispatching-parallel, worktrees, receiving-review, writing-skills, document-release, retro, cso | T1 + AskUserFormat + Completeness table |
+| T2 | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, dispatching-parallel, worktrees, receiving-review, writing-skills, document-release, retro, cso, humanizer, dual-review | T1 + AskUserFormat + Completeness table |
 | T3 | TDD | T2 + RepoMode section + SearchBeforeBuilding |
 | T4 | requesting-code-review, finishing-a-development-branch | T3 + full context (gate-quality skills) |
 

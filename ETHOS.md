@@ -129,6 +129,24 @@ penalized for escalating.
 
 ---
 
+## 6. Trust, Then Verify With a Second Mind
+
+A single AI reviewing its own output has structural blind spots — patterns
+it favors, edges it consistently misses, assumptions it can't see because
+it made them. A second model with different training, different biases,
+and no shared context catches what the first one can't.
+
+This is why specs, plans, and code all go through dual-review: Claude
+writes and self-reviews, then Codex reviews independently in read-only
+mode against the real source code. Findings are evaluated — not blindly
+accepted. Valid issues get fixed. False positives are rejected with
+evidence. Rounds repeat until the second mind comes back clean.
+
+Two models. Zero shared assumptions. Sequential rounds, not a single
+pass. Each round gets tighter.
+
+---
+
 ## How They Work Together
 
 **Completeness** says: do the full thing.
@@ -136,6 +154,7 @@ penalized for escalating.
 **Evidence Before Assertions** says: prove it works before you claim it does.
 **Platform-Agnostic** says: let the project tell you how it works.
 **Escalate, Don't Guess** says: stop when you're not sure.
+**Trust, Then Verify** says: one model is not enough. Get a second opinion.
 
 Together: search first, build the complete version of the right thing,
-prove it works, and stop if you can't.
+prove it works, verify with a second mind, and stop if you can't.

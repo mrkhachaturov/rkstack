@@ -24,10 +24,16 @@ Session-start hook loads using-rkstack
   │  (intent → skill mapping)
   ▼
 Claude invokes brainstorming skill
-  │  (design spec produced)
+  │  (design spec produced, humanizer active)
+  ▼
+dual-review (spec)
+  │  (Claude self-reviews → Codex reviews → rounds until clean)
   ▼
 writing-plans skill
-  │  (implementation plan with TDD tasks)
+  │  (implementation plan with TDD tasks, humanizer active)
+  ▼
+dual-review (plan)
+  │  (Claude self-reviews → Codex reviews → rounds until clean)
   ▼
 executing-plans / subagent-driven-development
   │  (each task follows TDD: RED → GREEN → REFACTOR)
@@ -65,7 +71,7 @@ Alternative approaches and why we didn't use them:
 
 ## Why Templates
 
-28 skills. Shared patterns (preamble, base branch detection, test failure
+23 skills. Shared patterns (preamble, base branch detection, test failure
 triage). If these are copy-pasted, they drift. A change to the preamble
 means editing 28 files.
 
