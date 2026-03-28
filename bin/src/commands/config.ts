@@ -17,6 +17,12 @@ function writeConfig(filePath: string, data: ConfigObject): void {
   writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
+/** Validate a dotted key: non-empty, no empty segments, no leading/trailing dots. */
+export function isValidKey(key: string): boolean {
+  if (!key || key.startsWith('.') || key.endsWith('.') || key.includes('..')) return false;
+  return key.split('.').every(part => part.length > 0);
+}
+
 /** Traverse a dotted key path into a nested object, returning the value as string or ''. */
 export function configGet(filePath: string, key: string): string {
   const data = readConfig(filePath);
@@ -27,17 +33,25 @@ export function configGet(filePath: string, key: string): string {
     node = (node as Record<string, unknown>)[part];
   }
   if (node === undefined || node === null) return '';
+  if (typeof node === 'object') return '';
   return String(node);
 }
 
 /** Set a dotted key path in the config file. Creates the file if missing. */
 export function configSet(filePath: string, key: string, value: string): void {
+  if (!isValidKey(key)) {
+    process.stderr.write(`Invalid config key: "${key}". Keys must be non-empty with no empty segments.\n`);
+    return;
+  }
   const data = readConfig(filePath);
   const parts = key.split('.');
   let node: Record<string, unknown> = data;
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
-    if (typeof node[part] !== 'object' || node[part] === null) {
+    if (node[part] !== undefined && (typeof node[part] !== 'object' || node[part] === null)) {
+      process.stderr.write(`Warning: overwriting non-object value at "${parts.slice(0, i + 1).join('.')}" with nested object.\n`);
+      node[part] = {};
+    } else if (node[part] === undefined) {
       node[part] = {};
     }
     node = node[part] as Record<string, unknown>;

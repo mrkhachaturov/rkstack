@@ -197,6 +197,35 @@ describe('config command', () => {
     configSet(configPath, 'existing', 'value');
     expect(configGet(configPath, 'missing')).toBe('');
   });
+
+  test('get returns empty string for non-leaf (object) node', async () => {
+    const { configSet, configGet } = await import('../bin/src/commands/config.ts');
+    configSet(configPath, 'dual_review.max_rounds', '3');
+    expect(configGet(configPath, 'dual_review')).toBe('');
+  });
+
+  test('set rejects invalid keys', async () => {
+    const { configSet, isValidKey } = await import('../bin/src/commands/config.ts');
+    expect(isValidKey('')).toBe(false);
+    expect(isValidKey('.foo')).toBe(false);
+    expect(isValidKey('foo.')).toBe(false);
+    expect(isValidKey('foo..bar')).toBe(false);
+    expect(isValidKey('valid.key')).toBe(true);
+    expect(isValidKey('simple')).toBe(true);
+    // set with invalid key should not create a file
+    configSet(configPath, '', 'value');
+    expect(fs.existsSync(configPath)).toBe(false);
+  });
+
+  test('set warns when overwriting non-object with nested key', async () => {
+    const { configSet, configGet } = await import('../bin/src/commands/config.ts');
+    configSet(configPath, 'x', 'hello');
+    // This overwrites the string 'hello' at 'x' with an object {y: 'world'}
+    configSet(configPath, 'x.y', 'world');
+    expect(configGet(configPath, 'x.y')).toBe('world');
+    // Original scalar at 'x' is gone (replaced with object)
+    expect(configGet(configPath, 'x')).toBe('');
+  });
 });
 
 // ─── repo-mode ────────────────────────────────────────────
@@ -312,6 +341,33 @@ describe('main router', () => {
     if (orig !== undefined) process.env.CLAUDE_PLUGIN_DATA = orig;
     else delete process.env.CLAUDE_PLUGIN_DATA;
   });
+
+  test('binary dispatches version command', () => {
+    const r = spawnSync('bun', ['bin/src/main.ts', 'version'], {
+      encoding: 'utf8',
+      cwd: ROOT,
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  test('binary dispatches slug command', () => {
+    const r = spawnSync('bun', ['bin/src/main.ts', 'slug'], {
+      encoding: 'utf8',
+      cwd: ROOT,
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().length).toBeGreaterThan(0);
+  });
+
+  test('binary exits 1 for unknown command', () => {
+    const r = spawnSync('bun', ['bin/src/main.ts', 'bogus'], {
+      encoding: 'utf8',
+      cwd: ROOT,
+    });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('Usage:');
+  });
 });
 
 // ─── bootstrap script (integration) ─────────────────────
@@ -347,6 +403,41 @@ describe('bootstrap script (real generated)', () => {
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('downloads binary successfully when mock curl succeeds', () => {
+    const binDir = path.join(tmpDir, 'bin');
+    const versionFile = path.join(tmpDir, 'VERSION');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(versionFile, '0.4.0', 'utf8');
+
+    // Mock curl: writes a fake binary that prints the expected version
+    const mockCurl = path.join(tmpDir, 'curl');
+    fs.writeFileSync(mockCurl, [
+      '#!/bin/bash',
+      '# Parse -o <outfile> from curl args',
+      'OUT=""',
+      'while [ $# -gt 0 ]; do',
+      '  if [ "$1" = "-o" ]; then OUT="$2"; shift; fi',
+      '  shift',
+      'done',
+      'printf \'#!/bin/bash\\necho 0.4.0\\n\' > "$OUT"',
+    ].join('\n'), { mode: 0o755 });
+
+    const wrapper = `
+      export PATH="${tmpDir}:$PATH"
+      export CLAUDE_PLUGIN_DATA="${tmpDir}"
+      export CLAUDE_PLUGIN_ROOT="${tmpDir}"
+      ${bootstrapScript}
+    `;
+    const r = spawnSync('bash', ['-c', wrapper], { encoding: 'utf8' });
+    expect(r.status).toBe(0);
+    // Binary should exist and be executable
+    expect(fs.existsSync(path.join(binDir, 'rkstack'))).toBe(true);
+    // No fail marker
+    expect(fs.existsSync(path.join(binDir, '.download-failed'))).toBe(false);
+    // No UNAVAILABLE message
+    expect(r.stdout).not.toContain('RKSTACK_BIN_UNAVAILABLE');
   });
 
   test('prints RKSTACK_BIN_UNAVAILABLE on download failure', () => {
