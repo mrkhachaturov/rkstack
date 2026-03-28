@@ -373,12 +373,12 @@ describe('main router', () => {
 // ─── bootstrap in session-start hook (integration) ─────────────────────
 
 /** Extract the bootstrap section from hooks/session-start.
- *  The bootstrap is between "# === rkstack binary bootstrap" and the next
- *  "# Read using-rkstack content" comment. We also need the shebang + set. */
+ *  The bootstrap is between "# === Binary bootstrap" and the next
+ *  "# Read using-rkstack content" comment. */
 function extractBootstrapFromHook(): string {
   const hookPath = path.join(ROOT, 'hooks', 'session-start');
   const content = fs.readFileSync(hookPath, 'utf8');
-  const start = content.indexOf('# === rkstack binary bootstrap');
+  const start = content.indexOf('# === Binary bootstrap');
   const end = content.indexOf('# Read using-rkstack content');
   if (start === -1 || end === -1) throw new Error('Bootstrap section not found in session-start hook');
   return content.substring(start, end);

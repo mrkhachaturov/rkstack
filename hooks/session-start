@@ -7,23 +7,26 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# === rkstack binary bootstrap (Claude Code only) ===
+# === Binary bootstrap (Claude Code only) ===
 # CLAUDE_PLUGIN_DATA and CLAUDE_PLUGIN_ROOT are exported by Claude Code to hook
 # processes. They are NOT available inside Claude's Bash tool, so the bootstrap
 # must happen here — not in the preamble.
 RKSTACK_BOOTSTRAP_RESULT=""
+BROWSE_BOOTSTRAP_RESULT=""
 if [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
-  RKSTACK_BIN="${CLAUDE_PLUGIN_DATA}/bin/rkstack"
   WANT_VERSION=$(cat "${CLAUDE_PLUGIN_ROOT}/VERSION" 2>/dev/null || echo "")
+  OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+  ARCH=$(uname -m)
+  mkdir -p "${CLAUDE_PLUGIN_DATA}/bin"
+
   if [ -n "$WANT_VERSION" ]; then
+    # --- rkstack binary ---
+    RKSTACK_BIN="${CLAUDE_PLUGIN_DATA}/bin/rkstack"
     if [ -x "$RKSTACK_BIN" ] && [ "$("$RKSTACK_BIN" version 2>/dev/null)" = "$WANT_VERSION" ]; then
       RKSTACK_BOOTSTRAP_RESULT="RKSTACK_BIN=${RKSTACK_BIN} (v${WANT_VERSION})"
     else
-      OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-      ARCH=$(uname -m)
       ASSET="rkstack-${OS}-${ARCH}"
       URL="https://github.com/mrkhachaturov/rkstack/releases/download/v${WANT_VERSION}/${ASSET}"
-      mkdir -p "${CLAUDE_PLUGIN_DATA}/bin"
       FAIL_MARKER="${CLAUDE_PLUGIN_DATA}/bin/.download-failed"
       find "${CLAUDE_PLUGIN_DATA}/bin" -name ".download-failed" -mmin +60 -delete 2>/dev/null || true
       if [ -f "$FAIL_MARKER" ]; then
@@ -43,37 +46,30 @@ if [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
         fi
       fi
     fi
-  fi
-fi
 
-# === rkstack-browse binary bootstrap ===
-BROWSE_BOOTSTRAP_RESULT=""
-if [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
-  RKSTACK_BROWSE="${CLAUDE_PLUGIN_DATA}/bin/rkstack-browse"
-  WANT_BROWSE_VERSION=$(cat "${CLAUDE_PLUGIN_ROOT}/VERSION" 2>/dev/null || echo "")
-  if [ -n "$WANT_BROWSE_VERSION" ]; then
-    if [ -x "$RKSTACK_BROWSE" ]; then
+    # --- rkstack-browse binary ---
+    RKSTACK_BROWSE="${CLAUDE_PLUGIN_DATA}/bin/rkstack-browse"
+    if [ -x "$RKSTACK_BROWSE" ] && [ "$(cat "${RKSTACK_BROWSE}.version" 2>/dev/null)" = "$WANT_VERSION" ]; then
       BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=${RKSTACK_BROWSE}"
     else
-      OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-      ARCH=$(uname -m)
       ASSET="rkstack-browse-${OS}-${ARCH}"
-      URL="https://github.com/mrkhachaturov/rkstack/releases/download/v${WANT_BROWSE_VERSION}/${ASSET}"
+      URL="https://github.com/mrkhachaturov/rkstack/releases/download/v${WANT_VERSION}/${ASSET}"
       FAIL_MARKER="${CLAUDE_PLUGIN_DATA}/bin/.browse-download-failed"
       find "${CLAUDE_PLUGIN_DATA}/bin" -name ".browse-download-failed" -mmin +60 -delete 2>/dev/null || true
       if [ -f "$FAIL_MARKER" ]; then
-        BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=UNAVAILABLE"
+        BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=UNAVAILABLE (download failed recently, will retry next session)"
       else
         TMPBIN="${RKSTACK_BROWSE}.tmp.$$"
         if curl --connect-timeout 5 --max-time 60 -fsSL "$URL" -o "$TMPBIN" 2>/dev/null \
            && chmod +x "$TMPBIN"; then
           mv -f "$TMPBIN" "$RKSTACK_BROWSE"
+          echo "$WANT_VERSION" > "${RKSTACK_BROWSE}.version"
           rm -f "$FAIL_MARKER"
           BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=${RKSTACK_BROWSE}"
         else
           rm -f "$TMPBIN"
           touch "$FAIL_MARKER"
-          BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=UNAVAILABLE"
+          BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=UNAVAILABLE (download failed or platform ${OS}-${ARCH} not supported)"
         fi
       fi
     fi
