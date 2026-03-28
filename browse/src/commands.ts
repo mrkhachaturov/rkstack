@@ -30,10 +30,6 @@ export const META_COMMANDS = new Set([
   'screenshot', 'pdf', 'responsive',
   'chain', 'diff',
   'url', 'snapshot',
-  'handoff', 'resume',
-  'connect', 'disconnect', 'focus',
-  'inbox',
-  'watch',
   'state',
   'frame',
 ]);
@@ -100,17 +96,6 @@ export const COMMAND_DESCRIPTIONS: Record<string, { category: string; descriptio
   // Meta
   'snapshot':{ category: 'Snapshot', description: 'Accessibility tree with @e refs for element selection. Flags: -i interactive only, -c compact, -d N depth limit, -s sel scope, -D diff vs previous, -a annotated screenshot, -o path output, -C cursor-interactive @c refs', usage: 'snapshot [flags]' },
   'chain':   { category: 'Meta', description: 'Run commands from JSON stdin. Format: [["cmd","arg1",...],...]' },
-  // Handoff
-  'handoff': { category: 'Server', description: 'Open visible Chrome at current page for user takeover', usage: 'handoff [message]' },
-  'resume':  { category: 'Server', description: 'Re-snapshot after user takeover, return control to AI', usage: 'resume' },
-  // Headed mode
-  'connect': { category: 'Server', description: 'Launch headed Chromium with Chrome extension', usage: 'connect' },
-  'disconnect': { category: 'Server', description: 'Disconnect headed browser, return to headless mode' },
-  'focus':   { category: 'Server', description: 'Bring headed browser window to foreground (macOS)', usage: 'focus [@ref]' },
-  // Inbox
-  'inbox':   { category: 'Meta', description: 'List messages from sidebar scout inbox', usage: 'inbox [--clear]' },
-  // Watch
-  'watch':   { category: 'Meta', description: 'Passive observation — periodic snapshots while user browses', usage: 'watch [stop]' },
   // State
   'state':   { category: 'Server', description: 'Save/load browser state (cookies + URLs)', usage: 'state save|load <name>' },
   // Frame

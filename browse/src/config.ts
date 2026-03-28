@@ -3,7 +3,7 @@
  *
  * Resolution:
  *   1. BROWSE_STATE_FILE env → derive stateDir from parent
- *   2. git rev-parse --show-toplevel → projectDir/.gstack/
+ *   2. git rev-parse --show-toplevel → projectDir/.rkstack/
  *   3. process.cwd() fallback (non-git environments)
  *
  * The CLI computes the config and passes BROWSE_STATE_FILE to the
@@ -56,10 +56,10 @@ export function resolveConfig(
   if (env.BROWSE_STATE_FILE) {
     stateFile = env.BROWSE_STATE_FILE;
     stateDir = path.dirname(stateFile);
-    projectDir = path.dirname(stateDir); // parent of .gstack/
+    projectDir = path.dirname(stateDir); // parent of .rkstack/
   } else {
     projectDir = getGitRoot() || process.cwd();
-    stateDir = path.join(projectDir, '.gstack');
+    stateDir = path.join(projectDir, '.rkstack');
     stateFile = path.join(stateDir, 'browse.json');
   }
 
@@ -74,7 +74,7 @@ export function resolveConfig(
 }
 
 /**
- * Create the .gstack/ state directory if it doesn't exist.
+ * Create the .rkstack/ state directory if it doesn't exist.
  * Throws with a clear message on permission errors.
  */
 export function ensureStateDir(config: BrowseConfig): void {
@@ -90,13 +90,13 @@ export function ensureStateDir(config: BrowseConfig): void {
     throw err;
   }
 
-  // Ensure .gstack/ is in the project's .gitignore
+  // Ensure .rkstack/ is in the project's .gitignore
   const gitignorePath = path.join(config.projectDir, '.gitignore');
   try {
     const content = fs.readFileSync(gitignorePath, 'utf-8');
-    if (!content.match(/^\.gstack\/?$/m)) {
+    if (!content.match(/^\.rkstack\/?$/m)) {
       const separator = content.endsWith('\n') ? '' : '\n';
-      fs.appendFileSync(gitignorePath, `${separator}.gstack/\n`);
+      fs.appendFileSync(gitignorePath, `${separator}.rkstack/\n`);
     }
   } catch (err: any) {
     if (err.code !== 'ENOENT') {
@@ -134,6 +134,14 @@ export function getRemoteSlug(): string {
     const root = getGitRoot();
     return path.basename(root || process.cwd());
   }
+}
+
+/**
+ * Return the Chromium cache directory for rkstack-browse.
+ */
+export function getChromiumCacheDir(): string {
+  const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
+  return path.join(home, '.cache', 'rkstack-browse');
 }
 
 /**

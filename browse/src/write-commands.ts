@@ -6,7 +6,7 @@
  */
 
 import type { BrowserManager } from './browser-manager';
-import { findInstalledBrowsers, importCookies, listSupportedBrowserNames } from './cookie-import-browser';
+import { importCookies } from './cookie-import-browser';
 import { validateNavigationUrl } from './url-validation';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -318,44 +318,25 @@ export async function handleWriteCommand(
     }
 
     case 'cookie-import-browser': {
-      // Two modes:
-      // 1. Direct CLI import: cookie-import-browser <browser> --domain <domain> [--profile <profile>]
-      // 2. Open picker UI: cookie-import-browser [browser]
+      // Direct CLI import: cookie-import-browser <browser> --domain <domain> [--profile <profile>]
       const browserArg = args[0];
       const domainIdx = args.indexOf('--domain');
       const profileIdx = args.indexOf('--profile');
       const profile = (profileIdx !== -1 && profileIdx + 1 < args.length) ? args[profileIdx + 1] : 'Default';
 
-      if (domainIdx !== -1 && domainIdx + 1 < args.length) {
-        // Direct import mode — no UI
-        const domain = args[domainIdx + 1];
-        const browser = browserArg || 'comet';
-        const result = await importCookies(browser, [domain], profile);
-        if (result.cookies.length > 0) {
-          await page.context().addCookies(result.cookies);
-        }
-        const msg = [`Imported ${result.count} cookies for ${domain} from ${browser}`];
-        if (result.failed > 0) msg.push(`(${result.failed} failed to decrypt)`);
-        return msg.join(' ');
+      if (domainIdx === -1 || domainIdx + 1 >= args.length) {
+        throw new Error('Usage: cookie-import-browser [browser] --domain <domain> [--profile <profile>]');
       }
 
-      // Picker UI mode — open in user's browser
-      const port = bm.serverPort;
-      if (!port) throw new Error('Server port not available');
-
-      const browsers = findInstalledBrowsers();
-      if (browsers.length === 0) {
-        throw new Error(`No Chromium browsers found. Supported: ${listSupportedBrowserNames().join(', ')}`);
+      const domain = args[domainIdx + 1];
+      const browser = browserArg || 'comet';
+      const result = await importCookies(browser, [domain], profile);
+      if (result.cookies.length > 0) {
+        await page.context().addCookies(result.cookies);
       }
-
-      const pickerUrl = `http://127.0.0.1:${port}/cookie-picker`;
-      try {
-        Bun.spawn(['open', pickerUrl], { stdout: 'ignore', stderr: 'ignore' });
-      } catch {
-        // open may fail silently — URL is in the message below
-      }
-
-      return `Cookie picker opened at ${pickerUrl}\nDetected browsers: ${browsers.map(b => b.name).join(', ')}\nSelect domains to import, then close the picker when done.`;
+      const msg = [`Imported ${result.count} cookies for ${domain} from ${browser}`];
+      if (result.failed > 0) msg.push(`(${result.failed} failed to decrypt)`);
+      return msg.join(' ');
     }
 
     default:
