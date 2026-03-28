@@ -67,6 +67,56 @@ Each step uses **test-driven-development** (RED → GREEN → REFACTOR). Bugs tr
 
 ---
 
+## 🔍 Project-Aware: Same Flow, Different Depth
+
+At session start, `scc` scans your project and classifies it. The workflow stays the same — but **web projects get visual verification built into every step**, automatically.
+
+```mermaid
+graph TD
+    A["🚀 Session starts"] --> B["scc scans project"]
+    B --> C{"Classify"}
+    C -->|"TS/JS + CSS\nor web config"| W["🌐 PROJECT_TYPE=web"]
+    C -->|"TS/JS only"| N["📦 PROJECT_TYPE=node"]
+    C -->|"Python"| P["🐍 PROJECT_TYPE=python"]
+    C -->|"Go"| G["🔧 PROJECT_TYPE=go"]
+    C -->|"Terraform/HCL"| I["🏗️ PROJECT_TYPE=infra"]
+    C -->|"YAML + Shell"| D["⚙️ PROJECT_TYPE=devops"]
+    C -->|"other"| X["📄 PROJECT_TYPE=general"]
+
+    W --> WF["Web-aware workflow"]
+    N --> SF["Standard workflow"]
+    P --> SF
+    G --> SF
+    I --> SF
+    D --> SF
+    X --> SF
+
+    WF --> S1["brainstorming\n+ suggests design system\n+ invokes plan-design-review"]
+    WF --> S2["writing-plans\n+ visual verification steps\n+ responsive checkpoints"]
+    WF --> S3["executing-plans\n+ screenshot after UI tasks\n+ console error check\n+ network failure check"]
+    WF --> S4["verification\n+ /qa-only health score\n+ responsive at 3 breakpoints"]
+    WF --> S5["finishing-branch\n+ /qa gate before PR\n+ /benchmark regression check\n+ screenshots in PR"]
+
+    style A fill:#0f766e,color:#fff
+    style B fill:#f59e0b,color:#000
+    style W fill:#3b82f6,color:#fff
+    style WF fill:#3b82f6,color:#fff
+    style S1 fill:#8b5cf6,color:#fff
+    style S2 fill:#6366f1,color:#fff
+    style S3 fill:#3b82f6,color:#fff
+    style S4 fill:#10b981,color:#fff
+    style S5 fill:#0f766e,color:#fff
+    style SF fill:#64748b,color:#fff
+```
+
+**No config needed.** scc detects TypeScript + CSS + `next.config.ts`? You get browser-based QA, annotated screenshots, responsive checks, and design review — injected into the same brainstorming → plans → execute → verify → ship flow.
+
+Supabase detected (`.mcp.json` or `supabase/` directory)? Skills also verify data via MCP after browser actions — checking that what the user sees matches what the database stored.
+
+Non-web projects (Go, Python, Terraform, DevOps) get the standard workflow with zero web-specific behavior.
+
+---
+
 ## 🔄 Dual-Review: Claude Writes, Codex Reviews
 
 Specs and plans go through a multi-round review loop before you approve them. Claude self-reviews first, then Codex reviews independently against the source code. Claude evaluates each finding, fixes valid ones, rejects false positives with evidence. Rounds repeat until Codex comes back clean or max rounds are reached.

@@ -230,18 +230,66 @@ PR merged
                                    focus scoring, team breakdown, trends
 ```
 
+## Project Type Detection
+
+At session start, the session-start hook runs `scc` on the project root and classifies it:
+
+```mermaid
+graph LR
+    SCC["scc scans project"] --> C{"Classify"}
+    C -->|"TS/JS + CSS or web config"| W["web"]
+    C -->|"TS/JS only"| N["node"]
+    C -->|"Python dominant"| P["python"]
+    C -->|"Go dominant"| G["go"]
+    C -->|"Terraform/HCL"| I["infra"]
+    C -->|"YAML + Shell only"| D["devops"]
+    C -->|"anything else"| X["general"]
+
+    style W fill:#3b82f6,color:#fff
+    style SCC fill:#f59e0b,color:#000
+```
+
+The result is injected into session context as `PROJECT_TYPE=web` (or node, python, go, etc.). Skills read this and adapt their behavior. No configuration needed.
+
+**Web detection signals:** TypeScript or JavaScript **AND** (CSS/HTML/SCSS detected **OR** web framework config: `next.config.*`, `vite.config.*`, `nuxt.config.*`, `svelte.config.*`, `angular.json`).
+
+**Service detection:** If `.mcp.json` contains a `"supabase"` key or a `supabase/` directory exists, `HAS_SUPABASE=yes` is also injected.
+
 ## Web-Aware Workflow
 
-When `PROJECT_TYPE=web` is detected (TypeScript/JavaScript + CSS/HTML or web framework config), process skills automatically include visual verification:
+When `PROJECT_TYPE=web`, the same core flow (brainstorming → plans → execute → verify → ship) gains visual verification at every stage. Non-web projects are completely unaffected.
 
-- **brainstorming** — suggests /design-consultation, invokes /plan-design-review
-- **writing-plans** — adds visual verification steps to UI tasks
-- **executing-plans** — screenshot + console check after UI tasks
-- **verification** — runs /qa-only, responsive checks
-- **requesting-code-review** — includes screenshots
-- **finishing-branch** — QA gate, /benchmark, screenshots in PR
+```mermaid
+graph TD
+    B["🧠 brainstorming"] -->|"web"| B1["suggests /design-consultation\ninvokes /plan-design-review"]
+    B1 --> C["📋 writing-plans"]
+    C -->|"web"| C1["visual verification steps\nresponsive checkpoints\ndesign reference in tasks"]
+    C1 --> E["⚙️ executing-plans"]
+    E -->|"web"| E1["screenshot after UI tasks\nconsole error = blocker\nnetwork failure = blocker\nSupabase MCP data check"]
+    E1 --> V["✅ verification"]
+    V -->|"web"| V1["/qa-only quick mode\nresponsive at 3 breakpoints\nconsole audit across pages"]
+    V1 --> R["🔍 code-review"]
+    R -->|"web + frontend files"| R1["screenshots of affected pages\nvisual regression detection"]
+    R1 --> F["🚀 finishing-branch"]
+    F -->|"web"| F1["/qa standard mode = gate\n/benchmark if baseline exists\nscreenshots in PR description"]
 
-When `HAS_SUPABASE=yes`, skills also verify data via Supabase MCP.
+    style B fill:#8b5cf6,color:#fff
+    style C fill:#6366f1,color:#fff
+    style E fill:#3b82f6,color:#fff
+    style V fill:#10b981,color:#fff
+    style R fill:#0ea5e9,color:#fff
+    style F fill:#0f766e,color:#fff
+    style B1 fill:#c084fc,color:#000
+    style C1 fill:#818cf8,color:#fff
+    style E1 fill:#60a5fa,color:#000
+    style V1 fill:#34d399,color:#000
+    style R1 fill:#38bdf8,color:#000
+    style F1 fill:#2dd4bf,color:#000
+```
+
+**The browser daemon** (`rkstack-browse`) powers all visual verification. It's a persistent headless Chromium with an accessibility-tree ref system (`@e1`, `@e2` for DOM elements), annotated screenshots, responsive breakpoints, and console/network capture. Auto-starts on first command, shuts down after 30 min idle.
+
+**Supabase integration:** When `HAS_SUPABASE=yes`, skills verify data via Supabase MCP after browser actions (form submit → check database, auth flow → check session table, mutations → check RLS).
 
 ## Security
 
