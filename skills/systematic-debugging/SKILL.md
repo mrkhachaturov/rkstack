@@ -75,7 +75,7 @@ echo "CLAUDE_MD: $_HAS_CLAUDE_MD"
 ```
 
 Use the preamble output to adapt your behavior:
-- **TypeScript/JavaScript** — web/fullstack project. Check for React/Vue/Svelte patterns.
+- **TypeScript/JavaScript** — see PROJECT_TYPE in session context (web or node). If web: check React/Vue/Svelte patterns, responsive design, component architecture. If node: CLI tools, MCP servers, backend scripts.
 - **Python** — backend/ML/scripts. Check PEP8 conventions, pytest for testing.
 - **Go** — backend/infra. Check error handling patterns, go test.
 - **Rust** — systems. Check ownership patterns, cargo test.
