@@ -51,7 +51,7 @@ rkstack/
 ├── hooks/                        # SessionStart + hook scripts
 │   ├── hooks.json                # SessionStart declaration
 │   └── session-start             # injects using-rkstack at session start
-├── skills/                       # 22 shipped skills (templates + generated)
+├── skills/                       # 23 shipped skills (templates + generated)
 │   ├── brainstorming/
 │   │   ├── SKILL.md.tmpl         # template (human-authored)
 │   │   ├── SKILL.md              # generated (committed)
@@ -392,11 +392,12 @@ preamble tiers, and the build workflow.
 - gen-dev-skills.ts (dev/ → .claude/skills/ with refs from upstream)
 - Preamble tier system (T1-T4) with AskUserFormat, Completeness, RepoMode, Escalation
 - Resolvers: PREAMBLE, TEST_FAILURE_TRIAGE, BASE_BRANCH_DETECT
-- 22 shipped skills at gstack depth:
+- 23 shipped skills at gstack depth:
   - T1: using-rkstack, careful, freeze, guard, unfreeze
   - T2: brainstorming, systematic-debugging, writing-plans, verification,
     executing-plans, subagent-driven, parallel-agents, worktrees,
-    receiving-review, writing-skills, document-release, retro, cso, humanizer
+    receiving-review, writing-skills, document-release, retro, cso, humanizer,
+    dual-review
   - T3: TDD
   - T4: requesting-code-review, finishing-a-development-branch
 - 1 dev skill: writing-rkstack-skills (contributor-only, in dev/skills/)
