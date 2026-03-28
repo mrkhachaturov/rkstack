@@ -198,3 +198,87 @@ describe('config command', () => {
     expect(configGet(configPath, 'missing')).toBe('');
   });
 });
+
+// ─── repo-mode ────────────────────────────────────────────
+
+describe('repo-mode command', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-repomode-test-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('returns solo for 1 author', async () => {
+    const { detectRepoMode } = await import('../bin/src/commands/repo-mode.ts');
+    const result = detectRepoMode({ cacheDir: tmpDir, getAuthorCount: () => 1 });
+    expect(result).toBe('solo');
+  });
+
+  test('returns collaborative for 2+ authors', async () => {
+    const { detectRepoMode } = await import('../bin/src/commands/repo-mode.ts');
+    const result = detectRepoMode({ cacheDir: tmpDir, getAuthorCount: () => 3 });
+    expect(result).toBe('collaborative');
+  });
+
+  test('returns solo for 0 authors (no history)', async () => {
+    const { detectRepoMode } = await import('../bin/src/commands/repo-mode.ts');
+    // 0 authors = new repo or no commits in 90 days → default to solo
+    const result = detectRepoMode({ cacheDir: tmpDir, getAuthorCount: () => 0 });
+    expect(result).toBe('solo');
+  });
+
+  test('writes result to cache file', async () => {
+    const { detectRepoMode } = await import('../bin/src/commands/repo-mode.ts');
+    detectRepoMode({ cacheDir: tmpDir, getAuthorCount: () => 1 });
+    const cacheFiles = fs.readdirSync(tmpDir).filter(f => f.startsWith('repo-mode-'));
+    expect(cacheFiles.length).toBe(1);
+    const cache = JSON.parse(fs.readFileSync(path.join(tmpDir, cacheFiles[0]), 'utf8'));
+    expect(cache.result).toBe('solo');
+    expect(typeof cache.timestamp).toBe('number');
+  });
+
+  test('reads from cache when fresh (avoids calling getAuthorCount)', async () => {
+    const { detectRepoMode } = await import('../bin/src/commands/repo-mode.ts');
+    let callCount = 0;
+    const getAuthorCount = () => { callCount++; return 1; };
+    // First call writes cache
+    detectRepoMode({ cacheDir: tmpDir, getAuthorCount });
+    expect(callCount).toBe(1);
+    // Second call should read from cache (within 7 days)
+    detectRepoMode({ cacheDir: tmpDir, getAuthorCount });
+    expect(callCount).toBe(1); // not called again
+  });
+
+  test('recomputes when cache is expired (> 7 days)', async () => {
+    const { detectRepoMode, cacheFileName } = await import('../bin/src/commands/repo-mode.ts');
+    let callCount = 0;
+    const getAuthorCount = () => { callCount++; return 1; };
+    const repoRoot = process.cwd();
+    // Write a stale cache manually using the same hash function as the implementation
+    const staleTimestamp = Date.now() - 8 * 24 * 60 * 60 * 1000; // 8 days ago
+    fs.writeFileSync(
+      path.join(tmpDir, cacheFileName(repoRoot)),
+      JSON.stringify({ result: 'solo', timestamp: staleTimestamp }),
+      'utf8'
+    );
+    // Should recompute despite cache existing
+    detectRepoMode({ cacheDir: tmpDir, getAuthorCount, repoRoot });
+    expect(callCount).toBe(1);
+  });
+
+  test('config override short-circuits detection and caching', async () => {
+    const { detectRepoMode } = await import('../bin/src/commands/repo-mode.ts');
+    let callCount = 0;
+    const result = detectRepoMode({
+      cacheDir: tmpDir,
+      getAuthorCount: () => { callCount++; return 5; },
+      override: 'solo',
+    });
+    expect(result).toBe('solo');
+    expect(callCount).toBe(0);
+  });
+});
