@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.6.0] - 2026-03-28
+
+RKstack now understands web projects. When you open a Next.js, Vite, or any TypeScript+CSS project, the workflow adapts automatically: brainstorming suggests design system creation, plans include visual verification steps, executing-plans checks screenshots and console errors after each UI task, verification runs responsive checks, and finishing-branch gates on QA before shipping. For non-web projects, nothing changes.
+
+This is built on two new pieces of infrastructure: a persistent headless Chromium browser daemon (`rkstack-browse`, adapted from gstack) and project type detection in the session-start hook.
+
+- **Browser daemon** -- `rkstack-browse` is a compiled Bun binary that runs a persistent headless Chromium via Playwright. HTTP commands, accessibility-tree-based ref system (`@e1`, `@e2` for DOM elements instead of fragile CSS selectors), annotated screenshots with red boxes and labels, responsive screenshots at three breakpoints, cookie import from real browsers (Chrome, Arc, Brave, Edge). Auto-starts on first command, 30-minute idle timeout, localhost-only with Bearer auth. Adapted from gstack's browse subsystem.
+- **Project type detection** -- the session-start hook runs `scc` and classifies projects as `web`, `node`, `python`, `go`, `infra`, `devops`, or `general`. Injected as `PROJECT_TYPE=web` into the session context. The preamble TypeScript/JavaScript hint now references PROJECT_TYPE instead of assuming all TS projects are web.
+- **Supabase detection** -- if `.mcp.json` contains a Supabase server or a `supabase/` directory exists, `HAS_SUPABASE=yes` is injected. Web skills verify data via Supabase MCP after browser actions.
+- **10 new skills** (adapted from gstack):
+  - `/browse` (T1) -- command reference for the browser daemon
+  - `/qa` (T4) -- systematic web QA: test pages, find bugs, fix them with before/after screenshots
+  - `/qa-only` (T4) -- same QA methodology but report-only, never touches code
+  - `/design-review` (T4) -- visual QA: spacing, hierarchy, alignment, responsive breakage + fixes
+  - `/plan-design-review` (T3) -- rates design dimensions 0-10 before implementation, with 12 cognitive patterns and AI slop detection
+  - `/design-consultation` (T3) -- creates DESIGN.md from scratch: typography, color, layout, spacing, motion
+  - `/setup-browser-cookies` (T1) -- import cookies from a real browser into the headless session
+  - `/benchmark` (T1) -- performance baselines and regression detection
+  - `/canary` (T2) -- post-deploy monitoring for console errors and performance regressions
+  - `/supabase-qa` (T3) -- auth flow testing, RLS policy audit, data consistency via MCP
+- **Web-aware workflow** -- 6 existing process skills now include conditional sections when `PROJECT_TYPE=web`: brainstorming suggests `/design-consultation` and invokes `/plan-design-review`; writing-plans adds visual verification steps; executing-plans checks screenshots and console errors; verification runs `/qa-only`; code review includes screenshots; finishing-branch gates on `/qa`.
+- **CI: rkstack-browse builds** -- `release.yml` builds the browse binary for all 4 platforms alongside `rkstack`. `check.yml` installs Playwright Chromium for browser tests.
+- **551 tests** (was 121) -- 321 browser daemon tests, 8 project type detection tests, 101 web skill validation tests.
+
 ## [0.5.1] - 2026-03-28
 
 The binary bootstrap now actually works. It was in the wrong execution context (SKILL.md preamble, run by Claude's Bash tool) where `CLAUDE_PLUGIN_DATA` and `CLAUDE_PLUGIN_ROOT` are not available. Moved it to the `session-start` hook, which runs as a Claude Code subprocess with both env vars set. The binary downloads on first session and the resolved path is injected into the context.
