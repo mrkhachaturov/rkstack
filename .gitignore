@@ -15,5 +15,8 @@ bun.lock
 # Skill-generated specs, plans, brainstorm artifacts
 docs/rkstack/
 
+# Compiled binary (platform-specific, not committed)
+bin/rkstack
+
 # Temporary files
 tmp/
