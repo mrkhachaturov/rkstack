@@ -282,3 +282,34 @@ describe('repo-mode command', () => {
     expect(callCount).toBe(0);
   });
 });
+
+// ─── main router ──────────────────────────────────────────
+
+describe('main router', () => {
+  test('resolveConfigPath uses CLAUDE_PLUGIN_DATA env var when set', async () => {
+    const { resolveConfigPath } = await import('../bin/src/main.ts');
+    const orig = process.env.CLAUDE_PLUGIN_DATA;
+    process.env.CLAUDE_PLUGIN_DATA = '/tmp/test-plugin-data';
+    expect(resolveConfigPath()).toBe('/tmp/test-plugin-data/config.json');
+    if (orig !== undefined) process.env.CLAUDE_PLUGIN_DATA = orig;
+    else delete process.env.CLAUDE_PLUGIN_DATA;
+  });
+
+  test('resolveConfigPath uses nested path under CLAUDE_PLUGIN_DATA', async () => {
+    const { resolveConfigPath } = await import('../bin/src/main.ts');
+    const orig = process.env.CLAUDE_PLUGIN_DATA;
+    process.env.CLAUDE_PLUGIN_DATA = '/tmp/test-plugin-data-2';
+    expect(resolveConfigPath()).toBe('/tmp/test-plugin-data-2/config.json');
+    if (orig !== undefined) process.env.CLAUDE_PLUGIN_DATA = orig;
+    else delete process.env.CLAUDE_PLUGIN_DATA;
+  });
+
+  test('resolveCacheDir uses CLAUDE_PLUGIN_DATA env var when set', async () => {
+    const { resolveCacheDir } = await import('../bin/src/main.ts');
+    const orig = process.env.CLAUDE_PLUGIN_DATA;
+    process.env.CLAUDE_PLUGIN_DATA = '/tmp/test-plugin-data';
+    expect(resolveCacheDir()).toBe('/tmp/test-plugin-data/cache');
+    if (orig !== undefined) process.env.CLAUDE_PLUGIN_DATA = orig;
+    else delete process.env.CLAUDE_PLUGIN_DATA;
+  });
+});
