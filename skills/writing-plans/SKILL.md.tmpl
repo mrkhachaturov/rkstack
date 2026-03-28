@@ -163,7 +163,7 @@ Flag any task below **7/10**. For each flagged task, decide: is the missing work
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
-For automated plan review, dispatch a subagent using the prompt template in `plan-document-reviewer-prompt.md`.
+After self-review, invoke the **dual-review** skill on the plan file. This runs a Codex review loop: Codex reviews the plan against its linked spec in read-only mode, you evaluate each finding, fix valid ones, and loop until clean or max 3 rounds are reached. This step is automatic — do not skip it or ask the user whether to run it.
 
 ## Execution Handoff
 

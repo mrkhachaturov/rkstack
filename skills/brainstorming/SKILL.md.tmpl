@@ -152,7 +152,7 @@ After writing the spec document, look at it with fresh eyes:
 
 Fix any issues inline. No need to re-review — just fix and move on.
 
-For a more thorough review, dispatch a subagent using the prompt template in `spec-document-reviewer-prompt.md`.
+After self-review, invoke the **dual-review** skill on the spec file. This runs a Codex review loop: Codex reviews in read-only mode, you evaluate each finding against the document and source code, fix valid ones, and loop until Codex returns clean or max 3 rounds are reached. This step is automatic — do not skip it or ask the user whether to run it.
 
 ---
 

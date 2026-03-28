@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0] - 2026-03-28
+
+New dual-review skill -- specs and plans now get a second opinion from Codex before you approve them.
+
+Brainstorming and writing-plans automatically run a Codex review loop after self-review: Codex reads the document in read-only mode, Claude evaluates each finding against the source code, fixes valid ones, and loops until Codex returns clean or 3 rounds are reached. You can also run it manually on any spec or plan with `/dual-review path/to/file.md`.
+
+- **dual-review** -- sequential Claude-Codex review loop for specs and plans. Two prompt templates (spec-review, plan-review) give Codex focused review criteria. Findings classified as valid (fixed), rejected (intentional), or unclear (surfaced to you). Temp-file prompt delivery for large documents, 5-minute timeout, read-only sandbox.
+- **brainstorming** and **writing-plans** now invoke dual-review automatically after self-review, before the user approval gate.
+- **using-rkstack** intent table updated to route `/dual-review` requests.
+
 ## [0.3.2] - 2026-03-28
 
 Skills now reference each other where the workflow requires it. Humanizer constraints activate during spec writing, plan prose, CHANGELOG entries, PR descriptions, retro narratives, and documentation edits. Verification is enforced before completion claims in both execution skills. Code review now suggests the shipping step instead of ending at a dead end.

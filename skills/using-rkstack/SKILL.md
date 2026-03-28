@@ -196,6 +196,7 @@ When the user's request matches a workflow stage, suggest the relevant skill:
 | Security audit, OWASP, vulnerability, pentest | `cso` |
 | Unlock edits, remove freeze, unfreeze | `unfreeze` |
 | Write naturally, humanize, no AI slop, public-facing | `humanizer` |
+| Review spec/plan with Codex, dual review, second opinion | `dual-review` |
 
 ### Workflow Chain
 
