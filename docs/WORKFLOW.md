@@ -295,13 +295,13 @@ cso (T2) — Chief Security Officer audit
 | cso | T2 | gstack (adapted) | Security |
 | requesting-code-review | T4 | gstack /review + superpowers | Quality |
 | finishing-a-development-branch | T4 | gstack /ship + superpowers | Shipping |
-| browse | T1 | rkstack (original) | Web |
-| qa | T4 | rkstack (original) | Web |
-| qa-only | T4 | rkstack (original) | Web |
-| design-review | T4 | rkstack (original) | Web |
-| plan-design-review | T3 | rkstack (original) | Web |
-| design-consultation | T3 | rkstack (original) | Web |
-| setup-browser-cookies | T1 | rkstack (original) | Web |
-| benchmark | T1 | rkstack (original) | Web |
-| canary | T2 | rkstack (original) | Web |
+| browse | T1 | gstack (adapted) | Web |
+| qa | T4 | gstack (adapted) | Web |
+| qa-only | T4 | gstack (adapted) | Web |
+| design-review | T4 | gstack (adapted) | Web |
+| plan-design-review | T3 | gstack (adapted) | Web |
+| design-consultation | T3 | gstack (adapted) | Web |
+| setup-browser-cookies | T1 | gstack (adapted) | Web |
+| benchmark | T1 | gstack (adapted) | Web |
+| canary | T2 | gstack (adapted) | Web |
 | supabase-qa | T3 | rkstack (original) | Web |
