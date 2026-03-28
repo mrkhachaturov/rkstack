@@ -370,35 +370,27 @@ describe('main router', () => {
   });
 });
 
-// ─── bootstrap script (integration) ─────────────────────
+// ─── bootstrap in session-start hook (integration) ─────────────────────
 
-import { generatePreamble } from '../scripts/resolvers/preamble';
-import { HOST_PATHS } from '../scripts/resolvers/types';
-import type { TemplateContext } from '../scripts/resolvers/types';
-
-/** Extract the second ```bash...``` block (the bootstrap) from generated preamble. */
-function extractBootstrapBlock(preamble: string): string {
-  const blocks = [...preamble.matchAll(/```bash\n([\s\S]*?)```/g)];
-  if (blocks.length < 2) throw new Error('No bootstrap block found in preamble');
-  return blocks[1][1]; // Second bash block = bootstrap
+/** Extract the bootstrap section from hooks/session-start.
+ *  The bootstrap is between "# === rkstack binary bootstrap" and the next
+ *  "# Read using-rkstack content" comment. We also need the shebang + set. */
+function extractBootstrapFromHook(): string {
+  const hookPath = path.join(ROOT, 'hooks', 'session-start');
+  const content = fs.readFileSync(hookPath, 'utf8');
+  const start = content.indexOf('# === rkstack binary bootstrap');
+  const end = content.indexOf('# Read using-rkstack content');
+  if (start === -1 || end === -1) throw new Error('Bootstrap section not found in session-start hook');
+  return content.substring(start, end);
 }
 
-describe('bootstrap script (real generated)', () => {
+describe('bootstrap in session-start hook', () => {
   let tmpDir: string;
   let bootstrapScript: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-bootstrap-test-'));
-    // Generate the real preamble for Claude host T1
-    const ctx: TemplateContext = {
-      skillName: 'test-bootstrap',
-      tmplPath: '/fake/SKILL.md.tmpl',
-      host: 'claude',
-      paths: HOST_PATHS['claude'],
-      preambleTier: 1,
-    };
-    const preamble = generatePreamble(ctx);
-    bootstrapScript = extractBootstrapBlock(preamble);
+    bootstrapScript = extractBootstrapFromHook();
   });
 
   afterEach(() => {
@@ -425,10 +417,12 @@ describe('bootstrap script (real generated)', () => {
     ].join('\n'), { mode: 0o755 });
 
     const wrapper = `
+      set -euo pipefail
       export PATH="${tmpDir}:$PATH"
       export CLAUDE_PLUGIN_DATA="${tmpDir}"
       export CLAUDE_PLUGIN_ROOT="${tmpDir}"
       ${bootstrapScript}
+      echo "$RKSTACK_BOOTSTRAP_RESULT"
     `;
     const r = spawnSync('bash', ['-c', wrapper], { encoding: 'utf8' });
     expect(r.status).toBe(0);
@@ -436,11 +430,12 @@ describe('bootstrap script (real generated)', () => {
     expect(fs.existsSync(path.join(binDir, 'rkstack'))).toBe(true);
     // No fail marker
     expect(fs.existsSync(path.join(binDir, '.download-failed'))).toBe(false);
-    // No UNAVAILABLE message
-    expect(r.stdout).not.toContain('RKSTACK_BIN_UNAVAILABLE');
+    // Result should report the binary path
+    expect(r.stdout).toContain('RKSTACK_BIN=');
+    expect(r.stdout).not.toContain('UNAVAILABLE');
   });
 
-  test('prints RKSTACK_BIN_UNAVAILABLE on download failure', () => {
+  test('reports UNAVAILABLE on download failure', () => {
     const binDir = path.join(tmpDir, 'bin');
     const versionFile = path.join(tmpDir, 'VERSION');
     fs.mkdirSync(binDir, { recursive: true });
@@ -451,13 +446,15 @@ describe('bootstrap script (real generated)', () => {
     fs.writeFileSync(mockCurl, '#!/bin/bash\nexit 1\n', { mode: 0o755 });
 
     const wrapper = `
+      set -euo pipefail
       export PATH="${tmpDir}:$PATH"
       export CLAUDE_PLUGIN_DATA="${tmpDir}"
       export CLAUDE_PLUGIN_ROOT="${tmpDir}"
       ${bootstrapScript}
+      echo "$RKSTACK_BOOTSTRAP_RESULT"
     `;
     const r = spawnSync('bash', ['-c', wrapper], { encoding: 'utf8' });
-    expect(r.stdout).toContain('RKSTACK_BIN_UNAVAILABLE');
+    expect(r.stdout).toContain('UNAVAILABLE');
     // Verify no partial file left behind
     expect(fs.existsSync(path.join(binDir, 'rkstack'))).toBe(false);
     // Verify fail marker was created
@@ -473,12 +470,14 @@ describe('bootstrap script (real generated)', () => {
     fs.writeFileSync(path.join(binDir, '.download-failed'), '', 'utf8');
 
     const wrapper = `
+      set -euo pipefail
       export CLAUDE_PLUGIN_DATA="${tmpDir}"
       export CLAUDE_PLUGIN_ROOT="${tmpDir}"
       ${bootstrapScript}
+      echo "$RKSTACK_BOOTSTRAP_RESULT"
     `;
     const r = spawnSync('bash', ['-c', wrapper], { encoding: 'utf8' });
-    expect(r.stdout).toContain('RKSTACK_BIN_UNAVAILABLE');
+    expect(r.stdout).toContain('UNAVAILABLE');
     expect(r.stdout).toContain('will retry next session');
   });
 });

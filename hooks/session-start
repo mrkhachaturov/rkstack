@@ -7,6 +7,45 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# === rkstack binary bootstrap (Claude Code only) ===
+# CLAUDE_PLUGIN_DATA and CLAUDE_PLUGIN_ROOT are exported by Claude Code to hook
+# processes. They are NOT available inside Claude's Bash tool, so the bootstrap
+# must happen here — not in the preamble.
+RKSTACK_BOOTSTRAP_RESULT=""
+if [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  RKSTACK_BIN="${CLAUDE_PLUGIN_DATA}/bin/rkstack"
+  WANT_VERSION=$(cat "${CLAUDE_PLUGIN_ROOT}/VERSION" 2>/dev/null || echo "")
+  if [ -n "$WANT_VERSION" ]; then
+    if [ -x "$RKSTACK_BIN" ] && [ "$("$RKSTACK_BIN" version 2>/dev/null)" = "$WANT_VERSION" ]; then
+      RKSTACK_BOOTSTRAP_RESULT="RKSTACK_BIN=${RKSTACK_BIN} (v${WANT_VERSION})"
+    else
+      OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+      ARCH=$(uname -m)
+      ASSET="rkstack-${OS}-${ARCH}"
+      URL="https://github.com/mrkhachaturov/rkstack/releases/download/v${WANT_VERSION}/${ASSET}"
+      mkdir -p "${CLAUDE_PLUGIN_DATA}/bin"
+      FAIL_MARKER="${CLAUDE_PLUGIN_DATA}/bin/.download-failed"
+      find "${CLAUDE_PLUGIN_DATA}/bin" -name ".download-failed" -mmin +60 -delete 2>/dev/null || true
+      if [ -f "$FAIL_MARKER" ]; then
+        RKSTACK_BOOTSTRAP_RESULT="RKSTACK_BIN=UNAVAILABLE (download failed recently, will retry next session)"
+      else
+        TMPBIN="${RKSTACK_BIN}.tmp.$$"
+        if curl --connect-timeout 5 --max-time 30 -fsSL "$URL" -o "$TMPBIN" 2>/dev/null \
+           && chmod +x "$TMPBIN" \
+           && [ "$("$TMPBIN" version 2>/dev/null)" = "$WANT_VERSION" ]; then
+          mv -f "$TMPBIN" "$RKSTACK_BIN"
+          rm -f "$FAIL_MARKER"
+          RKSTACK_BOOTSTRAP_RESULT="RKSTACK_BIN=${RKSTACK_BIN} (v${WANT_VERSION}, just downloaded)"
+        else
+          rm -f "$TMPBIN"
+          touch "$FAIL_MARKER"
+          RKSTACK_BOOTSTRAP_RESULT="RKSTACK_BIN=UNAVAILABLE (download failed or platform ${OS}-${ARCH} not supported)"
+        fi
+      fi
+    fi
+  fi
+fi
+
 # Read using-rkstack content
 using_rkstack_content=$(cat "${PLUGIN_ROOT}/skills/using-rkstack/SKILL.md" 2>&1 || echo "Error reading using-rkstack skill")
 
@@ -24,7 +63,14 @@ escape_for_json() {
 }
 
 using_rkstack_escaped=$(escape_for_json "$using_rkstack_content")
-session_context="<EXTREMELY_IMPORTANT>\nYou have rkstack skills.\n\n**Below is the full content of your 'rkstack:using-rkstack' skill — your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_rkstack_escaped}\n</EXTREMELY_IMPORTANT>"
+
+# Build session context — prepend bootstrap result if available
+bootstrap_prefix=""
+if [ -n "$RKSTACK_BOOTSTRAP_RESULT" ]; then
+  bootstrap_escaped=$(escape_for_json "$RKSTACK_BOOTSTRAP_RESULT")
+  bootstrap_prefix="${bootstrap_escaped}\n\n"
+fi
+session_context="${bootstrap_prefix}<EXTREMELY_IMPORTANT>\nYou have rkstack skills.\n\n**Below is the full content of your 'rkstack:using-rkstack' skill — your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_rkstack_escaped}\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
 # Cursor hooks expect additional_context.

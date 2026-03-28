@@ -1,43 +1,13 @@
 import type { TemplateContext } from './types';
 
-/** Bootstrap block — downloads the rkstack binary on first use. Claude host only. */
-function generateBootstrapBlock(): string {
-  return `\`\`\`bash
-# === rkstack bootstrap ===
-RKSTACK_BIN="\${CLAUDE_PLUGIN_DATA}/bin/rkstack"
-WANT_VERSION=$(cat "\${CLAUDE_PLUGIN_ROOT}/VERSION")
-if [ ! -x "$RKSTACK_BIN" ] || [ "$("$RKSTACK_BIN" version 2>/dev/null)" != "$WANT_VERSION" ]; then
-  OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-  ARCH=$(uname -m)
-  ASSET="rkstack-\${OS}-\${ARCH}"
-  URL="https://github.com/mrkhachaturov/rkstack/releases/download/v\${WANT_VERSION}/\${ASSET}"
-  mkdir -p "\${CLAUDE_PLUGIN_DATA}/bin"
-  FAIL_MARKER="\${CLAUDE_PLUGIN_DATA}/bin/.download-failed"
-  find "\${CLAUDE_PLUGIN_DATA}/bin" -name ".download-failed" -mmin +60 -delete 2>/dev/null || true
-  if [ -f "$FAIL_MARKER" ]; then
-    echo "RKSTACK_BIN_UNAVAILABLE (download failed this session, will retry next session)"
-  else
-    TMPBIN="\${RKSTACK_BIN}.tmp.$$"
-    if curl --connect-timeout 5 --max-time 30 -fsSL "$URL" -o "$TMPBIN" 2>/dev/null \\
-       && chmod +x "$TMPBIN" \\
-       && [ "$("$TMPBIN" version 2>/dev/null)" = "$WANT_VERSION" ]; then
-      mv -f "$TMPBIN" "$RKSTACK_BIN"
-      rm -f "$FAIL_MARKER"
-    else
-      rm -f "$TMPBIN"
-      touch "$FAIL_MARKER"
-      echo "RKSTACK_BIN_UNAVAILABLE (download failed or platform \${OS}-\${ARCH} not supported)"
-    fi
-  fi
-fi
-\`\`\`
-
-If \`RKSTACK_BIN_UNAVAILABLE\` is printed above, skills fall back to inline bash — no action needed.`;
-}
-
 /**
  * Core bash block — runs first, collects project state as facts.
  * Every skill gets this regardless of tier.
+ *
+ * Note: binary bootstrap is handled by hooks/session-start (where
+ * CLAUDE_PLUGIN_DATA/CLAUDE_PLUGIN_ROOT env vars are available).
+ * The bootstrap result is injected into the session context as
+ * RKSTACK_BIN=<path> or RKSTACK_BIN=UNAVAILABLE.
  */
 function generatePreambleBash(ctx: TemplateContext): string {
   const mainBlock = `## Preamble (run first)
@@ -96,9 +66,7 @@ Use the preamble output to adapt your behavior:
 - **mise** — tool version manager. Versions are pinned — don't suggest global installs.
 - **CLAUDE.md exists** — read it for project-specific commands and conventions.`;
 
-  if (ctx.host !== 'claude') return mainBlock;
-
-  return `${mainBlock}\n\n${generateBootstrapBlock()}`;
+  return mainBlock;
 }
 
 /**

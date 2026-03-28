@@ -387,10 +387,10 @@ describe('Freshness', () => {
   });
 });
 
-// ─── Preamble Bootstrap Injection ────────────────────────────────────────────
+// ─── Preamble Bootstrap — moved to session-start hook ────────────────────────
 
-describe('preamble bootstrap injection', () => {
-  test('T1 preamble for claude host includes bootstrap block', () => {
+describe('preamble does not contain bootstrap block (moved to session-start hook)', () => {
+  test('T1 preamble for claude host does NOT include bootstrap block', () => {
     const ctx: TemplateContext = {
       skillName: 'test-skill',
       tmplPath: '/fake/SKILL.md.tmpl',
@@ -399,9 +399,8 @@ describe('preamble bootstrap injection', () => {
       preambleTier: 1,
     };
     const preamble = generatePreamble(ctx);
-    expect(preamble).toContain('RKSTACK_BIN=');
-    expect(preamble).toContain('WANT_VERSION=');
-    expect(preamble).toContain('RKSTACK_BIN_UNAVAILABLE');
+    expect(preamble).not.toContain('rkstack bootstrap');
+    expect(preamble).not.toContain('RKSTACK_BIN_UNAVAILABLE');
   });
 
   test('T1 preamble for codex host does NOT include bootstrap block', () => {
@@ -413,7 +412,7 @@ describe('preamble bootstrap injection', () => {
       preambleTier: 1,
     };
     const preamble = generatePreamble(ctx);
-    expect(preamble).not.toContain('RKSTACK_BIN=');
+    expect(preamble).not.toContain('rkstack bootstrap');
   });
 
   test('T1 preamble for gemini host does NOT include bootstrap block', () => {
@@ -425,6 +424,6 @@ describe('preamble bootstrap injection', () => {
       preambleTier: 1,
     };
     const preamble = generatePreamble(ctx);
-    expect(preamble).not.toContain('RKSTACK_BIN=');
+    expect(preamble).not.toContain('rkstack bootstrap');
   });
 });
