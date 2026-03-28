@@ -43,5 +43,8 @@ jobs:
       - name: Skill health check
         run: bun scripts/skill-check.ts
 
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
       - name: Run tests
         run: bun test
