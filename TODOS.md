@@ -5,7 +5,7 @@ Mark completed items with `[x]` and the version/date.
 
 ## Infrastructure
 
-- [ ] **bin/ utilities** — rkstack-detect (scc wrapper), rkstack-repo-mode (solo/collaborative), rkstack-config (user preferences). Currently these are inline in the preamble bash block; dedicated binaries would be faster and testable.
+- [ ] **rkstack-detect** — scc wrapper subcommand for the rkstack binary. Currently inline in the preamble bash block; a dedicated subcommand would be faster and testable.
 - [ ] **Codex/Gemini host support** — gen-skill-docs `--host codex` should transform frontmatter (strip to name+description), replace paths, inject hook safety prose. Follow gstack's `codex-helpers.ts` pattern.
 - [x] **CI freshness check** — GitHub Action that runs `just check && just skill-check` on PRs. **Completed:** v0.2.0 (2026-03-27), check.yml workflow
 - [ ] **Debounce dev-skill.ts** — `fs.watch` fires multiple events per save on macOS. Add 200ms debounce to avoid duplicate regeneration.
@@ -27,6 +27,7 @@ Mark completed items with `[x]` and the version/date.
 
 ## Completed
 
+- [x] **rkstack CLI binary** — compiled Bun binary with version, slug, config, repo-mode subcommands. Preamble bootstrap auto-downloads on Claude Code. CI builds for 4 platforms. **Completed:** v0.5.0 (2026-03-28)
 - [x] **Cross-skill wiring** — humanizer referenced by 5 prose-producing skills, verification wired to execution skills, TDD named in executing-plans, requesting-code-review chains to finishing-branch. **Completed:** v0.3.2 (2026-03-28)
 - [x] **dual-review skill** — sequential Claude-Codex review loop for specs and plans. Embedded in brainstorming and writing-plans, also standalone. **Completed:** v0.4.0 (2026-03-28)
 - [x] **Worktree locale fix** — force LANG=C in git helper for non-English systems. **Completed:** v0.3.2 (2026-03-28)

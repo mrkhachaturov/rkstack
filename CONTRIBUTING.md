@@ -110,6 +110,9 @@ rkstack/
 │       ├── SKILL.md.tmpl         # template (edit this)
 │       ├── SKILL.md              # generated (commit this)
 │       └── *.md                  # companions (hand-authored)
+├── bin/                          # rkstack CLI binary
+│   ├── src/                      # TypeScript source (version, slug, config, repo-mode)
+│   └── rkstack                   # compiled binary (gitignored)
 ├── agents/                       # agent definitions
 ├── scripts/                      # build tooling (Bun/TypeScript)
 │   ├── gen-skill-docs.ts         # template → SKILL.md generator
@@ -132,6 +135,7 @@ rkstack/
 
 ```bash
 just build         # generate all SKILL.md from templates
+just build-bin     # compile the rkstack binary for the current platform
 just check         # verify generated files are fresh
 just skill-check   # health dashboard (frontmatter, coverage, freshness)
 just dev           # watch mode: auto-regen on change

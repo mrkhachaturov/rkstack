@@ -217,7 +217,7 @@ just dev-build     # 🔧 generate project-local dev skills with refs
 just check         # ✅ verify generated files are fresh
 just skill-check   # 🩺 health dashboard for all skills
 just dev           # 👀 watch mode: auto-regen on change
-bun test           # 🧪 run 75 tests (<6s)
+bun test           # 🧪 run 121 tests (<8s)
 ```
 
 | | Tool | Purpose |

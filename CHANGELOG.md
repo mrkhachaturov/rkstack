@@ -9,6 +9,9 @@ You can now run `rkstack version`, `rkstack slug`, `rkstack config`, and `rkstac
 - **CI: consolidated release workflow** -- `release.yml` now handles all `v*` tags (manual and CI patch bumps) and builds platform binaries (macOS ARM/Intel, Linux x86/ARM). `update-refs.yml` no longer creates releases.
 - **CI: version sync check** -- `check.yml` verifies VERSION, plugin.json, and package.json agree on every push.
 - **Config hardening** -- key validation rejects malformed keys, `configGet` returns empty for non-leaf nodes, `configSet` warns before overwriting scalars with nested objects.
+
+### For contributors
+
 - **finishing-a-development-branch** -- removed `disable-model-invocation` flag so the skill can be chained from code review without manual invocation.
 - **skill-check** -- no longer warns about dev-generated skills in `.claude/skills/`.
 
