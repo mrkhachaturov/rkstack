@@ -429,6 +429,8 @@ If `PROJECT_TYPE` is `web` (from session context):
 
 3. **Visual evidence in PR.** Include screenshots of key visual changes in the PR description. If before/after screenshots are available (from QA or design-review), include those.
 
+4. **Supabase migration check.** If `HAS_SUPABASE=yes` and the branch includes database migrations (files in `supabase/migrations/`), verify the migrations apply cleanly and that RLS policies are in place for any new tables.
+
 If `PROJECT_TYPE` is not `web`, skip this section entirely.
 
 ---

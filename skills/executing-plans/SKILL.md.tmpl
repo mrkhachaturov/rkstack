@@ -188,6 +188,8 @@ If `PROJECT_TYPE` is `web` (from session context):
 
 3. **If the dev server is not running**, prompt: "Start the dev server to verify visually. The command should be in CLAUDE.md. Without it, I can only verify via tests."
 
+4. **If `HAS_SUPABASE=yes`** and the task involves data mutations, verify via Supabase MCP that the data was written correctly. This catches cases where the UI shows success but the backend silently failed.
+
 If `PROJECT_TYPE` is not `web`, skip this section entirely.
 
 ## Rules
