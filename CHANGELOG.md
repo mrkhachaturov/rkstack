@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.1] - 2026-03-28
+
+The binary bootstrap now actually works. It was in the wrong execution context (SKILL.md preamble, run by Claude's Bash tool) where `CLAUDE_PLUGIN_DATA` and `CLAUDE_PLUGIN_ROOT` are not available. Moved it to the `session-start` hook, which runs as a Claude Code subprocess with both env vars set. The binary downloads on first session and the resolved path is injected into the context.
+
 ## [0.5.0] - 2026-03-28
 
 You can now run `rkstack version`, `rkstack slug`, `rkstack config`, and `rkstack repo-mode` from a single compiled binary. The binary downloads automatically on first skill load (Claude Code only) and checks for updates on each session. No skill behavior changes yet -- the binary ships alongside inline bash; skills migrate to it in Phase 2.
