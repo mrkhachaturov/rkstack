@@ -43,8 +43,12 @@ jobs:
         include:
           - os: macos-14
             artifact: rkstack-darwin-arm64
+          - os: macos-13
+            artifact: rkstack-darwin-x86_64
           - os: ubuntu-latest
             artifact: rkstack-linux-x86_64
+          - os: ubuntu-24.04-arm
+            artifact: rkstack-linux-aarch64
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
