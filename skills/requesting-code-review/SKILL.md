@@ -275,6 +275,18 @@ echo "HEAD_SHA: $HEAD_SHA"
 
 ---
 
+## Web project review additions
+
+If `PROJECT_TYPE` is `web` (from session context) and the branch diff includes frontend files (`.tsx`, `.jsx`, `.css`, `.scss`, `.html`):
+
+1. **Include screenshots.** Take screenshots of pages affected by the changes and include them in the review context. The code-reviewer agent sees both the diff and the visual result.
+
+2. **Visual regression flag.** If a performance baseline exists (`.rkstack/benchmarks/baseline.json`), run `$RKSTACK_BROWSE perf` and compare. Flag any regressions in the review.
+
+If `PROJECT_TYPE` is not `web` or the branch doesn't touch frontend files, skip this section entirely.
+
+---
+
 ## Step 5: Dispatch Code-Reviewer Agent
 
 Use the Agent tool to dispatch the code-reviewer agent with the review context. Fill in the template from `requesting-code-review/code-reviewer.md`:
