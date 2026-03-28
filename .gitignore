@@ -12,5 +12,8 @@ bun.lock
 # Local state (freeze boundary, brainstorm sessions)
 .rkstack/
 
+# Skill-generated specs, plans, brainstorm artifacts
+docs/rkstack/
+
 # Temporary files
 tmp/
