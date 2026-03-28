@@ -29,11 +29,13 @@ beforeAll(async () => {
   await bm.launch();
 });
 
-afterAll(() => {
-  // Force kill browser instead of graceful close (avoids hang)
+afterAll(async () => {
   try { testServer.server.stop(); } catch {}
-  // bm.close() can hang — just let process exit handle it
-  setTimeout(() => process.exit(0), 500);
+  // Force-kill the browser process to avoid 5s close timeout
+  try {
+    const proc = (bm as any).browser?.process();
+    if (proc) proc.kill('SIGKILL');
+  } catch {}
 });
 
 // ─── Navigation ─────────────────────────────────────────────────

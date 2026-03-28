@@ -26,9 +26,13 @@ beforeAll(async () => {
   await bm.launch();
 });
 
-afterAll(() => {
+afterAll(async () => {
   try { testServer.server.stop(); } catch {}
-  setTimeout(() => process.exit(0), 500);
+  // Force-kill the browser process to avoid 5s close timeout
+  try {
+    const proc = (bm as any).browser?.process();
+    if (proc) proc.kill('SIGKILL');
+  } catch {}
 });
 
 // ─── Snapshot Output ────────────────────────────────────────────
