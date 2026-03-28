@@ -22,71 +22,45 @@ User works — skills activate based on intent
 
 ## The Core Flow
 
+```mermaid
+graph TD
+    A["💡 Idea / request"] --> B["🧠 brainstorming"]
+    B --> DR1["🔄 dual-review · spec"]
+    DR1 --> C["📋 writing-plans"]
+    C --> DR2["🔄 dual-review · plan"]
+    DR2 --> D{"Execute"}
+    D -->|inline| E["⚙️ executing-plans"]
+    D -->|subagents| F["🤖 subagent-driven"]
+    E --> G["✅ verification"]
+    F --> G
+    G --> H["🔍 requesting-code-review"]
+    H --> I["🚀 finishing-branch"]
+    I --> J["📝 document-release"]
+
+    style A fill:#f59e0b,color:#000
+    style B fill:#8b5cf6,color:#fff
+    style DR1 fill:#f97316,color:#fff
+    style C fill:#6366f1,color:#fff
+    style DR2 fill:#f97316,color:#fff
+    style E fill:#3b82f6,color:#fff
+    style F fill:#3b82f6,color:#fff
+    style G fill:#10b981,color:#fff
+    style H fill:#0ea5e9,color:#fff
+    style I fill:#0f766e,color:#fff
+    style J fill:#64748b,color:#fff
 ```
-Idea / request
-  │
-  ▼
-┌─────────────────┐
-│  brainstorming   │  T2 — explore ideas, propose approaches, write design spec
-│                  │  Output: docs/rkstack/specs/YYYY-MM-DD-<topic>-design.md
-│                  │  humanizer constraints active during spec writing
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  dual-review     │  T2 — Claude self-reviews, then Codex reviews spec
-│  (spec)          │  Sequential rounds until clean or max 3 reached
-│                  │  Source code is truth — both check against real codebase
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  writing-plans   │  T2 — create implementation plan from spec
-│                  │  Output: docs/rkstack/plans/YYYY-MM-DD-<feature>.md
-│                  │  Bite-sized TDD tasks, exact file paths, no placeholders
-│                  │  Smart decomposition: split only when real dependencies exist
-│                  │  humanizer constraints active for plan header prose
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  dual-review     │  T2 — Claude self-reviews, then Codex reviews plan
-│  (plan)          │  Checks plan against spec + source code
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Implementation  │  Execute the plan using one of:
-│                  │  - subagent-driven-development (fresh agent per task)
-│                  │  - executing-plans (inline, same session)
-│                  │  Each task uses test-driven-development (T3)
-│                  │  Commits reference plan ID in conventional commit format
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  verification    │  T2 — evidence before assertions
-│  -before-        │  Run command, read output, verify claim, then state result
-│  completion      │  Status: DONE / DONE_WITH_CONCERNS / BLOCKED / NEEDS_CONTEXT
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  requesting-     │  T4 — two-pass review (CRITICAL then INFORMATIONAL)
-│  code-review     │  Dispatches code-reviewer agent
-│                  │  Fix-first: AUTO-FIX safe issues, ASK for design decisions
-│                  │  Suggests finishing-a-development-branch as next step
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  finishing-a-    │  T4 — merge, PR, or cleanup
-│  development-    │  Pre-flight: test triage, base branch detection
-│  branch          │  Options: merge locally / push+PR / keep / discard
-│                  │  humanizer constraints active for CHANGELOG + PR description
-│                  │  Suggests document-release after PR
-└─────────────────┘
-```
+
+| Step | Skill | What happens |
+|------|-------|-------------|
+| Design | **brainstorming** (T2) | Explore ideas, write design spec. humanizer active. |
+| Review spec | **dual-review** (T2) | Claude self-reviews → Codex reviews → rounds until clean. Source code is truth. |
+| Plan | **writing-plans** (T2) | TDD tasks, exact file paths, no placeholders. Smart decomposition if needed. humanizer active. |
+| Review plan | **dual-review** (T2) | Same loop. Checks plan against spec + source code. |
+| Execute | **executing-plans** or **subagent-driven** (T2) | TDD per task. Commits reference plan ID. |
+| Verify | **verification-before-completion** (T2) | Evidence before assertions. Run command, read output, prove claims. |
+| Code review | **requesting-code-review** (T4) | Two-pass: CRITICAL then INFORMATIONAL. Fix-first. Suggests finishing-branch. |
+| Ship | **finishing-a-development-branch** (T4) | Test triage, merge/PR, CHANGELOG. humanizer active. Suggests document-release. |
+| Docs | **document-release** (T2) | Audit .md files against diff. Auto-update factual content. humanizer active. |
 
 ## When Bugs Happen
 
