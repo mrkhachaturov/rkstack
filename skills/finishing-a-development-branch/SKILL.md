@@ -5,7 +5,6 @@ version: 2.0.0
 description: |
   Use when implementation is complete and ready to merge, create PR, or
   clean up a branch. Use when asked to ship, merge, land, or finish.
-disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read
