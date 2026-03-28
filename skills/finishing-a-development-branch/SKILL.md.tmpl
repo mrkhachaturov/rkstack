@@ -419,6 +419,20 @@ Claiming work is complete without verification is dishonesty, not efficiency.
 
 ---
 
+## Web project shipping additions
+
+If `PROJECT_TYPE` is `web` (from session context):
+
+1. **QA gate.** Before creating the PR, invoke the `/qa` skill in standard mode. Fix any critical and high severity issues found. This is a blocking gate — do not create the PR until QA passes.
+
+2. **Performance check.** If a baseline exists (`.rkstack/benchmark-reports/baseline.json`), run `/benchmark` and compare. Flag regressions >20% in the PR description.
+
+3. **Visual evidence in PR.** Include screenshots of key visual changes in the PR description. If before/after screenshots are available (from QA or design-review), include those.
+
+If `PROJECT_TYPE` is not `web`, skip this section entirely.
+
+---
+
 ## Step 5: Cleanup
 
 **For Options A, B, D only.** Skip for Option C.

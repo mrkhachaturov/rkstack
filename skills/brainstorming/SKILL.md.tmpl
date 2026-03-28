@@ -132,6 +132,18 @@ Use the preamble output to understand the tech stack. Adapt your questions to th
 
 ---
 
+## Web project design additions
+
+If `PROJECT_TYPE` is `web` (from session context):
+
+1. **Design system check.** If the project has no `DESIGN.md`, mention it as a recommendation: "This project has no documented design system. Consider running `/design-consultation` to establish one before implementing UI features." Do not force this — just mention it once.
+
+2. **Visual design review.** If the feature involves UI changes, invoke the `/plan-design-review` skill after the user approves the design but before writing the spec. This rates visual design dimensions (layout, typography, spacing, responsiveness) and suggests improvements to the design.
+
+If `PROJECT_TYPE` is not `web`, skip this section entirely.
+
+---
+
 ## Step 4: Write design doc
 
 - Write the validated design (spec) to `docs/rkstack/specs/YYYY-MM-DD-<topic>-design.md`

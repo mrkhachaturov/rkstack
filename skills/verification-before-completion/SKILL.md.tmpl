@@ -211,6 +211,24 @@ If anything looks wrong, fix it BEFORE claiming completion.
 
 ---
 
+## Web project verification additions
+
+If `PROJECT_TYPE` is `web` (from session context):
+
+In addition to the test suite, run visual verification:
+
+1. **Quick QA.** Invoke the `/qa-only` skill in quick mode (critical and high severity only). This produces a health score and screenshots. If health score is below 80%, flag it as a concern in the completion report.
+
+2. **Responsive check.** Run `$RKSTACK_BROWSE responsive` on key pages. Verify no layout breakage at mobile (375px), tablet (768px), and desktop (1280px).
+
+3. **Console audit.** Run `$RKSTACK_BROWSE console --errors` across key pages. Any JavaScript errors are flagged.
+
+4. **Dev server required.** If the dev server is not running, note it as a limitation: "Visual verification skipped — dev server not running."
+
+If `PROJECT_TYPE` is not `web`, skip this section entirely.
+
+---
+
 ## The Bottom Line
 
 **No shortcuts for verification.**

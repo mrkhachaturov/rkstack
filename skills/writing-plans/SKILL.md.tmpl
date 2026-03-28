@@ -62,6 +62,22 @@ This structure informs the task decomposition. Each task should produce self-con
 - "Run the tests and make sure they pass" — step
 - "Commit" — step
 
+## Web project plan additions
+
+If `PROJECT_TYPE` is `web` (from session context) and a task involves UI:
+
+1. **Visual verification step.** Every task that creates or modifies a visible component gets an explicit verification step at the end:
+
+   - Ensure dev server is running (see `skills/browse/dev-server-discovery.md`)
+   - `$RKSTACK_BROWSE goto <dev-url>/<page>`
+   - `$RKSTACK_BROWSE snapshot -i -a` — check interactive elements are present and correct
+   - `$RKSTACK_BROWSE console` — must be clean (no errors)
+   - `$RKSTACK_BROWSE responsive` — check mobile, tablet, desktop
+
+2. **Design reference.** If the spec includes a design reference (mockup, DESIGN.md section), include it in the task description so the implementer can compare their result against the intended design.
+
+If `PROJECT_TYPE` is not `web`, skip this section entirely.
+
 ## Plan Document Header
 
 **Every plan MUST start with this header:**
