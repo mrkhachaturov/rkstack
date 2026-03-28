@@ -224,6 +224,10 @@ adds — not what was already on main.
 **Format:** Keep a Changelog (`## [a.b.c] - YYYY-MM-DD`). CI bumps patch (`c`)
 automatically when refs update. We bump minor (`b`) or major (`a`) manually.
 
+**Three files must stay in sync when bumping:** `VERSION`, `.claude-plugin/plugin.json`
+(the `"version"` field), and the new CHANGELOG entry header. If `plugin.json` is not
+bumped, marketplace users won't see the update due to caching.
+
 **When to write the CHANGELOG entry:**
 - At `/finishing-a-development-branch` time, not during development or mid-branch.
 - The entry covers ALL commits on this branch vs the base branch.
