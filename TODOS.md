@@ -7,19 +7,30 @@ Mark completed items with `[x]` and the version/date.
 
 - [ ] **bin/ utilities** — rkstack-detect (scc wrapper), rkstack-repo-mode (solo/collaborative), rkstack-config (user preferences). Currently these are inline in the preamble bash block; dedicated binaries would be faster and testable.
 - [ ] **Codex/Gemini host support** — gen-skill-docs `--host codex` should transform frontmatter (strip to name+description), replace paths, inject hook safety prose. Follow gstack's `codex-helpers.ts` pattern.
-- [ ] **CI freshness check** — GitHub Action that runs `just check && just skill-check` on PRs. Prevents stale generated files from being merged.
+- [x] **CI freshness check** — GitHub Action that runs `just check && just skill-check` on PRs. **Completed:** v0.2.0 (2026-03-27), check.yml workflow
 - [ ] **Debounce dev-skill.ts** — `fs.watch` fires multiple events per save on macOS. Add 200ms debounce to avoid duplicate regeneration.
 
 ## Skills
 
 - [ ] **Enrich systematic-debugging AskUserQuestion examples** — current examples skip re-ground/simplify steps. Should follow the full T2 format the preamble injects.
 - [ ] **Add opt-out for proactive suggestions** — gstack has `PROACTIVE` config flag. Add equivalent to using-rkstack so users can disable auto-suggestion.
+- [ ] **dual-review sandbox testing** — verify `codex exec -s read-only` works reliably across project types. Document workarounds if sandbox blocks source file reads.
+- [ ] **dual-review for code diffs** — extend dual-review to run Codex on diffs after execution (currently specs/plans only). Use `codex review --base <branch>` with plan context.
+- [ ] **Smart plan decomposition** — writing-plans should assess when to split specs into A/B/C plans based on real implementation dependencies, not just size.
+- [ ] **Plan ID in commits** — executing-plans and subagent-driven should include plan ID in conventional commit format so diff review can auto-discover the plan.
 - [ ] **benchmark skill** — performance regression detection. Port from gstack when needed.
 - [ ] **office-hours skill** — brainstorming variant focused on product/startup diagnostic. Port from gstack when needed.
 
 ## Documentation
 
-- [ ] **README.md enrichment** — current README is functional but minimal. Add architecture diagram, full skill table, and getting-started guide.
+- [x] **README.md enrichment** — architecture diagram, full skill table, dual-review mermaid diagram, getting-started guide. **Completed:** v0.4.0 (2026-03-28)
+
+## Completed
+
+- [x] **Cross-skill wiring** — humanizer referenced by 5 prose-producing skills, verification wired to execution skills, TDD named in executing-plans, requesting-code-review chains to finishing-branch. **Completed:** v0.3.2 (2026-03-28)
+- [x] **dual-review skill** — sequential Claude-Codex review loop for specs and plans. Embedded in brainstorming and writing-plans, also standalone. **Completed:** v0.4.0 (2026-03-28)
+- [x] **Worktree locale fix** — force LANG=C in git helper for non-English systems. **Completed:** v0.3.2 (2026-03-28)
+- [x] **ETHOS.md principle #6** — Trust, Then Verify With a Second Mind. **Completed:** v0.4.0 (2026-03-28)
 
 ## Tech Debt
 
