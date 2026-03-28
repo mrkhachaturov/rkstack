@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.0'  # Only manual releases (a.b.0), not CI patch bumps
+      - 'v*'  # All version tags: manual (v*.*.0) and CI patch bumps (v*.*.N)
 
 permissions:
   contents: write
@@ -28,9 +28,44 @@ jobs:
           validation_level: warn
 
       - name: Create GitHub release
+        id: create_release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
           name: v${{ steps.version.outputs.version }}
           body: ${{ steps.changelog.outputs.changes }}
           makeLatest: true
+
+  build-binary:
+    needs: release
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            artifact: rkstack-darwin-arm64
+          - os: ubuntu-latest
+            artifact: rkstack-linux-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build binary
+        run: |
+          VERSION=$(cat VERSION)
+          bun build --compile --define "VERSION=\"${VERSION}\"" bin/src/main.ts --outfile bin/${{ matrix.artifact }}
+
+      - name: Attach binary to release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          artifacts: bin/${{ matrix.artifact }}
+          omitBody: true
+          omitName: true
