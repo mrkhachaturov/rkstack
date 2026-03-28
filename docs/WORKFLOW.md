@@ -1,8 +1,8 @@
-# RKstack Workflow
+# RKstack workflow
 
 How the skills connect, from session start to shipped code.
 
-## Session Lifecycle
+## Session lifecycle
 
 ```
 Session starts
@@ -17,10 +17,10 @@ Claude reads using-rkstack:
   - the Rule: invoke skills BEFORE any response
   │
   ▼
-User works — skills activate based on intent
+User works: skills activate based on intent
 ```
 
-## The Core Flow
+## The core flow
 
 ```mermaid
 graph TD
@@ -62,14 +62,14 @@ graph TD
 | Ship | **finishing-a-development-branch** (T4) | Test triage, merge/PR, CHANGELOG. humanizer active. Suggests document-release. |
 | Docs | **document-release** (T2) | Audit .md files against diff. Auto-update factual content. humanizer active. |
 
-## When Bugs Happen
+## When bugs happen
 
 ```
 Bug / test failure / unexpected behavior
   │
   ▼
 ┌─────────────────┐
-│  systematic-     │  T2 — 5-phase investigation
+│  systematic-     │  T2: 5-phase investigation
 │  debugging       │  Phase 1: Root cause investigation
 │                  │  Phase 2: Pattern analysis (6 known patterns)
 │                  │  Phase 3: Hypothesis testing (3-strike rule)
@@ -81,7 +81,7 @@ Bug / test failure / unexpected behavior
 └─────────────────┘
 ```
 
-## Safety Guardrails
+## Safety guardrails
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -101,7 +101,7 @@ Bug / test failure / unexpected behavior
 └──────────────────────────────────────────────────┘
 ```
 
-## Preamble Tier System
+## Preamble tier system
 
 Every skill gets a preamble injected at the top. The tier controls how much context:
 
@@ -120,7 +120,7 @@ Every skill gets a preamble injected at the top. The tier controls how much cont
 
 **Search Before Building** (T3+): Layer 1 (tried-and-true) → Layer 2 (new-and-popular) → Layer 3 (first principles)
 
-## Template System
+## Template system
 
 Skills are built from templates:
 
@@ -135,12 +135,12 @@ skills/{name}/SKILL.md          ← generated, committed, read by Claude at load
 ```
 
 Build commands:
-- `just build` — generate all SKILL.md from templates
-- `just check` — verify generated files are fresh
-- `just skill-check` — health dashboard (frontmatter validation, template coverage, freshness)
-- `just dev` — watch mode (auto-regen on change)
+- `just build`: generate all SKILL.md from templates
+- `just check`: verify generated files are fresh
+- `just skill-check`: health dashboard (frontmatter validation, template coverage, freshness)
+- `just dev`: watch mode (auto-regen on change)
 
-## Resolver Registry
+## Resolver registry
 
 | Placeholder | What it generates | Used by |
 |------------|-------------------|---------|
@@ -148,7 +148,7 @@ Build commands:
 | `{{BASE_BRANCH_DETECT}}` | Platform-aware base branch detection (GitHub, GitLab, git) | requesting-code-review, finishing-branch |
 | `{{TEST_FAILURE_TRIAGE}}` | Test failure ownership classification | finishing-branch |
 
-## Companion Files
+## Companion files
 
 Hand-authored files that live alongside templates. NOT processed by gen-skill-docs.
 
@@ -164,13 +164,13 @@ Hand-authored files that live alongside templates. NOT processed by gen-skill-do
 | dual-review | spec-review-prompt.md | Codex prompt for spec review |
 | dual-review | plan-review-prompt.md | Codex prompt for plan review |
 
-## Agent Definitions
+## Agent definitions
 
 | Agent | File | Purpose |
 |-------|------|---------|
 | code-reviewer | agents/code-reviewer.md | Two-pass review (CRITICAL/INFORMATIONAL), fix-first classification |
 
-## Cross-Skill References
+## Cross-skill references
 
 - **brainstorming** → runs **dual-review** on spec, then invokes **writing-plans**
 - **brainstorming** → applies **humanizer** constraints during spec writing
@@ -188,7 +188,7 @@ Hand-authored files that live alongside templates. NOT processed by gen-skill-do
 - **dispatching-parallel-agents** → references **verification-before-completion**
 - **receiving-code-review** → references **verification-before-completion**
 
-## Execution Skills
+## Execution skills
 
 ```
 Plan ready
@@ -205,7 +205,7 @@ Both use: verification-before-completion before claiming done
 Both end with: requesting-code-review → finishing-branch
 ```
 
-## Parallel & Isolation
+## Parallel & isolation
 
 ```
 dispatching-parallel-agents (T2)    using-git-worktrees (T2)
@@ -216,7 +216,7 @@ dispatching-parallel-agents (T2)    using-git-worktrees (T2)
   Review for conflicts after          Cleanup on completion
 ```
 
-## Post-Ship & Analysis
+## Post-ship & analysis
 
 ```
 PR merged
@@ -230,7 +230,7 @@ PR merged
                                    focus scoring, team breakdown, trends
 ```
 
-## Project Type Detection
+## Project type detection
 
 At session start, the session-start hook runs `scc` on the project root and classifies it:
 
@@ -255,7 +255,7 @@ The result is injected into session context as `PROJECT_TYPE=web` (or node, pyth
 
 **Service detection:** If `.mcp.json` contains a `"supabase"` key or a `supabase/` directory exists, `HAS_SUPABASE=yes` is also injected.
 
-## Web-Aware Workflow
+## Web-aware workflow
 
 When `PROJECT_TYPE=web`, the same core flow (brainstorming → plans → execute → verify → ship) gains visual verification at every stage. Non-web projects are completely unaffected.
 
@@ -294,7 +294,7 @@ graph TD
 ## Security
 
 ```
-cso (T2) — Chief Security Officer audit
+cso (T2): Chief Security Officer audit
   │
   Phases 0-12: architecture model → attack surface → secrets →
   supply chain → CI/CD → infrastructure → webhooks → LLM security →
@@ -303,11 +303,11 @@ cso (T2) — Chief Security Officer audit
   Modes: /cso (full), --diff (branch), --owasp, --infra, --code
 ```
 
-## Meta Skills
+## Meta skills
 
 | Skill | Tier | Purpose |
 |-------|------|---------|
-| writing-skills | T2 | Create/edit skills — template system, frontmatter, tiers, testing |
+| writing-skills | T2 | Create/edit skills: template system, frontmatter, tiers, testing |
 | receiving-code-review | T2 | Respond to review feedback with technical rigor, not blind agreement |
 
 ## Library
@@ -316,7 +316,7 @@ cso (T2) — Chief Security Officer audit
 |--------|------|---------|
 | WorktreeManager | lib/worktree.ts | Git worktree isolation: create, harvest patches, cleanup, dedup |
 
-## All 33 Skills
+## All 33 skills
 
 | Skill | Tier | Source | Category |
 |-------|------|--------|----------|
@@ -337,7 +337,7 @@ cso (T2) — Chief Security Officer audit
 | writing-skills | T2 | superpowers + rkstack | Meta |
 | document-release | T2 | gstack (adapted) | Post-ship |
 | retro | T2 | gstack (core adapted) | Analysis |
-| humanizer | T2 | rkstack (original) | Quality |
+| humanizer | T2 | yoloshii/humanizer-pro (adapted) | Quality |
 | dual-review | T2 | rkstack (original, inspired by gstack /codex) | Quality |
 | test-driven-development | T3 | superpowers (enriched) | Quality |
 | cso | T2 | gstack (adapted) | Security |
