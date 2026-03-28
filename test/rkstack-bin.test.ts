@@ -120,3 +120,81 @@ describe('slug command', () => {
     });
   });
 });
+
+// ─── config ───────────────────────────────────────────────
+
+describe('config command', () => {
+  let tmpDir: string;
+  let configPath: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-config-test-'));
+    configPath = path.join(tmpDir, 'config.json');
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('get returns empty string for missing file', async () => {
+    const { configGet } = await import('../bin/src/commands/config.ts');
+    expect(configGet(configPath, 'some.key')).toBe('');
+  });
+
+  test('set creates config file and get retrieves it', async () => {
+    const { configSet, configGet } = await import('../bin/src/commands/config.ts');
+    configSet(configPath, 'some.key', 'hello');
+    expect(configGet(configPath, 'some.key')).toBe('hello');
+  });
+
+  test('set stores value as string even for boolean-like input', async () => {
+    const { configSet, configGet } = await import('../bin/src/commands/config.ts');
+    configSet(configPath, 'proactive_suggestions', 'false');
+    expect(configGet(configPath, 'proactive_suggestions')).toBe('false');
+    expect(typeof configGet(configPath, 'proactive_suggestions')).toBe('string');
+  });
+
+  test('set handles dotted key as nested object', async () => {
+    const { configSet, configGet } = await import('../bin/src/commands/config.ts');
+    configSet(configPath, 'dual_review.max_rounds', '3');
+    expect(configGet(configPath, 'dual_review.max_rounds')).toBe('3');
+    // Verify nested structure in file
+    const raw = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    expect(raw.dual_review.max_rounds).toBe('3');
+  });
+
+  test('set preserves existing keys', async () => {
+    const { configSet, configGet } = await import('../bin/src/commands/config.ts');
+    configSet(configPath, 'key1', 'val1');
+    configSet(configPath, 'key2', 'val2');
+    expect(configGet(configPath, 'key1')).toBe('val1');
+    expect(configGet(configPath, 'key2')).toBe('val2');
+  });
+
+  test('list returns empty string for missing file', async () => {
+    const { configList } = await import('../bin/src/commands/config.ts');
+    expect(configList(configPath)).toBe('');
+  });
+
+  test('list returns key=value lines', async () => {
+    const { configSet, configList } = await import('../bin/src/commands/config.ts');
+    configSet(configPath, 'a', '1');
+    configSet(configPath, 'b', '2');
+    const output = configList(configPath);
+    expect(output).toContain('a = 1');
+    expect(output).toContain('b = 2');
+  });
+
+  test('list flattens dotted keys', async () => {
+    const { configSet, configList } = await import('../bin/src/commands/config.ts');
+    configSet(configPath, 'dual_review.max_rounds', '5');
+    const output = configList(configPath);
+    expect(output).toContain('dual_review.max_rounds = 5');
+  });
+
+  test('get returns empty string for missing key in existing file', async () => {
+    const { configSet, configGet } = await import('../bin/src/commands/config.ts');
+    configSet(configPath, 'existing', 'value');
+    expect(configGet(configPath, 'missing')).toBe('');
+  });
+});
