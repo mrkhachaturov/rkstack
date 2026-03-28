@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.2] - 2026-03-28
+
+Skills now reference each other where the workflow requires it. Humanizer constraints activate during spec writing, plan prose, CHANGELOG entries, PR descriptions, retro narratives, and documentation edits. Verification is enforced before completion claims in both execution skills. Code review now suggests the shipping step instead of ending at a dead end.
+
+Also fixes worktree tests failing on non-English system locales.
+
 ## [0.3.1] - 2026-03-27
 
 Preamble now derives language frameworks from scc output instead of hardcoded file checks. scc scans recursively — catches Go in subdirectories, Python without pyproject.toml, and any language scc detects. File checks remain only for non-language tooling (Docker, Ansible, Compose, justfile, mise).
