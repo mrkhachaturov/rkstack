@@ -313,3 +313,81 @@ describe('main router', () => {
     else delete process.env.CLAUDE_PLUGIN_DATA;
   });
 });
+
+// ─── bootstrap script (integration) ─────────────────────
+
+import { generatePreamble } from '../scripts/resolvers/preamble';
+import { HOST_PATHS } from '../scripts/resolvers/types';
+import type { TemplateContext } from '../scripts/resolvers/types';
+
+/** Extract the second ```bash...``` block (the bootstrap) from generated preamble. */
+function extractBootstrapBlock(preamble: string): string {
+  const blocks = [...preamble.matchAll(/```bash\n([\s\S]*?)```/g)];
+  if (blocks.length < 2) throw new Error('No bootstrap block found in preamble');
+  return blocks[1][1]; // Second bash block = bootstrap
+}
+
+describe('bootstrap script (real generated)', () => {
+  let tmpDir: string;
+  let bootstrapScript: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-bootstrap-test-'));
+    // Generate the real preamble for Claude host T1
+    const ctx: TemplateContext = {
+      skillName: 'test-bootstrap',
+      tmplPath: '/fake/SKILL.md.tmpl',
+      host: 'claude',
+      paths: HOST_PATHS['claude'],
+      preambleTier: 1,
+    };
+    const preamble = generatePreamble(ctx);
+    bootstrapScript = extractBootstrapBlock(preamble);
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('prints RKSTACK_BIN_UNAVAILABLE on download failure', () => {
+    const binDir = path.join(tmpDir, 'bin');
+    const versionFile = path.join(tmpDir, 'VERSION');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(versionFile, '0.4.0', 'utf8');
+
+    // Mock curl that always fails
+    const mockCurl = path.join(tmpDir, 'curl');
+    fs.writeFileSync(mockCurl, '#!/bin/bash\nexit 1\n', { mode: 0o755 });
+
+    const wrapper = `
+      export PATH="${tmpDir}:$PATH"
+      export CLAUDE_PLUGIN_DATA="${tmpDir}"
+      export CLAUDE_PLUGIN_ROOT="${tmpDir}"
+      ${bootstrapScript}
+    `;
+    const r = spawnSync('bash', ['-c', wrapper], { encoding: 'utf8' });
+    expect(r.stdout).toContain('RKSTACK_BIN_UNAVAILABLE');
+    // Verify no partial file left behind
+    expect(fs.existsSync(path.join(binDir, 'rkstack'))).toBe(false);
+    // Verify fail marker was created
+    expect(fs.existsSync(path.join(binDir, '.download-failed'))).toBe(true);
+  });
+
+  test('skips download when fail marker exists (session-level dedup)', () => {
+    const binDir = path.join(tmpDir, 'bin');
+    const versionFile = path.join(tmpDir, 'VERSION');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(versionFile, '0.4.0', 'utf8');
+    // Pre-create fail marker (simulates prior failure in this session)
+    fs.writeFileSync(path.join(binDir, '.download-failed'), '', 'utf8');
+
+    const wrapper = `
+      export CLAUDE_PLUGIN_DATA="${tmpDir}"
+      export CLAUDE_PLUGIN_ROOT="${tmpDir}"
+      ${bootstrapScript}
+    `;
+    const r = spawnSync('bash', ['-c', wrapper], { encoding: 'utf8' });
+    expect(r.stdout).toContain('RKSTACK_BIN_UNAVAILABLE');
+    expect(r.stdout).toContain('will retry next session');
+  });
+});

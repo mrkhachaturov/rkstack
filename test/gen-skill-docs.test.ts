@@ -9,6 +9,9 @@ import { describe, test, expect } from 'bun:test';
 import * as fs from 'fs';
 import * as path from 'path';
 import { discoverTemplates, discoverSkillFiles } from '../scripts/discover-skills';
+import { generatePreamble } from '../scripts/resolvers/preamble';
+import { HOST_PATHS } from '../scripts/resolvers/types';
+import type { TemplateContext } from '../scripts/resolvers/types';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 
@@ -381,5 +384,47 @@ describe('Freshness', () => {
       exitCode,
       `gen-skill-docs --dry-run exited ${exitCode}.\nstdout: ${stdout}\nstderr: ${stderr}`
     ).toBe(0);
+  });
+});
+
+// ─── Preamble Bootstrap Injection ────────────────────────────────────────────
+
+describe('preamble bootstrap injection', () => {
+  test('T1 preamble for claude host includes bootstrap block', () => {
+    const ctx: TemplateContext = {
+      skillName: 'test-skill',
+      tmplPath: '/fake/SKILL.md.tmpl',
+      host: 'claude',
+      paths: HOST_PATHS['claude'],
+      preambleTier: 1,
+    };
+    const preamble = generatePreamble(ctx);
+    expect(preamble).toContain('RKSTACK_BIN=');
+    expect(preamble).toContain('WANT_VERSION=');
+    expect(preamble).toContain('RKSTACK_BIN_UNAVAILABLE');
+  });
+
+  test('T1 preamble for codex host does NOT include bootstrap block', () => {
+    const ctx: TemplateContext = {
+      skillName: 'test-skill',
+      tmplPath: '/fake/SKILL.md.tmpl',
+      host: 'codex',
+      paths: HOST_PATHS['codex'],
+      preambleTier: 1,
+    };
+    const preamble = generatePreamble(ctx);
+    expect(preamble).not.toContain('RKSTACK_BIN=');
+  });
+
+  test('T1 preamble for gemini host does NOT include bootstrap block', () => {
+    const ctx: TemplateContext = {
+      skillName: 'test-skill',
+      tmplPath: '/fake/SKILL.md.tmpl',
+      host: 'gemini',
+      paths: HOST_PATHS['gemini'],
+      preambleTier: 1,
+    };
+    const preamble = generatePreamble(ctx);
+    expect(preamble).not.toContain('RKSTACK_BIN=');
   });
 });
