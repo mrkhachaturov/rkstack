@@ -2,11 +2,11 @@
 
 > 🤖 Engineering discipline system for AI coding agents.
 >
-> One plugin. 23 skills. Install once, adapts to your project.
+> One plugin. 33 skills. Install once, adapts to your project.
 
 [![Check](https://github.com/mrkhachaturov/rkstack/actions/workflows/check.yml/badge.svg)](https://github.com/mrkhachaturov/rkstack/actions/workflows/check.yml)
 [![Docs](https://github.com/mrkhachaturov/rkstack/actions/workflows/update-refs.yml/badge.svg)](https://github.com/mrkhachaturov/rkstack/actions/workflows/update-refs.yml)
-![Skills](https://img.shields.io/badge/skills-23-0f766e)
+![Skills](https://img.shields.io/badge/skills-33-0f766e)
 ![Tiers](https://img.shields.io/badge/preamble%20tiers-T1--T4-6366f1)
 ![License](https://img.shields.io/badge/license-MIT-3b82f6)
 
@@ -15,6 +15,7 @@
 | 🧠 | Workflow | Full cycle: idea → spec → plan → implement → verify → review → ship |
 | 🛡️ | Safety | PreToolUse hooks block destructive commands and scope-lock edits |
 | 🔍 | Detection | scc detects your stack, preamble adapts behavior automatically |
+| 🌐 | Web-aware | Browser daemon, visual QA, design review, responsive checks |
 | 📐 | Platform-agnostic | Reads CLAUDE.md for commands — works with any stack |
 
 > [!IMPORTANT]
@@ -152,6 +153,21 @@ Each round gets tighter. Codex catches real issues Claude missed (missing CI pat
 | 🛡️ | **guard** | Both careful + freeze at once. |
 | 🔓 | **unfreeze** | Remove freeze restriction. |
 
+### 🌐 Web
+
+| | Skill | What it does |
+|---|-------|-------------|
+| 🌐 | **browse** | Headless browser — navigate, interact, screenshot, refs. |
+| 🧪 | **qa** | Web QA — test + fix bugs with before/after evidence. |
+| 📋 | **qa-only** | Report-only web QA — bugs documented, never fixed. |
+| 🎨 | **design-review** | Visual QA — spacing, hierarchy, alignment + fixes. |
+| 📐 | **plan-design-review** | Design review before implementation, rates 0-10. |
+| 🖌️ | **design-consultation** | Create DESIGN.md — typography, color, layout, motion. |
+| 🍪 | **setup-browser-cookies** | Import auth cookies from real browser. |
+| ⏱️ | **benchmark** | Performance regression detection — Core Web Vitals. |
+| 📡 | **canary** | Post-deploy monitoring — console errors, regressions. |
+| 🗄️ | **supabase-qa** | Supabase testing — auth, RLS, data consistency. |
+
 ### 🔩 Utility
 
 | | Skill | What it does |
@@ -217,7 +233,7 @@ just dev-build     # 🔧 generate project-local dev skills with refs
 just check         # ✅ verify generated files are fresh
 just skill-check   # 🩺 health dashboard for all skills
 just dev           # 👀 watch mode: auto-regen on change
-bun test           # 🧪 run 121 tests (<8s)
+bun test           # 🧪 run 450 tests (<8s)
 ```
 
 | | Tool | Purpose |

@@ -34,7 +34,7 @@ bun scripts/gen-dev-skills.ts              # generate dev skills
 ## Verification
 
 ```bash
-bun test                    # run before every commit — 75 tests, <6s
+bun test                    # run before every commit — 450 tests, <6s
 just build && just check    # run before every commit — verify generated files are fresh
 just skill-check            # run before shipping — validates frontmatter, coverage, freshness
 ```
@@ -52,7 +52,7 @@ rkstack/
 ├── hooks/                        # SessionStart + hook scripts
 │   ├── hooks.json                # SessionStart declaration
 │   └── session-start             # injects using-rkstack at session start
-├── skills/                       # 23 shipped skills (templates + generated)
+├── skills/                       # 33 shipped skills (templates + generated)
 │   ├── brainstorming/
 │   │   ├── SKILL.md.tmpl         # template (human-authored)
 │   │   ├── SKILL.md              # generated (committed)
@@ -65,6 +65,16 @@ rkstack/
 │   │   ├── SKILL.md.tmpl
 │   │   ├── SKILL.md
 │   │   └── refs/                 # official Claude Code docs (copied from upstream by build)
+│   ├── browse/                   # headless browser skill + refs
+│   ├── qa/                       # web QA — test + fix bugs
+│   ├── qa-only/                  # report-only web QA
+│   ├── design-review/            # visual QA — spacing, hierarchy, alignment
+│   ├── plan-design-review/       # design review before implementation
+│   ├── design-consultation/      # create DESIGN.md
+│   ├── setup-browser-cookies/    # import auth cookies
+│   ├── benchmark/                # performance regression detection
+│   ├── canary/                   # post-deploy monitoring
+│   ├── supabase-qa/              # Supabase testing
 │   └── ...                       # 18 more skills
 ├── dev/                          # contributor-only (not shipped to users)
 │   └── skills/
@@ -84,6 +94,10 @@ rkstack/
 │   │       ├── config.ts          # rkstack config get/set/list
 │   │       └── repo-mode.ts       # rkstack repo-mode (solo/collaborative)
 │   └── rkstack                   # compiled binary (gitignored)
+├── browse/                       # browser daemon (Playwright headless Chromium)
+│   ├── src/                      # CLI + server + commands (13 files)
+│   ├── test/                     # integration tests (321 tests)
+│   └── dist/                     # compiled binary (gitignored)
 ├── agents/                       # agent definitions
 │   └── code-reviewer.md          # two-pass review agent
 ├── scripts/                      # build tooling (Bun/TypeScript)
@@ -175,10 +189,10 @@ It runs first when Claude loads a skill, collecting project context.
 
 | Tier | Skills | What it includes |
 |------|--------|-----------------|
-| T1 | using-rkstack, careful, freeze, guard, unfreeze | Core: scc detection, branch, repo-mode, framework hints, CLAUDE.md check |
-| T2 | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, dispatching-parallel, worktrees, receiving-review, writing-skills, document-release, retro, cso, humanizer, dual-review | T1 + AskUserFormat + Completeness table |
-| T3 | TDD | T2 + RepoMode section + SearchBeforeBuilding |
-| T4 | requesting-code-review, finishing-a-development-branch | T3 + full context (gate-quality skills) |
+| T1 | using-rkstack, careful, freeze, guard, unfreeze, browse, setup-browser-cookies, benchmark | Core: scc detection, branch, repo-mode, framework hints, CLAUDE.md check |
+| T2 | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, dispatching-parallel, worktrees, receiving-review, writing-skills, document-release, retro, cso, humanizer, dual-review, canary | T1 + AskUserFormat + Completeness table |
+| T3 | TDD, plan-design-review, design-consultation, supabase-qa | T2 + RepoMode section + SearchBeforeBuilding |
+| T4 | requesting-code-review, finishing-a-development-branch, qa, qa-only, design-review | T3 + full context (gate-quality skills) |
 
 AskUserFormat, Completeness, Escalation, RepoMode are **sections within the
 preamble** — not separate `{{PLACEHOLDER}}`s. This matches gstack's design.
@@ -402,14 +416,16 @@ preamble tiers, and the build workflow.
 - gen-dev-skills.ts (dev/ → .claude/skills/ with refs from upstream)
 - Preamble tier system (T1-T4) with AskUserFormat, Completeness, RepoMode, Escalation
 - Resolvers: PREAMBLE, TEST_FAILURE_TRIAGE, BASE_BRANCH_DETECT
-- 23 shipped skills at gstack depth:
-  - T1: using-rkstack, careful, freeze, guard, unfreeze
+- 33 shipped skills at gstack depth:
+  - T1: using-rkstack, careful, freeze, guard, unfreeze, browse,
+    setup-browser-cookies, benchmark
   - T2: brainstorming, systematic-debugging, writing-plans, verification,
     executing-plans, subagent-driven, parallel-agents, worktrees,
     receiving-review, writing-skills, document-release, retro, cso, humanizer,
-    dual-review
-  - T3: TDD
-  - T4: requesting-code-review, finishing-a-development-branch
+    dual-review, canary
+  - T3: TDD, plan-design-review, design-consultation, supabase-qa
+  - T4: requesting-code-review, finishing-a-development-branch, qa, qa-only,
+    design-review
 - 1 dev skill: writing-rkstack-skills (contributor-only, in dev/skills/)
 - Hooks: session-start (injects using-rkstack), PreToolUse (careful/freeze/guard)
 - Agent: code-reviewer
@@ -419,6 +435,12 @@ preamble tiers, and the build workflow.
 - CI: check (push/PR, includes version sync), update-refs (daily + version bump), release (all tags + binary builds)
 - Root docs: VERSION, LICENSE, CHANGELOG.md, ETHOS.md, ARCHITECTURE.md,
   CONTRIBUTING.md, AGENTS.md, TODOS.md, docs/WORKFLOW.md
+- Browser daemon (browse/) — Playwright headless Chromium, HTTP commands, ref system, 321 tests
+- 10 web skills: browse, qa, qa-only, design-review, plan-design-review,
+  design-consultation, setup-browser-cookies, benchmark, canary, supabase-qa
+- Project type detection (web/node/python/go/infra/devops/general)
+- Supabase detection
+- Web-aware workflow integration in 6 process skills
 
 **Next:**
 

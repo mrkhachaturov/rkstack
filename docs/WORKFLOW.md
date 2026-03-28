@@ -107,10 +107,10 @@ Every skill gets a preamble injected at the top. The tier controls how much cont
 
 | Tier | Sections Included | Skills |
 |------|------------------|--------|
-| T1 | Core bash (scc, branch, repo-mode) + Completion Status + Escalation | using-rkstack, careful, freeze, guard, unfreeze |
-| T2 | T1 + AskUserQuestion Format + Completeness Principle | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, parallel-agents, worktrees, receiving-review, writing-skills, document-release, retro, cso, humanizer, dual-review |
-| T3 | T2 + Repo Ownership + Search Before Building | TDD |
-| T4 | T3 (gate-quality skills) | requesting-code-review, finishing-a-development-branch |
+| T1 | Core bash (scc, branch, repo-mode) + Completion Status + Escalation | using-rkstack, careful, freeze, guard, unfreeze, browse, setup-browser-cookies, benchmark |
+| T2 | T1 + AskUserQuestion Format + Completeness Principle | brainstorming, systematic-debugging, writing-plans, verification, executing-plans, subagent-driven, parallel-agents, worktrees, receiving-review, writing-skills, document-release, retro, cso, humanizer, dual-review, canary |
+| T3 | T2 + Repo Ownership + Search Before Building | TDD, plan-design-review, design-consultation, supabase-qa |
+| T4 | T3 (gate-quality skills) | requesting-code-review, finishing-a-development-branch, qa, qa-only, design-review |
 
 **AskUserQuestion Format** (T2+): re-ground → simplify → recommend → options with Completeness scoring
 
@@ -230,6 +230,19 @@ PR merged
                                    focus scoring, team breakdown, trends
 ```
 
+## Web-Aware Workflow
+
+When `PROJECT_TYPE=web` is detected (TypeScript/JavaScript + CSS/HTML or web framework config), process skills automatically include visual verification:
+
+- **brainstorming** — suggests /design-consultation, invokes /plan-design-review
+- **writing-plans** — adds visual verification steps to UI tasks
+- **executing-plans** — screenshot + console check after UI tasks
+- **verification** — runs /qa-only, responsive checks
+- **requesting-code-review** — includes screenshots
+- **finishing-branch** — QA gate, /benchmark, screenshots in PR
+
+When `HAS_SUPABASE=yes`, skills also verify data via Supabase MCP.
+
 ## Security
 
 ```
@@ -255,7 +268,7 @@ cso (T2) — Chief Security Officer audit
 |--------|------|---------|
 | WorktreeManager | lib/worktree.ts | Git worktree isolation: create, harvest patches, cleanup, dedup |
 
-## All 23 Skills
+## All 33 Skills
 
 | Skill | Tier | Source | Category |
 |-------|------|--------|----------|
@@ -282,3 +295,13 @@ cso (T2) — Chief Security Officer audit
 | cso | T2 | gstack (adapted) | Security |
 | requesting-code-review | T4 | gstack /review + superpowers | Quality |
 | finishing-a-development-branch | T4 | gstack /ship + superpowers | Shipping |
+| browse | T1 | rkstack (original) | Web |
+| qa | T4 | rkstack (original) | Web |
+| qa-only | T4 | rkstack (original) | Web |
+| design-review | T4 | rkstack (original) | Web |
+| plan-design-review | T3 | rkstack (original) | Web |
+| design-consultation | T3 | rkstack (original) | Web |
+| setup-browser-cookies | T1 | rkstack (original) | Web |
+| benchmark | T1 | rkstack (original) | Web |
+| canary | T2 | rkstack (original) | Web |
+| supabase-qa | T3 | rkstack (original) | Web |

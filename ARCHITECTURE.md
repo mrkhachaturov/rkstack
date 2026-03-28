@@ -71,7 +71,7 @@ Alternative approaches and why we didn't use them:
 
 ## Why Templates
 
-23 skills. Shared patterns (preamble, base branch detection, test failure
+33 skills. Shared patterns (preamble, base branch detection, test failure
 triage). If these are copy-pasted, they drift. A change to the preamble
 means editing 28 files.
 
@@ -154,6 +154,42 @@ framework command. The pattern:
 
 This means rkstack works on any stack without configuration. The project
 owns its commands; rkstack reads them.
+
+## Project Type Detection
+
+The preamble detects what kind of project rkstack is running in and adapts
+skill behavior accordingly. Detection uses scc output and config file
+presence:
+
+| PROJECT_TYPE | Detection signal |
+| ------------ | --------------- |
+| web | TypeScript/JavaScript + CSS/HTML or web framework config (next.config, vite.config, etc.) |
+| node | package.json without web indicators |
+| python | pyproject.toml, setup.py, requirements.txt |
+| go | go.mod |
+| infra | Terraform, Pulumi, CloudFormation files |
+| devops | Dockerfile, docker-compose, k8s manifests |
+| general | fallback when no specific type matches |
+
+When `PROJECT_TYPE=web`, process skills inject visual verification steps:
+screenshots after UI changes, responsive checks, design review gates.
+Skills read the type from the preamble and branch on it in prose — no
+separate resolver needed.
+
+**Supabase detection** — when `supabase/config.toml` or a Supabase client
+import is found, `HAS_SUPABASE=yes` is set. Skills that touch data or auth
+then include Supabase-specific verification (RLS policies, auth flows).
+
+## Browser Daemon
+
+`browse/` is a Playwright-based headless Chromium daemon that web skills
+use for navigation, interaction, screenshots, and console monitoring. It
+runs as an HTTP server started on demand by the browse skill.
+
+The daemon is a subsystem, not a skill. Skills call it through bash
+commands (`rkstack-browse navigate`, `rkstack-browse screenshot`, etc.).
+The browse skill itself is a T1 utility that starts the daemon and
+provides the command reference.
 
 ## Resolver Architecture
 

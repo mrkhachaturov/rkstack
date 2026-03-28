@@ -105,7 +105,7 @@ To add one:
 rkstack/
 ├── .claude-plugin/plugin.json    # plugin manifest
 ├── hooks/                        # SessionStart + scripts
-├── skills/                       # all skills (23 total)
+├── skills/                       # all skills (33 total)
 │   └── {name}/
 │       ├── SKILL.md.tmpl         # template (edit this)
 │       ├── SKILL.md              # generated (commit this)
@@ -120,6 +120,10 @@ rkstack/
 │   ├── skill-check.ts            # health dashboard
 │   ├── dev-skill.ts              # watch mode
 │   └── resolvers/                # {{PLACEHOLDER}} → content
+├── browse/                       # browser daemon (Playwright headless Chromium)
+│   ├── src/                      # CLI + server + commands
+│   ├── test/                     # integration tests (321 tests)
+│   └── dist/                     # compiled binary (gitignored)
 ├── lib/                          # reusable infrastructure
 │   └── worktree.ts               # git worktree isolation
 ├── .upstreams/                   # git submodules (read-only)
@@ -141,7 +145,22 @@ just skill-check   # health dashboard (frontmatter, coverage, freshness)
 just dev           # watch mode: auto-regen on change
 just detect        # run scc on current directory
 just setup         # install tools via mise
+just build-browse  # compile the browser daemon
 ```
+
+### Browser Daemon
+
+The `browse/` subsystem requires Playwright with Chromium. To set it up:
+
+```bash
+cd browse && npm install
+npx playwright install chromium
+just build-browse
+```
+
+Browse tests run as part of `bun test`. If you're only working on skills
+(not the browser daemon), you can skip the Playwright install — the browse
+tests will be skipped if Chromium is not available.
 
 ## Before Submitting
 
