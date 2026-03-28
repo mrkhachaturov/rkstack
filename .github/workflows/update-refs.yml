@@ -126,24 +126,6 @@ jobs:
           git tag "v${VERSION}"
           git push origin "v${VERSION}"
 
-      - name: Read changelog entry
-        if: steps.refs-changed.outputs.refs_changed == 'true'
-        id: changelog
-        uses: mindsers/changelog-reader-action@v2
-        with:
-          version: ${{ steps.version.outputs.version }}
-          path: ./CHANGELOG.md
-          validation_level: warn
-
-      - name: Create GitHub release
-        if: steps.refs-changed.outputs.refs_changed == 'true'
-        uses: ncipollo/release-action@v1
-        with:
-          tag: v${{ steps.version.outputs.version }}
-          name: v${{ steps.version.outputs.version }}
-          body: ${{ steps.changelog.outputs.changes }}
-          makeLatest: false
-
       - name: No changes
         if: steps.check.outputs.changed != 'true'
         run: echo "No upstream changes detected"

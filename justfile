@@ -35,3 +35,8 @@ dev:
 [doc("Detect project stack via scc")]
 detect:
   scc --format wide --no-cocomo .
+
+[group("build")]
+[doc("Compile the rkstack binary for the current platform")]
+build-bin:
+  bun build --compile --define "VERSION=\"$(cat VERSION)\"" bin/src/main.ts --outfile bin/rkstack

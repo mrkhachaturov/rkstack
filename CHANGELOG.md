@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0] - 2026-03-28
+
+You can now run `rkstack version`, `rkstack slug`, `rkstack config`, and `rkstack repo-mode` from a single compiled binary. The binary downloads automatically on first skill load (Claude Code only) and checks for updates on each session. No skill behavior changes yet -- the binary ships alongside inline bash; skills migrate to it in Phase 2.
+
+- **rkstack binary** -- compiled Bun CLI with four subcommands: `version` (print version), `slug` (filesystem-safe project/branch names), `config get/set/list` (persistent JSON key-value store), `repo-mode` (solo/collaborative detection with 7-day cache). Source in `bin/src/`, compiled via `just build-bin`.
+- **Preamble bootstrap** -- T1 preamble now includes a download-and-verify block for Claude Code hosts. Downloads the binary on first run, version-checks on subsequent loads. Non-blocking: if download fails, skills continue with inline bash. Codex/Gemini hosts are unaffected.
+- **CI: consolidated release workflow** -- `release.yml` now handles all `v*` tags (manual and CI patch bumps) and builds platform binaries (macOS ARM/Intel, Linux x86/ARM). `update-refs.yml` no longer creates releases.
+- **CI: version sync check** -- `check.yml` verifies VERSION, plugin.json, and package.json agree on every push.
+- **Config hardening** -- key validation rejects malformed keys, `configGet` returns empty for non-leaf nodes, `configSet` warns before overwriting scalars with nested objects.
+- **finishing-a-development-branch** -- removed `disable-model-invocation` flag so the skill can be chained from code review without manual invocation.
+- **skill-check** -- no longer warns about dev-generated skills in `.claude/skills/`.
+
 ## [0.4.0] - 2026-03-28
 
 New dual-review skill -- specs and plans now get a second opinion from Codex before you approve them.

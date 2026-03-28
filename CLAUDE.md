@@ -15,6 +15,7 @@ no intermediate layers. Claude Code reads `skills/` directly.
 just build         # pull latest docs + generate all SKILL.md from templates
 just check         # verify generated files are up to date (--dry-run)
 just skill-check   # health dashboard for all skills
+just build-bin     # compile the rkstack binary for the current platform
 just dev-build     # generate project-local skills (dev/ → .claude/skills/)
 just dev           # watch mode: auto-regen + validate on change
 just detect        # run scc on current directory
@@ -74,6 +75,15 @@ rkstack/
 │   └── writing-rkstack-skills/
 │       ├── SKILL.md              # generated from dev/skills/
 │       └── refs/                 # official Claude Code docs (14 files)
+├── bin/                          # rkstack CLI binary
+│   ├── src/
+│   │   ├── main.ts               # entry point: parse args, route to command
+│   │   └── commands/
+│   │       ├── version.ts         # rkstack version
+│   │       ├── slug.ts            # rkstack slug [--branch|--full]
+│   │       ├── config.ts          # rkstack config get/set/list
+│   │       └── repo-mode.ts       # rkstack repo-mode (solo/collaborative)
+│   └── rkstack                   # compiled binary (gitignored)
 ├── agents/                       # agent definitions
 │   └── code-reviewer.md          # two-pass review agent
 ├── scripts/                      # build tooling (Bun/TypeScript)
@@ -404,14 +414,17 @@ preamble tiers, and the build workflow.
 - Hooks: session-start (injects using-rkstack), PreToolUse (careful/freeze/guard)
 - Agent: code-reviewer
 - Library: lib/worktree.ts (git worktree isolation)
+- Binary: bin/src/ — rkstack CLI (version, slug, config, repo-mode) with preamble bootstrap (Claude host)
 - Refs pipeline: upstream claude-code-docs → skills/*/refs/ (shipped) + .claude/skills/*/refs/ (dev)
-- CI: check (push/PR), update-refs (daily + version bump), release (manual tags)
+- CI: check (push/PR, includes version sync), update-refs (daily + version bump), release (all tags + binary builds)
 - Root docs: VERSION, LICENSE, CHANGELOG.md, ETHOS.md, ARCHITECTURE.md,
   CONTRIBUTING.md, AGENTS.md, TODOS.md, docs/WORKFLOW.md
 
 **Next:**
-1. bin/ utilities (rkstack-detect, rkstack-repo-mode, rkstack-config)
-2. Codex/Gemini host support in gen-skill-docs (frontmatter transformation)
+
+1. Phase 2: Update skills to call rkstack binary (repo-mode, config) instead of inline bash
+2. bin/ utilities — rkstack-detect (scc wrapper)
+3. Codex/Gemini host support in gen-skill-docs (frontmatter transformation)
 
 ## Reference Material
 
