@@ -229,7 +229,7 @@ bun test           # 🧪 run 75 tests (<6s)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add skills and work with templates.
 See [ARCHITECTURE.md](ARCHITECTURE.md) for why rkstack is built this way.
-See [docs/workflow.md](docs/workflow.md) for the complete skill-to-skill flow with all cross-references.
+See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the complete skill-to-skill flow with all cross-references.
 
 ---
 

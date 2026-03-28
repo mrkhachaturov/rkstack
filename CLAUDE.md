@@ -407,7 +407,7 @@ preamble tiers, and the build workflow.
 - Refs pipeline: upstream claude-code-docs → skills/*/refs/ (shipped) + .claude/skills/*/refs/ (dev)
 - CI: check (push/PR), update-refs (daily + version bump), release (manual tags)
 - Root docs: VERSION, LICENSE, CHANGELOG.md, ETHOS.md, ARCHITECTURE.md,
-  CONTRIBUTING.md, AGENTS.md, TODOS.md, docs/workflow.md
+  CONTRIBUTING.md, AGENTS.md, TODOS.md, docs/WORKFLOW.md
 
 **Next:**
 1. bin/ utilities (rkstack-detect, rkstack-repo-mode, rkstack-config)
@@ -420,7 +420,7 @@ Study these before making changes:
 - `ETHOS.md` — builder philosophy (completeness, search, evidence, escalate)
 - `ARCHITECTURE.md` — why rkstack is built this way
 - `CONTRIBUTING.md` — how to add skills and work with templates
-- `docs/workflow.md` — how skills connect end-to-end
+- `docs/WORKFLOW.md` — how skills connect end-to-end
 - `.upstreams/gstack/CLAUDE.md` — how gstack instructs Claude to work
 - `.upstreams/gstack/ETHOS.md` — Boil the Lake, Search Before Building
 - `.upstreams/claude-code-docs/docs/skills.md` — official Claude Code skill spec
