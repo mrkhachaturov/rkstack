@@ -170,7 +170,7 @@ For each task in order:
 ### 2b. Follow each step exactly
 
 - Execute each step as written in the plan
-- If the plan specifies TDD (write test first, verify failure, implement, verify pass) — follow that sequence strictly
+- If the plan specifies TDD (write test first, verify failure, implement, verify pass) — follow that sequence strictly using the **test-driven-development** skill.
 - Run every verification command the plan specifies. Read the output. Confirm it matches the expected result.
 - If a step says "Run X, expected Y" and you get Z — that is a failure. Do not proceed. See **Handling Failures** below.
 
@@ -263,13 +263,15 @@ After all tasks are executed (or all non-blocked tasks are done):
    ```
    Use commands from CLAUDE.md or the plan header. Do not guess commands.
 
-2. **Report final status:**
+2. **Verify with evidence:** Apply the **verification-before-completion** discipline — every claim must be backed by a command you ran and output you read in this session. No completion claims without fresh evidence.
+
+3. **Report final status:**
 
    - **DONE** — All tasks completed, all verifications pass.
    - **DONE_WITH_CONCERNS** — All tasks completed, but: [list concerns — flaky tests, workarounds used, deviations from plan].
    - **BLOCKED** — N tasks blocked. [Summary of blockers].
 
-3. **Suggest next step:**
+4. **Suggest next step:**
 
    > "Plan execution complete. Status: [DONE/DONE_WITH_CONCERNS/BLOCKED].
    >

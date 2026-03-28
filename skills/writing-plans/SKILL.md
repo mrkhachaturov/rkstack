@@ -298,3 +298,4 @@ After saving the plan, offer execution choice:
 - Exact commands with expected output
 - DRY, YAGNI, TDD, frequent commits
 - Read CLAUDE.md of the target project before writing any commands
+- Apply **humanizer** constraints for the plan header prose (Goal, Architecture) — humans review this document

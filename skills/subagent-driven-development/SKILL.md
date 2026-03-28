@@ -189,6 +189,7 @@ digraph process {
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
+    "Verify with verification-before-completion" [shape=box];
     "Dispatch final code reviewer subagent for entire implementation" [shape=box];
     "Use finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
@@ -208,7 +209,8 @@ digraph process {
     "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
+    "More tasks remain?" -> "Verify with verification-before-completion" [label="no"];
+    "Verify with verification-before-completion" -> "Dispatch final code reviewer subagent for entire implementation";
     "Dispatch final code reviewer subagent for entire implementation" -> "Use finishing-a-development-branch";
 }
 ```
@@ -340,6 +342,18 @@ Done!
 
 ---
 
+## Verification Gate
+
+After all tasks are complete and before dispatching the final code reviewer:
+
+1. Run the full test suite. Paste output.
+2. Run the build (if applicable). Confirm exit 0.
+3. Apply the **verification-before-completion** discipline — every claim must be backed by a command you ran and output you read in this session. No completion claims without fresh evidence.
+
+Only proceed to the final code review if all verifications pass.
+
+---
+
 ## Advantages
 
 **vs. Manual execution:**
@@ -412,6 +426,7 @@ Done!
 - **writing-plans** -- Creates the plan this skill executes
 - **requesting-code-review** -- Code review template for reviewer subagents
 - **finishing-a-development-branch** -- Complete development after all tasks
+- **verification-before-completion** -- Verify all claims with evidence before final review
 
 **Subagents should use:**
 - **test-driven-development** -- Subagents follow TDD for each task

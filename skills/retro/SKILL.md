@@ -575,6 +575,7 @@ When the user runs `/retro compare` (or `/retro compare 14d`):
 - Never compare teammates against each other negatively. Each person's section stands on its own.
 - Keep total output around 3000-4500 words (slightly longer to accommodate team sections)
 - Use markdown tables and code blocks for data, prose for narrative
+- Apply **humanizer** constraints for all narrative sections — the retro is human-facing prose
 - Output directly to the conversation — do NOT write to filesystem (except the `.context/retros/` JSON snapshot)
 
 ## Important Rules

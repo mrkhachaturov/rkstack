@@ -242,6 +242,7 @@ Use the preamble output to understand the tech stack. Adapt your questions to th
 
 - Write the validated design (spec) to `docs/rkstack/specs/YYYY-MM-DD-<topic>-design.md`
   - (User preferences for spec location override this default)
+- Apply **humanizer** constraints when writing the spec — design docs are human-facing prose
 - Commit the design document to git
 
 ---
