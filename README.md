@@ -1,6 +1,6 @@
 # 🛠️ RKstack
 
-> 🤖 AI development workflow plugin for Claude Code, Codex, and Gemini.
+> 🤖 Engineering discipline system for AI coding agents.
 >
 > One plugin. 23 skills. Install once, adapts to your project.
 
