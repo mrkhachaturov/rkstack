@@ -1,6 +1,19 @@
 import type { TemplateContext } from './types';
 
 /**
+ * Co-author trailer for git commits — adapts to the target host.
+ */
+export function generateCoAuthorTrailer(ctx: TemplateContext): string {
+  if (ctx.host === 'codex') {
+    return 'Co-Authored-By: OpenAI Codex <noreply@openai.com>';
+  }
+  if (ctx.host === 'gemini') {
+    return 'Co-Authored-By: Google Gemini <noreply@google.com>';
+  }
+  return 'Co-Authored-By: Claude <noreply@anthropic.com>';
+}
+
+/**
  * Detect the base branch (main/master/develop) across platforms.
  * Used by skills that need to diff against the merge target.
  */
