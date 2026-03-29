@@ -275,10 +275,12 @@ adds — not what was already on main.
 **Format:** Keep a Changelog (`## [a.b.c] - YYYY-MM-DD`). CI bumps patch (`c`)
 automatically when refs update. We bump minor (`b`) or major (`a`) manually.
 
-**Four files must stay in sync when bumping:** `VERSION`, `.claude-plugin/plugin.json`
-(the `"version"` field), `package.json`, and the new CHANGELOG entry header. CI
-enforces that the first three match. If `plugin.json` is not bumped, marketplace
-users won't see the update due to caching.
+**When changing the version,** update it in all four places: `VERSION`,
+`.claude-plugin/plugin.json`, `package.json`, and the CHANGELOG entry header.
+CI enforces the first three match. After committing, rebuild the binary
+(`just skills::bin`), tag (`git tag va.b.c`), and push the tag
+(`git push origin va.b.c`) — the tag triggers the GitHub release with binaries.
+If `plugin.json` is not bumped, marketplace users won't see the update due to caching.
 
 **When to write the CHANGELOG entry:**
 - At `/finishing-a-development-branch` time, not during development or mid-branch.
