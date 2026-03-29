@@ -1,0 +1,21 @@
+---
+description: What belongs in CLAUDE.md vs rules vs auto-memory
+---
+
+# Context Hygiene
+
+## Three-Tier Model
+
+**CLAUDE.md** -- stable architectural facts and hard safety rules only.
+- Commands, host configuration, domain knowledge Claude cannot guess
+- Hard "Never" rules (plaintext secrets, direct infrastructure commands)
+- Must stay concise. Do not add content derivable from code or git history.
+
+**Rules files** (`.claude/rules/`) -- domain working rules, path-scoped where possible.
+- How to use a specific tool or provider in this project
+- Patterns and conventions for a subsystem
+- Never duplicate what is already in CLAUDE.md
+
+**Auto-memory** -- evolving project state and accumulated feedback.
+- User-stated preferences and behavioral corrections
+- Current project phase and what is/isn't live
