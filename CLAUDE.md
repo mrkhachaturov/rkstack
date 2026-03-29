@@ -11,15 +11,37 @@ no intermediate layers. Claude Code reads `skills/` directly.
 
 ## Commands
 
+Top-level aliases (most-typed commands):
+
 ```bash
 just build         # pull latest docs + generate all SKILL.md from templates
 just check         # verify generated files are up to date (--dry-run)
 just skill-check   # health dashboard for all skills
-just build-bin     # compile the rkstack binary for the current platform
 just dev-build     # generate project-local skills (dev/ → .claude/skills/)
 just dev           # watch mode: auto-regen + validate on change
 just detect        # run scc on current directory
-just setup         # install tools via mise
+just install       # install tools via mise
+```
+
+Modular commands (`.just/` files, accessed via `just module::recipe`):
+
+```bash
+# skills module
+just skills::gen          # same as just build
+just skills::check        # same as just check
+just skills::health       # same as just skill-check
+just skills::bin          # compile the rkstack binary
+just skills::browse       # compile the rkstack-browse binary
+
+# upstream module
+just upstream::bump-all   # bump all submodules to latest and commit
+just upstream::bump NAME  # bump one submodule (e.g. just upstream::bump gstack)
+just upstream::check      # show what's new in upstreams
+
+# setup module
+just setup::tools         # same as just install
+just setup::age           # configure age encryption for docs/rkstack/
+just setup::check-age     # verify docs are encrypted
 ```
 
 Bun equivalents:
@@ -34,7 +56,7 @@ bun scripts/gen-dev-skills.ts              # generate dev skills
 ## Verification
 
 ```bash
-bun test                    # run before every commit — 450 tests, <6s
+bun test                    # run before every commit
 just build && just check    # run before every commit — verify generated files are fresh
 just skill-check            # run before shipping — validates frontmatter, coverage, freshness
 ```
@@ -52,7 +74,7 @@ rkstack/
 ├── hooks/                        # SessionStart + hook scripts
 │   ├── hooks.json                # SessionStart declaration
 │   └── session-start             # injects using-rkstack at session start
-├── skills/                       # 33 shipped skills (templates + generated)
+├── skills/                       # shipped skills (templates + generated)
 │   ├── brainstorming/
 │   │   ├── SKILL.md.tmpl         # template (human-authored)
 │   │   ├── SKILL.md              # generated (committed)
@@ -74,8 +96,9 @@ rkstack/
 │   ├── setup-browser-cookies/    # import auth cookies
 │   ├── benchmark/                # performance regression detection
 │   ├── canary/                   # post-deploy monitoring
+│   ├── setup-project/            # project-level safety guards + rules
 │   ├── supabase-qa/              # Supabase testing
-│   └── ...                       # 18 more skills
+│   └── ...                       # more skills
 ├── dev/                          # contributor-only (not shipped to users)
 │   └── skills/
 │       └── writing-rkstack-skills/
@@ -130,8 +153,12 @@ rkstack/
 ├── CONTRIBUTING.md               # how to contribute
 ├── AGENTS.md                     # skill catalog for all AI agents
 ├── TODOS.md                      # structured roadmap
+├── .just/                        # modular justfile commands
+│   ├── skills.just               # gen, check, health, dev, bin, browse
+│   ├── upstream.just             # check, bump, bump-all
+│   └── setup.just                # tools, age, check-age
 ├── package.json                  # bun scripts
-├── justfile                      # human-friendly commands
+├── justfile                      # top-level aliases + module imports
 └── .mise.toml                    # tool versions (bun, just, scc)
 ```
 
@@ -435,7 +462,7 @@ preamble tiers, and the build workflow.
 - gen-dev-skills.ts (dev/ → .claude/skills/ with refs from upstream)
 - Preamble tier system (T1-T4) with AskUserFormat, Completeness, RepoMode, Escalation
 - Resolvers: PREAMBLE, TEST_FAILURE_TRIAGE, BASE_BRANCH_DETECT
-- 33 shipped skills at gstack depth:
+- Shipped skills at gstack depth:
   - T1: using-rkstack, careful, freeze, guard, unfreeze, browse,
     setup-browser-cookies, benchmark
   - T2: brainstorming, systematic-debugging, writing-plans, verification,
