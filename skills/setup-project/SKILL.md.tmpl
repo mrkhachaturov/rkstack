@@ -167,9 +167,9 @@ Present via AskUserQuestion after copying:
 
 ## Step 5: Write plugin metadata
 
-Read the current rkstack plugin version:
+Read the current rkstack plugin version. Use the rkstack binary (available in session context as `$RKSTACK_BIN`):
 ```bash
-cat "${CLAUDE_PLUGIN_ROOT}/VERSION" 2>/dev/null || echo "unknown"
+rkstack version 2>/dev/null || echo "unknown"
 ```
 
 If `.rkstack/settings.json` exists, read it to preserve the `detection` and `overrides` sections.

@@ -50,12 +50,21 @@ echo "CLAUDE_MD: $_HAS_CLAUDE_MD"
 ```
 
 Use the detection cache and preamble output to adapt your behavior:
-- Read `detection.langs` to know which languages are in the project and their scale (files, lines of code, complexity)
-- Read `detection.tools` for Docker, Terraform, Ansible, Compose, just, mise presence
-- Read `detection.projectType` for the high-level classification (web, node, python, go, infra, devops, general)
-- Read `detection.repoMode` for solo vs collaborative
-- Read `detection.services` for Supabase and other service integrations
+- **TypeScript/JavaScript** — see `detection.projectType` (web or node). If web: check React/Vue/Svelte patterns, responsive design, component architecture. If node: CLI tools, MCP servers, backend scripts.
+- **Python** — backend/ML/scripts. Check PEP8 conventions, pytest for testing.
+- **Go** — backend/infra. Check error handling patterns, go test.
+- **Rust** — systems. Check ownership patterns, cargo test.
+- **Java/C#** — enterprise. Check build tool (Maven/Gradle/.NET), framework conventions.
+- **Ruby** — web/scripting. Check Gemfile, Rails conventions if present.
+- **Terraform/HCL** — infrastructure as code. Plan before apply, extra caution with state.
+- **Ansible** — configuration management. Check inventory, role conventions, vault usage.
+- **Docker/Compose** — containerized. Check service dependencies, .env patterns.
+- **justfile** — task runner present. Use `just` commands instead of raw shell.
+- **mise** — tool version manager. Versions are pinned — don't suggest global installs.
 - **CLAUDE.md exists** — read it for project-specific commands and conventions.
+- Read `detection.langs` for project scale (files, lines of code, complexity per language).
+- Read `detection.repoMode` for solo vs collaborative.
+- Read `detection.services` for Supabase and other service integrations.
 
 ## Completion Status
 

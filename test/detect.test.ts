@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { parseSccOutput, classifyProjectType, detectTools, detectServices, hasWebFrameworkConfig, writeDetectionCache, readDetectionCache, type LangInfo, type DetectionResult } from '../bin/src/commands/detect';
+import { parseSccOutput, classifyProjectType, detectTools, detectServices, hasWebFrameworkConfig, writeDetectionCache, readDetectionCache, getEffectiveProjectType, type LangInfo, type DetectionResult } from '../bin/src/commands/detect';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -98,6 +98,11 @@ describe('classifyProjectType', () => {
 
   test('Shell only = devops', () => {
     const langs = { shell: { files: 5, code: 200, complexity: 30 } };
+    expect(classifyProjectType(langs, false)).toBe('devops');
+  });
+
+  test('YAML only = devops', () => {
+    const langs = { yaml: { files: 10, code: 500, complexity: 0 } };
     expect(classifyProjectType(langs, false)).toBe('devops');
   });
 
@@ -225,5 +230,40 @@ describe('detection cache', () => {
     }));
     const result = readDetectionCache(tmpDir);
     expect(result?.projectType).toBe('web');
+  });
+});
+
+describe('getEffectiveProjectType', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-detect-ept-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('returns general when no file exists', () => {
+    expect(getEffectiveProjectType(tmpDir)).toBe('general');
+  });
+
+  test('returns detection projectType when no overrides', () => {
+    const rkstackDir = path.join(tmpDir, '.rkstack');
+    fs.mkdirSync(rkstackDir, { recursive: true });
+    fs.writeFileSync(path.join(rkstackDir, 'settings.json'), JSON.stringify({
+      detection: { projectType: 'web' },
+    }));
+    expect(getEffectiveProjectType(tmpDir)).toBe('web');
+  });
+
+  test('returns override projectType when overrides exist', () => {
+    const rkstackDir = path.join(tmpDir, '.rkstack');
+    fs.mkdirSync(rkstackDir, { recursive: true });
+    fs.writeFileSync(path.join(rkstackDir, 'settings.json'), JSON.stringify({
+      detection: { projectType: 'web' },
+      overrides: { projectType: 'infra' },
+    }));
+    expect(getEffectiveProjectType(tmpDir)).toBe('infra');
   });
 });

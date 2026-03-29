@@ -40,9 +40,9 @@ const LANG_MAP: Record<string, string | null> = {
   'HTML': 'html',
   'HCL': 'hcl',
   'Terraform': 'hcl',
+  'YAML': 'yaml',
   'Markdown': null,
   'JSON': null,
-  'YAML': null,
   'TOML': null,
   'XML': null,
   'License': null,
@@ -102,6 +102,7 @@ export function classifyProjectType(
   const hasGo = 'go' in langs;
   const hasHcl = 'hcl' in langs;
   const hasShell = 'shell' in langs;
+  const hasYaml = 'yaml' in langs;
 
   if (hasTs || hasJs) {
     return (hasCss || hasWebConfig) ? 'web' : 'node';
@@ -109,7 +110,7 @@ export function classifyProjectType(
   if (hasPy) return 'python';
   if (hasGo) return 'go';
   if (hasHcl) return 'infra';
-  if (hasShell) return 'devops';
+  if (hasShell || hasYaml) return 'devops';
   return 'general';
 }
 
@@ -196,6 +197,7 @@ function runScc(): string {
       process.stderr.write('scc not found. Install via: mise install, or brew install scc\n');
       process.exit(1);
     }
+    process.stderr.write(`scc exited with status ${r.status}: ${r.stderr || 'no output'}\n`);
     return '';
   }
   return r.stdout;
