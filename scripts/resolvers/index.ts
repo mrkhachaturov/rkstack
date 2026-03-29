@@ -1,6 +1,7 @@
 import type { Resolver } from './types';
 import { generatePreamble, generateTestFailureTriage } from './preamble';
 import { generateBaseBranchDetect, generateCoAuthorTrailer } from './utility';
+import { generateCommandReference, generateSnapshotFlags, generateBrowseSetup } from './browse';
 
 /**
  * Registry of all placeholder resolvers.
@@ -16,4 +17,7 @@ export const RESOLVERS: Record<string, Resolver> = {
   TEST_FAILURE_TRIAGE: generateTestFailureTriage,
   BASE_BRANCH_DETECT: generateBaseBranchDetect,
   CO_AUTHOR_TRAILER: generateCoAuthorTrailer,
+  COMMAND_REFERENCE: generateCommandReference,
+  SNAPSHOT_FLAGS: generateSnapshotFlags,
+  BROWSE_SETUP: generateBrowseSetup,
 };
