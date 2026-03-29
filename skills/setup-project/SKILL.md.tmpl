@@ -142,7 +142,7 @@ For each stack detected in Step 2 that also has a rule template:
    - Extract real data: directory names, tool versions, existing patterns
 3. Write the generated rule to `.claude/rules/<stack>.md`
 
-**This is where Claude's intelligence matters.** The `.tmpl` skeleton has section headings and `[GENERATED]` placeholders. Claude reads the project, understands the structure, and writes content that fits — like the difference between a generic "Terraform rules" and your astrateam project's specific root ownership table.
+**This is where Claude's intelligence matters.** The `.tmpl` skeleton has section headings and `[GENERATED]` placeholders. Claude reads the project, understands the structure, and writes content that fits — like the difference between a generic "Terraform rules" and a project-specific root ownership table with actual directory names and provider versions.
 
 **If file exists:** same overwrite logic.
 
