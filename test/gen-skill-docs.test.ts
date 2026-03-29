@@ -41,15 +41,22 @@ function extractPreambleTier(fm: string): number | undefined {
 // ─── Template Discovery ────────────────────────────────────────────────────────
 
 describe('Template Discovery', () => {
-  test('discoverTemplates finds all 33 skill templates', () => {
+  test('discoverTemplates finds a reasonable number of skill templates', () => {
     const templates = discoverTemplates(ROOT);
-    expect(templates.length).toBe(33);
+    // Floor guard: catches broken discovery without hardcoding the exact count
+    expect(templates.length).toBeGreaterThanOrEqual(30);
   });
 
-  test('discoverSkillFiles finds all 33 shipped SKILL.md files', () => {
+  test('every shipped template has a corresponding SKILL.md and vice versa', () => {
+    const templates = discoverTemplates(ROOT);
     const skillFiles = discoverSkillFiles(ROOT);
     const shippedSkills = skillFiles.filter(f => f.startsWith('skills/'));
-    expect(shippedSkills.length).toBe(33);
+    // 1:1 correspondence: same count, and every template output exists in shipped skills
+    expect(shippedSkills.length).toBe(templates.length);
+    const shippedSet = new Set(shippedSkills);
+    for (const { output } of templates) {
+      expect(shippedSet.has(output)).toBe(true);
+    }
   });
 
   test('discoverTemplates returns sorted results', () => {
