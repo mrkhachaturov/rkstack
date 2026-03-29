@@ -12,9 +12,6 @@ bun.lock
 # Local state (freeze boundary, brainstorm sessions)
 .rkstack/
 
-# Skill-generated specs, plans, brainstorm artifacts
-docs/rkstack/
-
 # Compiled binary (platform-specific, not committed)
 bin/rkstack
 
