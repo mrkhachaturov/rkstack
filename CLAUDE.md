@@ -468,7 +468,7 @@ preamble tiers, and the build workflow.
   - T2: brainstorming, systematic-debugging, writing-plans, verification,
     executing-plans, subagent-driven, parallel-agents, worktrees,
     receiving-review, writing-skills, document-release, retro, cso, humanizer,
-    dual-review, canary
+    dual-review, canary, setup-project
   - T3: TDD, plan-design-review, design-consultation, supabase-qa
   - T4: requesting-code-review, finishing-a-development-branch, qa, qa-only,
     design-review
@@ -476,7 +476,7 @@ preamble tiers, and the build workflow.
 - Hooks: session-start (injects using-rkstack), PreToolUse (careful/freeze/guard)
 - Agent: code-reviewer
 - Library: lib/worktree.ts (git worktree isolation)
-- Binary: bin/src/ — rkstack CLI (version, slug, config, repo-mode) with preamble bootstrap (Claude host)
+- Binary: bin/src/ — rkstack CLI (version, slug, config, repo-mode, detect) with preamble bootstrap (Claude host)
 - Refs pipeline: upstream claude-code-docs → skills/*/refs/ (shipped) + .claude/skills/*/refs/ (dev)
 - CI: check (push/PR, includes version sync), update-refs (daily + version bump), release (all tags + binary builds)
 - Root docs: VERSION, LICENSE, CHANGELOG.md, ETHOS.md, ARCHITECTURE.md,
@@ -484,15 +484,18 @@ preamble tiers, and the build workflow.
 - Browser daemon (browse/) — Playwright headless Chromium, HTTP commands, ref system, 321 tests
 - 10 web skills: browse, qa, qa-only, design-review, plan-design-review,
   design-consultation, setup-browser-cookies, benchmark, canary, supabase-qa
-- Project type detection (web/node/python/go/infra/devops/general)
+- Project detection via `rkstack detect` — SCC parsing, project type classification,
+  tool/service detection, repo-mode. Cached to `.rkstack/settings.json` per session.
+  Session-start calls binary with inline SCC fallback. Preamble reads cache.
 - Supabase detection
 - Web-aware workflow integration in 6 process skills
+- Setup-project: curated guard scripts, hook JSON manifests, best-practice rule templates.
+  Reads detection cache to match templates by stack. No AI-generated content.
 
 **Next:**
 
-1. Phase 2: Update skills to call rkstack binary (repo-mode, config) instead of inline bash
-2. bin/ utilities — rkstack-detect (scc wrapper)
-3. Codex/Gemini host support in gen-skill-docs (frontmatter transformation)
+1. Flow system: per-project-type flow documents that skills read on demand (lazy loading)
+2. Codex/Gemini host support in gen-skill-docs (frontmatter transformation)
 
 ## Reference Material
 
