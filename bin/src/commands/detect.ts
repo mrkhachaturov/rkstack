@@ -1,5 +1,6 @@
 import { spawnSync } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { join } from 'path';
 
 export interface LangInfo {
   files: number;
@@ -145,4 +146,122 @@ export function hasWebFrameworkConfig(fileExists: (path: string) => boolean): bo
     'angular.json',
   ];
   return configs.some(f => fileExists(f));
+}
+
+const SETTINGS_PATH = '.rkstack/settings.json';
+
+export function writeDetectionCache(projectRoot: string, detection: DetectionResult): void {
+  const settingsFile = join(projectRoot, SETTINGS_PATH);
+  const rkstackDir = join(projectRoot, '.rkstack');
+
+  let existing: Record<string, unknown> = {};
+  try {
+    existing = JSON.parse(readFileSync(settingsFile, 'utf8'));
+  } catch {
+    // File doesn't exist or is invalid — start fresh
+  }
+
+  mkdirSync(rkstackDir, { recursive: true });
+  const merged = { ...existing, detection };
+  writeFileSync(settingsFile, JSON.stringify(merged, null, 2) + '\n', 'utf8');
+}
+
+export function readDetectionCache(projectRoot: string): DetectionResult | null {
+  const settingsFile = join(projectRoot, SETTINGS_PATH);
+  try {
+    const content = JSON.parse(readFileSync(settingsFile, 'utf8'));
+    return content.detection ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function getEffectiveProjectType(projectRoot: string): string {
+  const settingsFile = join(projectRoot, SETTINGS_PATH);
+  try {
+    const content = JSON.parse(readFileSync(settingsFile, 'utf8'));
+    return content.overrides?.projectType ?? content.detection?.projectType ?? 'general';
+  } catch {
+    return 'general';
+  }
+}
+
+function runScc(): string {
+  const r = spawnSync('scc', ['--format', 'wide', '--no-cocomo', '--exclude-dir', 'node_modules,.git,vendor,3rdparty-src', '.'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (r.status !== 0) {
+    if (r.error || (r.stderr && r.stderr.includes('not found'))) {
+      process.stderr.write('scc not found. Install via: mise install, or brew install scc\n');
+      process.exit(1);
+    }
+    return '';
+  }
+  return r.stdout;
+}
+
+function detectRepoMode(): string {
+  const r = spawnSync('git', ['shortlog', '-sn', '--no-merges', '--since=90 days ago'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  if (r.status !== 0 || !r.stdout.trim()) return 'solo';
+  return r.stdout.trim().split('\n').length >= 2 ? 'collaborative' : 'solo';
+}
+
+function printSummary(d: DetectionResult): void {
+  const langSummary = Object.entries(d.langs)
+    .sort(([, a], [, b]) => b.code - a.code)
+    .map(([k, v]) => `${k}(${v.files} files, ${v.code >= 1000 ? (v.code / 1000).toFixed(1) + 'k' : v.code} loc)`)
+    .join(' ');
+  const total = d.totalCode >= 1000 ? (d.totalCode / 1000).toFixed(1) + 'k' : String(d.totalCode);
+  console.log(`PROJECT_TYPE=${d.projectType}`);
+  console.log(`REPO_MODE=${d.repoMode}`);
+  if (d.services.supabase) console.log('HAS_SUPABASE=yes');
+  console.log(`STACK: ${langSummary} | ${total} total`);
+}
+
+export function run(args: string[]): void {
+  const projectRoot = process.cwd();
+
+  if (args.includes('--cached')) {
+    const cached = readDetectionCache(projectRoot);
+    if (cached) {
+      printSummary(cached);
+    } else {
+      process.stderr.write('No detection cache found. Run rkstack detect first.\n');
+      process.exit(1);
+    }
+    return;
+  }
+
+  const sccOutput = runScc();
+  const { langs, totalFiles, totalCode } = parseSccOutput(sccOutput);
+
+  const fe = (p: string) => existsSync(join(projectRoot, p));
+  const fc = (p: string, pattern: string) => {
+    try { return readFileSync(join(projectRoot, p), 'utf8').toLowerCase().includes(pattern.toLowerCase()); }
+    catch { return false; }
+  };
+
+  const tools = detectTools(fe);
+  const services = detectServices(fe, fc);
+  const webConfig = hasWebFrameworkConfig(fe);
+  const projectType = classifyProjectType(langs, webConfig);
+  const repoMode = detectRepoMode();
+
+  const detection: DetectionResult = {
+    projectType,
+    langs,
+    tools,
+    services,
+    repoMode,
+    totalFiles,
+    totalCode,
+    detectedAt: new Date().toISOString(),
+  };
+
+  writeDetectionCache(projectRoot, detection);
+  printSummary(detection);
 }

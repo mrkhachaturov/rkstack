@@ -1,5 +1,8 @@
-import { describe, test, expect } from 'bun:test';
-import { parseSccOutput, classifyProjectType, detectTools, detectServices, hasWebFrameworkConfig, type LangInfo } from '../bin/src/commands/detect';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { parseSccOutput, classifyProjectType, detectTools, detectServices, hasWebFrameworkConfig, writeDetectionCache, readDetectionCache, type LangInfo, type DetectionResult } from '../bin/src/commands/detect';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 const SAMPLE_SCC = `─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 Language                              Files     Lines   Blanks  Comments     Code Complexity Complexity/Lines
@@ -153,5 +156,74 @@ describe('hasWebFrameworkConfig', () => {
 
   test('no web config when nothing matches', () => {
     expect(hasWebFrameworkConfig(() => false)).toBe(false);
+  });
+});
+
+describe('detection cache', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-detect-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('writeDetectionCache creates .rkstack/settings.json', () => {
+    const detection: DetectionResult = {
+      projectType: 'node',
+      langs: { ts: { files: 10, code: 1000, complexity: 50 } },
+      tools: { docker: false, terraform: false, ansible: false, compose: false, just: true, mise: true },
+      services: { supabase: false },
+      repoMode: 'solo',
+      totalFiles: 10,
+      totalCode: 1000,
+      detectedAt: '2026-03-29T19:00:00Z',
+    };
+    writeDetectionCache(tmpDir, detection);
+    const settingsPath = path.join(tmpDir, '.rkstack', 'settings.json');
+    expect(fs.existsSync(settingsPath)).toBe(true);
+    const content = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    expect(content.detection.projectType).toBe('node');
+  });
+
+  test('writeDetectionCache preserves existing meta and overrides', () => {
+    const rkstackDir = path.join(tmpDir, '.rkstack');
+    fs.mkdirSync(rkstackDir, { recursive: true });
+    fs.writeFileSync(path.join(rkstackDir, 'settings.json'), JSON.stringify({
+      meta: { setupVersion: '0.7.0', guards: ['baseline'] },
+      overrides: { projectType: 'infra' },
+    }));
+
+    const detection: DetectionResult = {
+      projectType: 'web',
+      langs: { ts: { files: 10, code: 1000, complexity: 50 } },
+      tools: { docker: false, terraform: false, ansible: false, compose: false, just: true, mise: true },
+      services: { supabase: false },
+      repoMode: 'solo',
+      totalFiles: 10,
+      totalCode: 1000,
+      detectedAt: '2026-03-29T19:00:00Z',
+    };
+    writeDetectionCache(tmpDir, detection);
+    const content = JSON.parse(fs.readFileSync(path.join(rkstackDir, 'settings.json'), 'utf8'));
+    expect(content.detection.projectType).toBe('web');
+    expect(content.meta.setupVersion).toBe('0.7.0');
+    expect(content.overrides.projectType).toBe('infra');
+  });
+
+  test('readDetectionCache returns null if file missing', () => {
+    expect(readDetectionCache(tmpDir)).toBeNull();
+  });
+
+  test('readDetectionCache returns detection section', () => {
+    const rkstackDir = path.join(tmpDir, '.rkstack');
+    fs.mkdirSync(rkstackDir, { recursive: true });
+    fs.writeFileSync(path.join(rkstackDir, 'settings.json'), JSON.stringify({
+      detection: { projectType: 'web', langs: {}, tools: {}, services: {}, repoMode: 'solo', totalFiles: 0, totalCode: 0, detectedAt: '' },
+    }));
+    const result = readDetectionCache(tmpDir);
+    expect(result?.projectType).toBe('web');
   });
 });

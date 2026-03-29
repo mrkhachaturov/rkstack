@@ -3,6 +3,7 @@ import { run as runVersion } from './commands/version.ts';
 import { run as runSlug } from './commands/slug.ts';
 import { run as runConfig, configGet } from './commands/config.ts';
 import { run as runRepoMode } from './commands/repo-mode.ts';
+import { run as runDetect } from './commands/detect.ts';
 
 /** Resolve the data directory. Requires CLAUDE_PLUGIN_DATA (set by Claude Code). */
 function resolveDataDir(): string {
@@ -33,6 +34,7 @@ function printUsage(): void {
     '  config get <key>               Read a config value\n' +
     '  config set <key> <value>       Write a config value\n' +
     '  config list                    Show all config values\n' +
+    '  detect [--cached]              Detect project stack, write cache\n' +
     '  version                        Print rkstack version\n'
   );
 }
@@ -50,6 +52,9 @@ function main(): void {
       break;
     case 'config':
       runConfig(rest, resolveConfigPath());
+      break;
+    case 'detect':
+      runDetect(rest);
       break;
     case 'repo-mode': {
       const override = configGet(resolveConfigPath(), 'repo_mode_override') || undefined;
