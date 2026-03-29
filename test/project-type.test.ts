@@ -9,22 +9,26 @@ const ROOT = path.resolve(import.meta.dir, '..');
 /** Check if scc is available on this machine. */
 const HAS_SCC = spawnSync('command', ['-v', 'scc'], { shell: true, encoding: 'utf8' }).status === 0;
 
-/** Extract the project type detection section from session-start hook. */
+/** Extract the fallback flow type detection logic from session-start hook. */
 function extractDetectionBlock(): string {
   const hookPath = path.join(ROOT, 'hooks', 'session-start');
   const content = fs.readFileSync(hookPath, 'utf8');
-  const start = content.indexOf('# === Project type detection');
+  const start = content.indexOf('# === Fallback: inline flow type detection');
   const end = content.indexOf('# Read using-rkstack content');
-  if (start === -1 || end === -1) throw new Error('Detection block not found in session-start');
-  return content.substring(start, end);
+  if (start === -1 || end === -1) throw new Error('Fallback detection block not found in session-start');
+  // The block is indented inside an if — dedent and set DETECT_RESULT for standalone execution
+  let block = content.substring(start, end);
+  // Remove the enclosing if/fi since we run standalone
+  block = block.replace(/^\s*fi\s*$/m, '');
+  return block;
 }
 
-describe.skipIf(!HAS_SCC)('project type detection', () => {
+describe.skipIf(!HAS_SCC)('flow type detection (fallback)', () => {
   let tmpDir: string;
   let detectionScript: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-ptype-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-flow-'));
     detectionScript = extractDetectionBlock();
   });
 
@@ -38,9 +42,9 @@ describe.skipIf(!HAS_SCC)('project type detection', () => {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, content);
     }
-    const wrapper = `set -euo pipefail\ncd "${tmpDir}"\n${detectionScript}\necho "$PROJECT_TYPE_RESULT"`;
+    const wrapper = `set -euo pipefail\ncd "${tmpDir}"\n${detectionScript}\necho "$DETECT_RESULT"`;
     const r = spawnSync('bash', ['-c', wrapper], { encoding: 'utf8' });
-    return r.stdout.trim();
+    return r.stdout.trim().split('\n')[0]; // first line is FLOW_TYPE=
   }
 
   test('TypeScript + CSS = web', () => {
@@ -48,7 +52,7 @@ describe.skipIf(!HAS_SCC)('project type detection', () => {
       'src/app.ts': 'export const x = 1;',
       'src/style.css': 'body { margin: 0; }',
     });
-    expect(result).toBe('PROJECT_TYPE=web');
+    expect(result).toBe('FLOW_TYPE=web');
   });
 
   test('TypeScript + next.config.ts = web', () => {
@@ -56,48 +60,48 @@ describe.skipIf(!HAS_SCC)('project type detection', () => {
       'src/app.ts': 'export const x = 1;',
       'next.config.ts': 'export default {};',
     });
-    expect(result).toBe('PROJECT_TYPE=web');
+    expect(result).toBe('FLOW_TYPE=web');
   });
 
-  test('TypeScript only (no CSS, no web config) = node', () => {
+  test('TypeScript only (no CSS, no web config) = default', () => {
     const result = detectInDir({
       'src/index.ts': 'console.log("hello");',
     });
-    expect(result).toBe('PROJECT_TYPE=node');
+    expect(result).toBe('FLOW_TYPE=default');
   });
 
-  test('Python files = python', () => {
+  test('Python files = default', () => {
     const result = detectInDir({
       'main.py': 'print("hello")',
       'lib/util.py': 'def foo(): pass',
     });
-    expect(result).toBe('PROJECT_TYPE=python');
+    expect(result).toBe('FLOW_TYPE=default');
   });
 
-  test('Go files = go', () => {
+  test('Go files = default', () => {
     const result = detectInDir({
       'main.go': 'package main\nfunc main() {}',
     });
-    expect(result).toBe('PROJECT_TYPE=go');
+    expect(result).toBe('FLOW_TYPE=default');
   });
 
-  test('Terraform files = infra', () => {
+  test('Terraform files = default', () => {
     const result = detectInDir({
       'main.tf': 'resource "aws_instance" "web" {}',
     });
-    expect(result).toBe('PROJECT_TYPE=infra');
+    expect(result).toBe('FLOW_TYPE=default');
   });
 
-  test('YAML + Shell only = devops', () => {
+  test('YAML + Shell only = default', () => {
     const result = detectInDir({
       'deploy.yml': 'services:\n  web:\n    image: nginx',
       'setup.sh': '#!/bin/bash\necho hello',
     });
-    expect(result).toBe('PROJECT_TYPE=devops');
+    expect(result).toBe('FLOW_TYPE=default');
   });
 
-  test('empty dir = general', () => {
+  test('empty dir = default', () => {
     const result = detectInDir({});
-    expect(result).toBe('PROJECT_TYPE=general');
+    expect(result).toBe('FLOW_TYPE=default');
   });
 });

@@ -173,8 +173,8 @@ describe('Session-start hook structure', () => {
     expect(hookContent.includes('# === Project type detection')).toBe(true);
   });
 
-  test('contains service detection section', () => {
-    expect(hookContent.includes('# === Service detection')).toBe(true);
+  test('contains fallback flow type detection', () => {
+    expect(hookContent.includes('# === Fallback: inline flow type detection')).toBe(true);
   });
 
   test('declares RKSTACK_BOOTSTRAP_RESULT', () => {
@@ -185,8 +185,8 @@ describe('Session-start hook structure', () => {
     expect(hookContent.includes('BROWSE_BOOTSTRAP_RESULT')).toBe(true);
   });
 
-  test('declares PROJECT_TYPE_RESULT', () => {
-    expect(hookContent.includes('PROJECT_TYPE_RESULT')).toBe(true);
+  test('declares DETECT_RESULT', () => {
+    expect(hookContent.includes('DETECT_RESULT')).toBe(true);
   });
 
   test('declares HAS_SUPABASE', () => {

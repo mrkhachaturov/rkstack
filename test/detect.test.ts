@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { parseSccOutput, classifyProjectType, detectTools, detectServices, hasWebFrameworkConfig, writeDetectionCache, readDetectionCache, getEffectiveProjectType, type LangInfo, type DetectionResult } from '../bin/src/commands/detect';
+import { parseSccOutput, classifyFlowType, detectFileStack, detectServices, hasWebFrameworkConfig, writeDetectionCache, readDetectionCache, getEffectiveFlowType, type StackStats, type DetectionResult } from '../bin/src/commands/detect';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -26,17 +26,17 @@ Total                                   224     58484    13306      1356    4382
 describe('parseSccOutput', () => {
   test('parses language rows into structured data', () => {
     const result = parseSccOutput(SAMPLE_SCC);
-    expect(result.langs.ts).toEqual({ files: 44, code: 8869, complexity: 1093 });
-    expect(result.langs.js).toEqual({ files: 2, code: 352, complexity: 70 });
-    expect(result.langs.shell).toEqual({ files: 15, code: 635, complexity: 206 });
+    expect(result.stats.typescript).toEqual({ files: 44, code: 8869, complexity: 1093 });
+    expect(result.stats.javascript).toEqual({ files: 2, code: 352, complexity: 70 });
+    expect(result.stats.shell).toEqual({ files: 15, code: 635, complexity: 206 });
   });
 
-  test('maps language names to short keys', () => {
+  test('maps language names to stack keys', () => {
     const result = parseSccOutput(SAMPLE_SCC);
-    expect('ts' in result.langs).toBe(true);
-    expect('js' in result.langs).toBe(true);
-    expect('shell' in result.langs).toBe(true);
-    expect('TypeScript' in result.langs).toBe(false);
+    expect('typescript' in result.stats).toBe(true);
+    expect('javascript' in result.stats).toBe(true);
+    expect('shell' in result.stats).toBe(true);
+    expect('TypeScript' in result.stats).toBe(false);
   });
 
   test('extracts totalFiles and totalCode from Total row', () => {
@@ -47,91 +47,88 @@ describe('parseSccOutput', () => {
 
   test('handles empty SCC output', () => {
     const result = parseSccOutput('scc not available');
-    expect(Object.keys(result.langs)).toHaveLength(0);
+    expect(Object.keys(result.stats)).toHaveLength(0);
     expect(result.totalFiles).toBe(0);
     expect(result.totalCode).toBe(0);
   });
 
   test('ignores non-code languages (Markdown, JSON, License, Plain Text, TOML)', () => {
     const result = parseSccOutput(SAMPLE_SCC);
-    expect('markdown' in result.langs).toBe(false);
-    expect('json' in result.langs).toBe(false);
-    expect('license' in result.langs).toBe(false);
+    expect('markdown' in result.stats).toBe(false);
+    expect('json' in result.stats).toBe(false);
+    expect('license' in result.stats).toBe(false);
+  });
+
+  test('maps HCL/Terraform to terraform key', () => {
+    const tfOutput = `─────
+Language  Files Lines Blanks Comments Code Complexity Complexity/Lines
+─────
+HCL          10   500     50       10  400         0             0.00
+─────
+Total        10   500     50       10  400         0             0.00
+─────`;
+    const result = parseSccOutput(tfOutput);
+    expect('terraform' in result.stats).toBe(true);
   });
 });
 
-describe('classifyProjectType', () => {
+describe('classifyFlowType', () => {
   test('TS + CSS = web', () => {
-    const langs = { ts: { files: 10, code: 1000, complexity: 50 }, css: { files: 3, code: 200, complexity: 0 } };
-    expect(classifyProjectType(langs, false)).toBe('web');
+    const stack = { typescript: true, css: true };
+    expect(classifyFlowType(stack, false)).toBe('web');
   });
 
   test('TS + web config = web', () => {
-    const langs = { ts: { files: 10, code: 1000, complexity: 50 } };
-    expect(classifyProjectType(langs, true)).toBe('web');
+    const stack = { typescript: true };
+    expect(classifyFlowType(stack, true)).toBe('web');
   });
 
-  test('TS + HTML only (no CSS) = node', () => {
-    const langs = { ts: { files: 10, code: 1000, complexity: 50 }, html: { files: 5, code: 200, complexity: 0 } };
-    expect(classifyProjectType(langs, false)).toBe('node');
+  test('TS + HTML only (no CSS) = default', () => {
+    const stack = { typescript: true, html: true };
+    expect(classifyFlowType(stack, false)).toBe('default');
   });
 
-  test('TS only = node', () => {
-    const langs = { ts: { files: 10, code: 1000, complexity: 50 } };
-    expect(classifyProjectType(langs, false)).toBe('node');
+  test('TS only = default', () => {
+    const stack = { typescript: true };
+    expect(classifyFlowType(stack, false)).toBe('default');
   });
 
-  test('JS only = node', () => {
-    const langs = { js: { files: 5, code: 500, complexity: 20 } };
-    expect(classifyProjectType(langs, false)).toBe('node');
+  test('JS + CSS = web', () => {
+    const stack = { javascript: true, css: true };
+    expect(classifyFlowType(stack, false)).toBe('web');
   });
 
-  test('Python = python', () => {
-    const langs = { py: { files: 10, code: 2000, complexity: 100 } };
-    expect(classifyProjectType(langs, false)).toBe('python');
+  test('Python only = default', () => {
+    const stack = { python: true };
+    expect(classifyFlowType(stack, false)).toBe('default');
   });
 
-  test('Go = go', () => {
-    const langs = { go: { files: 5, code: 1000, complexity: 50 } };
-    expect(classifyProjectType(langs, false)).toBe('go');
-  });
-
-  test('HCL = infra', () => {
-    const langs = { hcl: { files: 10, code: 500, complexity: 0 } };
-    expect(classifyProjectType(langs, false)).toBe('infra');
-  });
-
-  test('Shell only = devops', () => {
-    const langs = { shell: { files: 5, code: 200, complexity: 30 } };
-    expect(classifyProjectType(langs, false)).toBe('devops');
-  });
-
-  test('YAML only = devops', () => {
-    const langs = { yaml: { files: 10, code: 500, complexity: 0 } };
-    expect(classifyProjectType(langs, false)).toBe('devops');
-  });
-
-  test('empty = general', () => {
-    expect(classifyProjectType({}, false)).toBe('general');
+  test('empty = default', () => {
+    expect(classifyFlowType({}, false)).toBe('default');
   });
 });
 
-describe('detectTools', () => {
+describe('detectFileStack', () => {
   test('detects docker when Dockerfile exists', () => {
-    const tools = detectTools((p) => p === 'Dockerfile');
-    expect(tools.docker).toBe(true);
-    expect(tools.terraform).toBe(false);
+    const stack = detectFileStack((p) => p === 'Dockerfile');
+    expect(stack.docker).toBe(true);
+    expect(stack.ansible).toBeUndefined();
   });
 
   test('detects compose variants', () => {
-    const tools = detectTools((p) => p === 'compose.yaml');
-    expect(tools.compose).toBe(true);
+    const stack = detectFileStack((p) => p === 'compose.yaml');
+    expect(stack.compose).toBe(true);
   });
 
   test('detects just and mise', () => {
-    const tools = detectTools((p) => p === 'justfile' || p === '.mise.toml');
-    expect(tools.just).toBe(true);
-    expect(tools.mise).toBe(true);
+    const stack = detectFileStack((p) => p === 'justfile' || p === '.mise.toml');
+    expect(stack.just).toBe(true);
+    expect(stack.mise).toBe(true);
+  });
+
+  test('returns empty when nothing matches', () => {
+    const stack = detectFileStack(() => false);
+    expect(Object.keys(stack)).toHaveLength(0);
   });
 });
 
@@ -182,9 +179,9 @@ describe('detection cache', () => {
 
   test('writeDetectionCache creates .rkstack/settings.json', () => {
     const detection: DetectionResult = {
-      projectType: 'node',
-      langs: { ts: { files: 10, code: 1000, complexity: 50 } },
-      tools: { docker: false, terraform: false, ansible: false, compose: false, just: true, mise: true },
+      flowType: 'default',
+      stack: { typescript: true, shell: true },
+      stats: { typescript: { files: 10, code: 1000, complexity: 50 } },
       services: { supabase: false },
       repoMode: 'solo',
       totalFiles: 10,
@@ -195,7 +192,8 @@ describe('detection cache', () => {
     const settingsPath = path.join(tmpDir, '.rkstack', 'settings.json');
     expect(fs.existsSync(settingsPath)).toBe(true);
     const content = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-    expect(content.detection.projectType).toBe('node');
+    expect(content.detection.flowType).toBe('default');
+    expect(content.detection.stack.typescript).toBe(true);
   });
 
   test('writeDetectionCache preserves existing meta and overrides', () => {
@@ -203,13 +201,13 @@ describe('detection cache', () => {
     fs.mkdirSync(rkstackDir, { recursive: true });
     fs.writeFileSync(path.join(rkstackDir, 'settings.json'), JSON.stringify({
       meta: { setupVersion: '0.7.0', guards: ['baseline'] },
-      overrides: { projectType: 'infra' },
+      overrides: { flowType: 'web' },
     }));
 
     const detection: DetectionResult = {
-      projectType: 'web',
-      langs: { ts: { files: 10, code: 1000, complexity: 50 } },
-      tools: { docker: false, terraform: false, ansible: false, compose: false, just: true, mise: true },
+      flowType: 'default',
+      stack: { typescript: true },
+      stats: { typescript: { files: 10, code: 1000, complexity: 50 } },
       services: { supabase: false },
       repoMode: 'solo',
       totalFiles: 10,
@@ -218,9 +216,9 @@ describe('detection cache', () => {
     };
     writeDetectionCache(tmpDir, detection);
     const content = JSON.parse(fs.readFileSync(path.join(rkstackDir, 'settings.json'), 'utf8'));
-    expect(content.detection.projectType).toBe('web');
+    expect(content.detection.flowType).toBe('default');
     expect(content.meta.setupVersion).toBe('0.7.0');
-    expect(content.overrides.projectType).toBe('infra');
+    expect(content.overrides.flowType).toBe('web');
   });
 
   test('readDetectionCache returns null if file missing', () => {
@@ -231,44 +229,44 @@ describe('detection cache', () => {
     const rkstackDir = path.join(tmpDir, '.rkstack');
     fs.mkdirSync(rkstackDir, { recursive: true });
     fs.writeFileSync(path.join(rkstackDir, 'settings.json'), JSON.stringify({
-      detection: { projectType: 'web', langs: {}, tools: {}, services: {}, repoMode: 'solo', totalFiles: 0, totalCode: 0, detectedAt: '' },
+      detection: { flowType: 'web', stack: { typescript: true, css: true }, stats: {}, services: {}, repoMode: 'solo', totalFiles: 0, totalCode: 0, detectedAt: '' },
     }));
     const result = readDetectionCache(tmpDir);
-    expect(result?.projectType).toBe('web');
+    expect(result?.flowType).toBe('web');
   });
 });
 
-describe('getEffectiveProjectType', () => {
+describe('getEffectiveFlowType', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-detect-ept-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rkstack-detect-eft-'));
   });
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  test('returns general when no file exists', () => {
-    expect(getEffectiveProjectType(tmpDir)).toBe('general');
+  test('returns default when no file exists', () => {
+    expect(getEffectiveFlowType(tmpDir)).toBe('default');
   });
 
-  test('returns detection projectType when no overrides', () => {
+  test('returns detection flowType when no overrides', () => {
     const rkstackDir = path.join(tmpDir, '.rkstack');
     fs.mkdirSync(rkstackDir, { recursive: true });
     fs.writeFileSync(path.join(rkstackDir, 'settings.json'), JSON.stringify({
-      detection: { projectType: 'web' },
+      detection: { flowType: 'web' },
     }));
-    expect(getEffectiveProjectType(tmpDir)).toBe('web');
+    expect(getEffectiveFlowType(tmpDir)).toBe('web');
   });
 
-  test('returns override projectType when overrides exist', () => {
+  test('returns override flowType when overrides exist', () => {
     const rkstackDir = path.join(tmpDir, '.rkstack');
     fs.mkdirSync(rkstackDir, { recursive: true });
     fs.writeFileSync(path.join(rkstackDir, 'settings.json'), JSON.stringify({
-      detection: { projectType: 'web' },
-      overrides: { projectType: 'infra' },
+      detection: { flowType: 'default' },
+      overrides: { flowType: 'web' },
     }));
-    expect(getEffectiveProjectType(tmpDir)).toBe('infra');
+    expect(getEffectiveFlowType(tmpDir)).toBe('web');
   });
 });

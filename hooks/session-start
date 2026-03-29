@@ -76,63 +76,33 @@ fi
 
 # Fallback: inline detection if binary unavailable
 if [ -z "$DETECT_RESULT" ]; then
-  PROJECT_TYPE_RESULT=""
+  # === Fallback: inline flow type detection ===
+  _FLOW_TYPE="default"
   if command -v scc >/dev/null 2>&1; then
     _SCC=$(scc --format wide --no-cocomo --exclude-dir node_modules,.git,vendor,3rdparty-src . 2>/dev/null | head -20)
-
     _HAS_TS=$(echo "$_SCC" | grep -qi "TypeScript" && echo "yes" || echo "no")
     _HAS_JS=$(echo "$_SCC" | grep -qi "JavaScript" && echo "yes" || echo "no")
-    _HAS_CSS=$(echo "$_SCC" | grep -qi "CSS\|SCSS\|SASS\|HTML" && echo "yes" || echo "no")
-    _HAS_PY=$(echo "$_SCC" | grep -qi "Python" && echo "yes" || echo "no")
-    _HAS_GO=$(echo "$_SCC" | grep -qi "^Go " && echo "yes" || echo "no")
-    _HAS_TF=$(echo "$_SCC" | grep -qi "Terraform\|HCL" && echo "yes" || echo "no")
+    _HAS_CSS=$(echo "$_SCC" | grep -qi "CSS\|SCSS\|SASS" && echo "yes" || echo "no")
 
-    # Web framework config files
     _HAS_WEB_CONFIG="no"
     for f in next.config.* vite.config.* nuxt.config.* svelte.config.* angular.json; do
       if ls $f 1>/dev/null 2>&1; then _HAS_WEB_CONFIG="yes"; break; fi
     done
 
-    # Classification rules (order matters — first match wins)
-    if [ "$_HAS_TS" = "yes" ] || [ "$_HAS_JS" = "yes" ]; then
-      if [ "$_HAS_CSS" = "yes" ] || [ "$_HAS_WEB_CONFIG" = "yes" ]; then
-        PROJECT_TYPE_RESULT="PROJECT_TYPE=web"
-      else
-        PROJECT_TYPE_RESULT="PROJECT_TYPE=node"
-      fi
-    elif [ "$_HAS_PY" = "yes" ]; then
-      PROJECT_TYPE_RESULT="PROJECT_TYPE=python"
-    elif [ "$_HAS_GO" = "yes" ]; then
-      PROJECT_TYPE_RESULT="PROJECT_TYPE=go"
-    elif [ "$_HAS_TF" = "yes" ]; then
-      PROJECT_TYPE_RESULT="PROJECT_TYPE=infra"
-    else
-      # Check for devops (YAML + Shell, no app language)
-      _HAS_YAML=$(echo "$_SCC" | grep -qi "YAML" && echo "yes" || echo "no")
-      _HAS_SHELL=$(echo "$_SCC" | grep -qi "Shell\|BASH" && echo "yes" || echo "no")
-      if [ "$_HAS_YAML" = "yes" ] || [ "$_HAS_SHELL" = "yes" ]; then
-        PROJECT_TYPE_RESULT="PROJECT_TYPE=devops"
-      else
-        PROJECT_TYPE_RESULT="PROJECT_TYPE=general"
-      fi
+    if { [ "$_HAS_TS" = "yes" ] || [ "$_HAS_JS" = "yes" ]; } && { [ "$_HAS_CSS" = "yes" ] || [ "$_HAS_WEB_CONFIG" = "yes" ]; }; then
+      _FLOW_TYPE="web"
     fi
-  else
-    PROJECT_TYPE_RESULT="PROJECT_TYPE=general"
   fi
 
-  # === Service detection (Supabase, etc.) ===
   HAS_SUPABASE="no"
-  # Check for Supabase MCP server in .mcp.json
   if [ -f .mcp.json ] && grep -qi '"supabase"' .mcp.json 2>/dev/null; then
     HAS_SUPABASE="yes"
   fi
-  # Check for supabase directory (migrations, client code)
   if [ -d supabase ] || find . -maxdepth 3 -type d -name supabase -print -quit 2>/dev/null | grep -q .; then
     HAS_SUPABASE="yes"
   fi
 
-  # Build DETECT_RESULT from inline detection
-  DETECT_RESULT="$PROJECT_TYPE_RESULT"
+  DETECT_RESULT="FLOW_TYPE=${_FLOW_TYPE}"
   if [ "$HAS_SUPABASE" = "yes" ]; then
     DETECT_RESULT="${DETECT_RESULT}
 HAS_SUPABASE=yes"

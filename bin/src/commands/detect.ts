@@ -2,16 +2,16 @@ import { spawnSync } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 
-export interface LangInfo {
+export interface StackStats {
   files: number;
   code: number;
   complexity: number;
 }
 
 export interface DetectionResult {
-  projectType: string;
-  langs: Record<string, LangInfo>;
-  tools: Record<string, boolean>;
+  flowType: 'web' | 'default';
+  stack: Record<string, boolean>;
+  stats: Record<string, StackStats>;
   services: Record<string, boolean>;
   repoMode: string;
   totalFiles: number;
@@ -19,15 +19,16 @@ export interface DetectionResult {
   detectedAt: string;
 }
 
+/** Map SCC language names to stack keys. Returns null for non-code languages to skip. */
 const LANG_MAP: Record<string, string | null> = {
-  'TypeScript': 'ts',
-  'JavaScript': 'js',
-  'Python': 'py',
+  'TypeScript': 'typescript',
+  'JavaScript': 'javascript',
+  'Python': 'python',
   'Go': 'go',
-  'Rust': 'rs',
+  'Rust': 'rust',
   'Java': 'java',
-  'C#': 'cs',
-  'Ruby': 'rb',
+  'C#': 'csharp',
+  'Ruby': 'ruby',
   'Shell': 'shell',
   'BASH': 'shell',
   'C': 'c',
@@ -38,8 +39,8 @@ const LANG_MAP: Record<string, string | null> = {
   'SCSS': 'css',
   'SASS': 'css',
   'HTML': 'html',
-  'HCL': 'hcl',
-  'Terraform': 'hcl',
+  'HCL': 'terraform',
+  'Terraform': 'terraform',
   'YAML': 'yaml',
   'Markdown': null,
   'JSON': null,
@@ -52,8 +53,9 @@ const LANG_MAP: Record<string, string | null> = {
   'Docker ignore': null,
 };
 
-export function parseSccOutput(output: string): Pick<DetectionResult, 'langs' | 'totalFiles' | 'totalCode'> {
-  const langs: Record<string, LangInfo> = {};
+/** Parse SCC wide-format output into stack stats. */
+export function parseSccOutput(output: string): { stats: Record<string, StackStats>; totalFiles: number; totalCode: number } {
+  const stats: Record<string, StackStats> = {};
   let totalFiles = 0;
   let totalCode = 0;
 
@@ -78,53 +80,39 @@ export function parseSccOutput(output: string): Pick<DetectionResult, 'langs' | 
     const key = LANG_MAP[name];
     if (key === null || key === undefined) continue;
 
-    if (langs[key]) {
-      langs[key].files += files;
-      langs[key].code += code;
-      langs[key].complexity += complexity;
+    if (stats[key]) {
+      stats[key].files += files;
+      stats[key].code += code;
+      stats[key].complexity += complexity;
     } else {
-      langs[key] = { files, code, complexity };
+      stats[key] = { files, code, complexity };
     }
   }
 
-  return { langs, totalFiles, totalCode };
+  return { stats, totalFiles, totalCode };
 }
 
-/** Classify project type from parsed language data. */
-export function classifyProjectType(
-  langs: Record<string, LangInfo>,
+/** Determine flow type: web or default. */
+export function classifyFlowType(
+  stack: Record<string, boolean>,
   hasWebConfig: boolean,
-): string {
-  const hasTs = 'ts' in langs;
-  const hasJs = 'js' in langs;
-  const hasCss = 'css' in langs;
-  const hasPy = 'py' in langs;
-  const hasGo = 'go' in langs;
-  const hasHcl = 'hcl' in langs;
-  const hasShell = 'shell' in langs;
-  const hasYaml = 'yaml' in langs;
-
-  if (hasTs || hasJs) {
-    return (hasCss || hasWebConfig) ? 'web' : 'node';
-  }
-  if (hasPy) return 'python';
-  if (hasGo) return 'go';
-  if (hasHcl) return 'infra';
-  if (hasShell || hasYaml) return 'devops';
-  return 'general';
+): 'web' | 'default' {
+  const hasTs = stack.typescript;
+  const hasJs = stack.javascript;
+  const hasCss = stack.css;
+  return (hasTs || hasJs) && (hasCss || hasWebConfig) ? 'web' : 'default';
 }
 
-/** Detect tooling by checking for marker files. */
-export function detectTools(fileExists: (path: string) => boolean): Record<string, boolean> {
-  return {
-    docker: fileExists('Dockerfile'),
-    terraform: fileExists('main.tf') || fileExists('terraform'),
-    ansible: fileExists('ansible') || fileExists('ansible.cfg'),
-    compose: fileExists('docker-compose.yml') || fileExists('docker-compose.yaml') ||
-             fileExists('compose.yml') || fileExists('compose.yaml'),
-    just: fileExists('justfile') || fileExists('Justfile'),
-    mise: fileExists('.mise.toml') || fileExists('mise.toml'),
-  };
+/** Detect stack items from filesystem (things SCC doesn't detect). */
+export function detectFileStack(fileExists: (path: string) => boolean): Record<string, boolean> {
+  const stack: Record<string, boolean> = {};
+  if (fileExists('Dockerfile')) stack.docker = true;
+  if (fileExists('docker-compose.yml') || fileExists('docker-compose.yaml') ||
+      fileExists('compose.yml') || fileExists('compose.yaml')) stack.compose = true;
+  if (fileExists('ansible') || fileExists('ansible.cfg')) stack.ansible = true;
+  if (fileExists('justfile') || fileExists('Justfile')) stack.just = true;
+  if (fileExists('.mise.toml') || fileExists('mise.toml')) stack.mise = true;
+  return stack;
 }
 
 /** Detect services (Supabase, etc.). */
@@ -177,13 +165,13 @@ export function readDetectionCache(projectRoot: string): DetectionResult | null 
   }
 }
 
-export function getEffectiveProjectType(projectRoot: string): string {
+export function getEffectiveFlowType(projectRoot: string): 'web' | 'default' {
   const settingsFile = join(projectRoot, SETTINGS_PATH);
   try {
     const content = JSON.parse(readFileSync(settingsFile, 'utf8'));
-    return content.overrides?.projectType ?? content.detection?.projectType ?? 'general';
+    return content.overrides?.flowType ?? content.detection?.flowType ?? 'default';
   } catch {
-    return 'general';
+    return 'default';
   }
 }
 
@@ -213,15 +201,16 @@ function detectRepoMode(): string {
 }
 
 function printSummary(d: DetectionResult): void {
-  const langSummary = Object.entries(d.langs)
+  const stackItems = Object.keys(d.stack).sort().join(', ');
+  const statsSummary = Object.entries(d.stats)
     .sort(([, a], [, b]) => b.code - a.code)
-    .map(([k, v]) => `${k}(${v.files} files, ${v.code >= 1000 ? (v.code / 1000).toFixed(1) + 'k' : v.code} loc)`)
+    .map(([k, v]) => `${k}(${v.files}, ${v.code >= 1000 ? (v.code / 1000).toFixed(1) + 'k' : v.code})`)
     .join(' ');
-  const total = d.totalCode >= 1000 ? (d.totalCode / 1000).toFixed(1) + 'k' : String(d.totalCode);
-  console.log(`PROJECT_TYPE=${d.projectType}`);
+  console.log(`FLOW_TYPE=${d.flowType}`);
   console.log(`REPO_MODE=${d.repoMode}`);
+  console.log(`STACK: ${stackItems}`);
   if (d.services.supabase) console.log('HAS_SUPABASE=yes');
-  console.log(`STACK: ${langSummary} | ${total} total`);
+  if (statsSummary) console.log(`STATS: ${statsSummary} | ${d.totalCode >= 1000 ? (d.totalCode / 1000).toFixed(1) + 'k' : d.totalCode} total`);
 }
 
 export function run(args: string[]): void {
@@ -239,7 +228,13 @@ export function run(args: string[]): void {
   }
 
   const sccOutput = runScc();
-  const { langs, totalFiles, totalCode } = parseSccOutput(sccOutput);
+  const { stats, totalFiles, totalCode } = parseSccOutput(sccOutput);
+
+  // Build stack: SCC-detected languages + filesystem-detected items
+  const stack: Record<string, boolean> = {};
+  for (const key of Object.keys(stats)) {
+    stack[key] = true;
+  }
 
   const fe = (p: string) => existsSync(join(projectRoot, p));
   const fc = (p: string, pattern: string) => {
@@ -247,16 +242,18 @@ export function run(args: string[]): void {
     catch { return false; }
   };
 
-  const tools = detectTools(fe);
+  const fileStack = detectFileStack(fe);
+  Object.assign(stack, fileStack);
+
   const services = detectServices(fe, fc);
   const webConfig = hasWebFrameworkConfig(fe);
-  const projectType = classifyProjectType(langs, webConfig);
+  const flowType = classifyFlowType(stack, webConfig);
   const repoMode = detectRepoMode();
 
   const detection: DetectionResult = {
-    projectType,
-    langs,
-    tools,
+    flowType,
+    stack,
+    stats,
     services,
     repoMode,
     totalFiles,
