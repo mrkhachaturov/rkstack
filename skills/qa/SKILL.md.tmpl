@@ -118,6 +118,7 @@ Detect existing test framework and project runtime:
 [ -f Gemfile ] && grep -q "rails" Gemfile 2>/dev/null && echo "FRAMEWORK:rails"
 [ -f package.json ] && grep -q '"next"' package.json 2>/dev/null && echo "FRAMEWORK:nextjs"
 # Check for existing test infrastructure
+setopt +o nomatch 2>/dev/null || true  # zsh compat
 ls jest.config.* vitest.config.* playwright.config.* .rspec pytest.ini pyproject.toml phpunit.xml 2>/dev/null
 ls -d test/ tests/ spec/ __tests__/ cypress/ e2e/ 2>/dev/null
 # Check opt-out marker
@@ -179,6 +180,7 @@ Before falling back to git diff heuristics, check for richer test plan sources:
 
 1. **Prior QA reports:** Check `.rkstack/qa-reports/` for recent reports for this repo
    ```bash
+   setopt +o nomatch 2>/dev/null || true  # zsh compat
    ls -t .rkstack/qa-reports/qa-report-*.md 2>/dev/null | head -1
    ```
 2. **Conversation context:** Check if a prior review skill produced test plan output in this conversation
