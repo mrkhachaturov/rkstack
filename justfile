@@ -42,6 +42,16 @@ upstream-check *ARGS:
   bun scripts/upstream-check.ts {{ ARGS }}
 
 [group("upstream")]
+[doc("Bump all upstream submodules to latest and commit")]
+upstream-bump-all:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  for REPO in .upstreams/*/; do
+    NAME=$(basename "$REPO")
+    just upstream-bump "$NAME"
+  done
+
+[group("upstream")]
 [doc("Advance a submodule pin to latest (e.g. just upstream-bump gstack)")]
 upstream-bump NAME:
   #!/usr/bin/env bash
