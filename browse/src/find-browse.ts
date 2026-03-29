@@ -41,7 +41,7 @@ export function locateBinary(): string | null {
   if (existsSync(pluginData)) return pluginData;
 
   // Global install
-  const markers = ['.claude', '.codex', '.agents'];
+  const markers = ['.codex', '.agents', '.claude'];
   for (const m of markers) {
     if (root) {
       const local = join(root, m, 'plugins', 'rkstack', 'browse', 'dist', 'rkstack-browse');
