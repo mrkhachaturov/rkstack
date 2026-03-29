@@ -97,7 +97,7 @@ export function classifyProjectType(
 ): string {
   const hasTs = 'ts' in langs;
   const hasJs = 'js' in langs;
-  const hasCss = 'css' in langs || 'html' in langs;
+  const hasCss = 'css' in langs;
   const hasPy = 'py' in langs;
   const hasGo = 'go' in langs;
   const hasHcl = 'hcl' in langs;

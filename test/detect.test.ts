@@ -71,6 +71,11 @@ describe('classifyProjectType', () => {
     expect(classifyProjectType(langs, true)).toBe('web');
   });
 
+  test('TS + HTML only (no CSS) = node', () => {
+    const langs = { ts: { files: 10, code: 1000, complexity: 50 }, html: { files: 5, code: 200, complexity: 0 } };
+    expect(classifyProjectType(langs, false)).toBe('node');
+  });
+
   test('TS only = node', () => {
     const langs = { ts: { files: 10, code: 1000, complexity: 50 } };
     expect(classifyProjectType(langs, false)).toBe('node');
