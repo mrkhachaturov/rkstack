@@ -168,13 +168,19 @@ If no dev server config is found and no URL was provided, use AskUserQuestion:
 > A) My dev server runs at `___`
 > B) Test a deployed URL: `___`
 
-**Find the browse binary:**
+## Browse Setup
 
-The browse binary path is injected into session context by the session-start hook. Look for `RKSTACK_BROWSE=<path>` at the top of this conversation.
+The browse binary path is injected into session context by the session-start hook.
+Look for `RKSTACK_BROWSE=<path>` at the top of this conversation.
 
-If `RKSTACK_BROWSE` is set, use it directly. For the rest of this skill, `$RKSTACK_BROWSE` refers to the browse binary.
+If `RKSTACK_BROWSE` is set, use it directly:
 
-If `RKSTACK_BROWSE=UNAVAILABLE` or not set, tell the user: "The browse binary is not available. Install it with the rkstack release for your platform." and stop.
+```bash
+$RKSTACK_BROWSE goto https://example.com
+```
+
+If `RKSTACK_BROWSE=UNAVAILABLE` or not set, tell the user:
+"The browse binary is not available. Install it with the rkstack release for your platform." and stop.
 
 **Create output directories:**
 

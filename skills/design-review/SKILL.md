@@ -183,13 +183,19 @@ If dirty, **STOP** and use AskUserQuestion:
 > B) Stash my changes -- Completeness: 7/10
 > C) Abort -- Completeness: 5/10
 
-**Find the browse binary:**
+## Browse Setup
 
-The browse binary path is injected into session context by the session-start hook. Look for `RKSTACK_BROWSE=<path>` at the top of this conversation.
+The browse binary path is injected into session context by the session-start hook.
+Look for `RKSTACK_BROWSE=<path>` at the top of this conversation.
 
-If `RKSTACK_BROWSE` is set, use it directly. For the rest of this skill, `$RKSTACK_BROWSE` refers to the browse binary.
+If `RKSTACK_BROWSE` is set, use it directly:
 
-If `RKSTACK_BROWSE=UNAVAILABLE` or not set, tell the user the browse binary is not available and stop.
+```bash
+$RKSTACK_BROWSE goto https://example.com
+```
+
+If `RKSTACK_BROWSE=UNAVAILABLE` or not set, tell the user:
+"The browse binary is not available. Install it with the rkstack release for your platform." and stop.
 
 **Check test framework (bootstrap if needed):**
 
