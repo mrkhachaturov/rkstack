@@ -1,5 +1,6 @@
 /**
- * Meta commands — tabs, server control, screenshots, chain, diff, snapshot
+ * Meta commands — tabs, server control, screenshots, chain, diff, snapshot,
+ * handoff, resume, connect, disconnect, focus, watch, inbox
  */
 
 import type { BrowserManager } from './browser-manager';
@@ -136,9 +137,10 @@ export async function handleMetaCommand(
       }
 
       // Separate target (selector/@ref) from output path
-      // A file path contains '/' or ends with an image extension; everything else is a selector
       for (const arg of remaining) {
-        if (arg.includes('/') || /\.(png|jpg|jpeg|pdf)$/i.test(arg)) {
+        // File paths containing / and ending with an image/pdf extension are never CSS selectors
+        const isFilePath = arg.includes('/') && /\.(png|jpe?g|webp|pdf)$/i.test(arg);
+        if (isFilePath) {
           outputPath = arg;
         } else if (arg.startsWith('@e') || arg.startsWith('@c') || arg.startsWith('.') || arg.startsWith('#') || arg.includes('[')) {
           targetSelector = arg;
@@ -182,15 +184,7 @@ export async function handleMetaCommand(
 
     case 'responsive': {
       const page = bm.getPage();
-      // Parse -o flag for output prefix
-      let prefix = `${TEMP_DIR}/browse-responsive`;
-      for (let i = 0; i < args.length; i++) {
-        if ((args[i] === '-o' || args[i] === '--output') && args[i + 1]) {
-          prefix = args[++i];
-        } else if (!args[i].startsWith('-')) {
-          prefix = args[i];
-        }
-      }
+      const prefix = args[0] || `${TEMP_DIR}/browse-responsive`;
       validateOutputPath(prefix);
       const viewports = [
         { name: 'mobile', width: 375, height: 812 },
@@ -303,6 +297,164 @@ export async function handleMetaCommand(
       return await handleSnapshot(args, bm);
     }
 
+    // ─── Handoff ────────────────────────────────────
+    case 'handoff': {
+      const message = args.join(' ') || 'User takeover requested';
+      return await bm.handoff(message);
+    }
+
+    case 'resume': {
+      bm.resume();
+      // Re-snapshot to capture current page state after human interaction
+      const snapshot = await handleSnapshot(['-i'], bm);
+      return `RESUMED\n${snapshot}`;
+    }
+
+    // ─── Headed Mode ──────────────────────────────────────
+    case 'connect': {
+      // connect is handled as a pre-server command in cli.ts
+      // If we get here, server is already running — tell the user
+      if (bm.getConnectionMode() === 'headed') {
+        return 'Already in headed mode with extension.';
+      }
+      return 'The connect command must be run from the CLI (not sent to a running server). Run: rkstack-browse connect';
+    }
+
+    case 'disconnect': {
+      if (bm.getConnectionMode() !== 'headed') {
+        return 'Not in headed mode — nothing to disconnect.';
+      }
+      // Signal that we want a restart in headless mode
+      console.log('[browse] Disconnecting headed browser. Restarting in headless mode.');
+      await shutdown();
+      return 'Disconnected. Server will restart in headless mode on next command.';
+    }
+
+    case 'focus': {
+      if (bm.getConnectionMode() !== 'headed') {
+        return 'focus requires headed mode. Run `rkstack-browse connect` first.';
+      }
+      try {
+        const { execSync } = await import('child_process');
+        // Try common Chromium-based browser app names to bring to foreground
+        const appNames = ['Comet', 'Google Chrome', 'Arc', 'Brave Browser', 'Microsoft Edge'];
+        let activated = false;
+        for (const appName of appNames) {
+          try {
+            execSync(`osascript -e 'tell application "${appName}" to activate'`, { stdio: 'pipe', timeout: 3000 });
+            activated = true;
+            break;
+          } catch {
+            // Try next browser
+          }
+        }
+
+        if (!activated) {
+          return 'Could not bring browser to foreground. macOS only.';
+        }
+
+        // If a ref was passed, scroll it into view
+        if (args.length > 0 && args[0].startsWith('@')) {
+          try {
+            const resolved = await bm.resolveRef(args[0]);
+            if ('locator' in resolved) {
+              await resolved.locator.scrollIntoViewIfNeeded({ timeout: 5000 });
+              return `Browser activated. Scrolled ${args[0]} into view.`;
+            }
+          } catch {
+            // Ref not found — still activated the browser
+          }
+        }
+
+        return 'Browser window activated.';
+      } catch (err: any) {
+        return `focus failed: ${err.message}. macOS only.`;
+      }
+    }
+
+    // ─── Watch ──────────────────────────────────────────
+    case 'watch': {
+      if (args[0] === 'stop') {
+        if (!bm.isWatching()) return 'Not currently watching.';
+        const result = bm.stopWatch();
+        const durationSec = Math.round(result.duration / 1000);
+        return [
+          `WATCH STOPPED (${durationSec}s, ${result.snapshots.length} snapshots)`,
+          '',
+          'Last snapshot:',
+          result.snapshots.length > 0 ? result.snapshots[result.snapshots.length - 1] : '(none)',
+        ].join('\n');
+      }
+
+      if (bm.isWatching()) return 'Already watching. Run `rkstack-browse watch stop` to stop.';
+      if (bm.getConnectionMode() !== 'headed') {
+        return 'watch requires headed mode. Run `rkstack-browse connect` first.';
+      }
+
+      bm.startWatch();
+      return 'WATCHING — observing user browsing. Periodic snapshots every 5s.\nRun `rkstack-browse watch stop` to stop and get summary.';
+    }
+
+    // ─── Inbox ──────────────────────────────────────────
+    case 'inbox': {
+      const { execSync } = await import('child_process');
+      let gitRoot: string;
+      try {
+        gitRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      } catch {
+        return 'Not in a git repository — cannot locate inbox.';
+      }
+
+      const inboxDir = path.join(gitRoot, '.context', 'sidebar-inbox');
+      if (!fs.existsSync(inboxDir)) return 'Inbox empty.';
+
+      const files = fs.readdirSync(inboxDir)
+        .filter(f => f.endsWith('.json') && !f.startsWith('.'))
+        .sort()
+        .reverse(); // newest first
+
+      if (files.length === 0) return 'Inbox empty.';
+
+      const messages: { timestamp: string; url: string; userMessage: string }[] = [];
+      for (const file of files) {
+        try {
+          const data = JSON.parse(fs.readFileSync(path.join(inboxDir, file), 'utf-8'));
+          messages.push({
+            timestamp: data.timestamp || '',
+            url: data.page?.url || 'unknown',
+            userMessage: data.userMessage || '',
+          });
+        } catch {
+          // Skip malformed files
+        }
+      }
+
+      if (messages.length === 0) return 'Inbox empty.';
+
+      const lines: string[] = [];
+      lines.push(`SIDEBAR INBOX (${messages.length} message${messages.length === 1 ? '' : 's'})`);
+      lines.push('────────────────────────────────');
+
+      for (const msg of messages) {
+        const ts = msg.timestamp ? `[${msg.timestamp}]` : '[unknown]';
+        lines.push(`${ts} ${msg.url}`);
+        lines.push(`  "${msg.userMessage}"`);
+        lines.push('');
+      }
+
+      lines.push('────────────────────────────────');
+
+      // Handle --clear flag
+      if (args.includes('--clear')) {
+        for (const file of files) {
+          try { fs.unlinkSync(path.join(inboxDir, file)); } catch {}
+        }
+        lines.push(`Cleared ${files.length} message${files.length === 1 ? '' : 's'}.`);
+      }
+
+      return lines.join('\n');
+    }
+
     // ─── State ────────────────────────────────────────
     case 'state': {
       const [action, name] = args;
@@ -323,6 +475,7 @@ export async function handleMetaCommand(
         // V1: cookies + URLs only (not localStorage — breaks on load-before-navigate)
         const saveData = {
           version: 1,
+          savedAt: new Date().toISOString(),
           cookies: state.cookies,
           pages: state.pages.map(p => ({ url: p.url, isActive: p.isActive })),
         };
@@ -335,6 +488,14 @@ export async function handleMetaCommand(
         const data = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
         if (!Array.isArray(data.cookies) || !Array.isArray(data.pages)) {
           throw new Error('Invalid state file: expected cookies and pages arrays');
+        }
+        // Warn on state files older than 7 days
+        if (data.savedAt) {
+          const ageMs = Date.now() - new Date(data.savedAt).getTime();
+          const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+          if (ageMs > SEVEN_DAYS) {
+            console.warn(`[browse] Warning: State file is ${Math.round(ageMs / 86400000)} days old. Consider re-saving.`);
+          }
         }
         // Close existing pages, then restore (replace, not merge)
         bm.setFrame(null);
