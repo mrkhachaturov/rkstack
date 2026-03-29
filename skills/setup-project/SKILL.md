@@ -3,10 +3,11 @@ name: setup-project
 preamble-tier: 2
 version: 1.0.0
 description: |
-  Configure project-level safety guards and working rules. Analyzes your project
-  stack, generates .claude/settings.json hooks, .claude/hooks/ scripts, and
-  .claude/rules/ files. Guards protect against destructive commands (rm -rf,
-  force-push, drop table). Rules teach Claude your project conventions.
+  Configure project-level safety guards and working rules. Reads the detection
+  cache from .rkstack/settings.json, installs .claude/settings.json hooks,
+  .claude/hooks/ scripts, and .claude/rules/ files. Guards protect against
+  destructive commands (rm -rf, force-push, drop table). Rules are curated
+  best-practice documents copied as-is from templates.
   Run once per project, update when rkstack ships new templates.
   Use when asked to "setup project", "configure guards", "protect this project",
   or "add safety hooks".
@@ -111,24 +112,34 @@ When the user types `/setup-project`, run this skill.
 - `/setup-project` — full setup (guards + rules)
 - `/setup-project --update` — update existing setup with new templates
 
-## Step 0: Read project context
+## Step 0: Read detection cache
 
-Use the preamble output for PROJECT_TYPE and stack detection. Also check:
+Read the detection cache written by `rkstack detect` (called automatically during session-start):
+
+```bash
+if [ -f .rkstack/settings.json ]; then
+  cat .rkstack/settings.json
+else
+  echo "MISSING: .rkstack/settings.json — detection cache not found"
+fi
+```
+
+If `.rkstack/settings.json` does not exist, tell the user: "Detection cache not found. Please start a new session so rkstack can detect your project stack, then run `/setup-project` again." and stop.
+
+Parse the detection cache JSON. The relevant fields are:
+- `detection.langs` — map of language keys (e.g., `ts`, `py`, `go`, `hcl`) to stats
+- `detection.tools` — map of tool names (e.g., `docker`, `terraform`, `ansible`, `compose`) to booleans
+- `detection.projectType` — high-level classification (web, node, python, go, infra, devops, general)
+
+Also check the existing project setup state:
 
 ```bash
 ls .claude/settings.json 2>/dev/null && echo "HAS_SETTINGS=yes" || echo "HAS_SETTINGS=no"
 ls .claude/hooks/ 2>/dev/null && echo "HAS_HOOKS=yes" || echo "HAS_HOOKS=no"
 ls .claude/rules/ 2>/dev/null && echo "HAS_RULES=yes" || echo "HAS_RULES=no"
-ls .rkstack/settings.json 2>/dev/null && echo "HAS_RKSTACK_SETTINGS=yes" || echo "HAS_RKSTACK_SETTINGS=no"
 ```
 
-If `HAS_RKSTACK_SETTINGS=yes`, read it to check the current setup state:
-
-```bash
-cat .rkstack/settings.json
-```
-
-If this is an `--update` run and `.rkstack/settings.json` shows the same `setupVersion` as the current rkstack version, tell the user: "Project is already up to date with rkstack vX.Y.Z. No new templates to install." and stop.
+If this is an `--update` run and `.rkstack/settings.json` has a `meta.setupVersion` that matches the current rkstack version, tell the user: "Project is already up to date with rkstack vX.Y.Z. No new templates to install." and stop.
 
 ## Step 1: Install baseline guard (always)
 
@@ -169,17 +180,26 @@ mkdir -p .claude/hooks
 
 ## Step 2: Offer stack-specific guards
 
-Based on the preamble detection, determine which guard templates are relevant:
+Using the detection cache from Step 0, determine which guard templates are relevant:
 
-| Template | Condition |
+| Template | Condition (from detection cache) |
 |----------|-----------|
-| terraform | `_HAS_TF=yes` or files matching `*.tf` exist |
-| secrets | `.env` files or `secrets/` directory exists |
-| docker | `_HAS_DOCKER=yes` or `_HAS_COMPOSE=yes` |
-| kubernetes | files matching `*.yaml` with `kind:` content exist |
-| python | `_HAS_PY=yes` |
-| node | `_HAS_TS=yes` or `_HAS_JS=yes` |
-| ansible | `_HAS_ANSIBLE=yes` |
+| terraform | `detection.tools.terraform` is true OR `hcl` in `detection.langs` |
+| secrets | `.env` files or `secrets/` directory exists (check filesystem) |
+| docker | `detection.tools.docker` is true OR `detection.tools.compose` is true |
+| kubernetes | files matching `*.yaml` with `kind:` content exist (check filesystem) |
+| python | `py` in `detection.langs` |
+| node | `ts` in `detection.langs` OR `js` in `detection.langs` |
+| ansible | `detection.tools.ansible` is true |
+
+For the filesystem checks (secrets, kubernetes), run:
+
+```bash
+# Secrets check
+(ls .env* 2>/dev/null || ls secrets/ 2>/dev/null) && echo "SECRETS_DETECTED=yes" || echo "SECRETS_DETECTED=no"
+# Kubernetes check
+grep -rl '^kind:' *.yaml **/*.yaml 2>/dev/null && echo "K8S_DETECTED=yes" || echo "K8S_DETECTED=no"
+```
 
 For each detected template, read its JSON from `skills/setup-project/templates/guards/<name>.json` to get the description.
 
@@ -208,23 +228,19 @@ Copy `context-hygiene.md` to `.claude/rules/`:
 
 **If file exists:** same overwrite logic as guard scripts (compare, ask if different).
 
-## Step 4: Generate stack-specific rules
+## Step 4: Install stack-specific rules
+
+Copy each matched rule template to `.claude/rules/<stack>.md`. The templates are complete best-practice documents — no generation or customization needed.
 
 For each stack detected in Step 2 that also has a rule template:
 
-1. Read the `.tmpl` skeleton from `skills/setup-project/templates/rules/<stack>.tmpl`
-2. **Analyze the project** to fill `[GENERATED]` sections:
-   - Read the actual project directory structure (ls, find)
-   - Read relevant config files (package.json, pyproject.toml, terraform providers, etc.)
-   - Extract real data: directory names, tool versions, existing patterns
-3. Write the generated rule to `.claude/rules/<stack>.md`
+1. Read the rule template from `skills/setup-project/templates/rules/<stack>.tmpl`
+2. Write it to `.claude/rules/<stack>.md` as-is
 
-**This is where Claude's intelligence matters.** The `.tmpl` skeleton has section headings and `[GENERATED]` placeholders. Claude reads the project, understands the structure, and writes content that fits — like the difference between a generic "Terraform rules" and a project-specific root ownership table with actual directory names and provider versions.
+**If file exists:** same overwrite logic as guard scripts (compare, ask if different).
 
-**If file exists:** same overwrite logic.
-
-Present via AskUserQuestion after generating:
-> Generated N rules for [stacks]. Each rule is scoped to relevant files only — it won't bloat context when working on other parts of the project.
+Present via AskUserQuestion after copying:
+> Installed N rules for [stacks]. Each rule is scoped to relevant files only — it won't bloat context when working on other parts of the project.
 
 ## Step 5: Write plugin metadata
 
@@ -233,17 +249,18 @@ Read the current rkstack plugin version:
 cat "${CLAUDE_PLUGIN_ROOT}/VERSION" 2>/dev/null || echo "unknown"
 ```
 
-If `.rkstack/settings.json` exists, read it to preserve the `overrides` section.
+If `.rkstack/settings.json` exists, read it to preserve the `detection` and `overrides` sections.
 
-Write `.rkstack/settings.json`:
+Write `.rkstack/settings.json`, merging the new `meta` key with the existing content:
 ```json
 {
+  "detection": <preserved from existing file>,
   "meta": {
     "setupVersion": "<plugin version>",
     "setupDate": "<YYYY-MM-DD>",
     "baseline": true,
     "guards": ["baseline", "<selected guards>"],
-    "rules": ["context-hygiene", "<generated rules>"]
+    "rules": ["context-hygiene", "<installed rules>"]
   },
   "overrides": <preserved from existing file, or {}>
 }
@@ -262,7 +279,7 @@ Guards installed:
   ✅ secrets (protects .env and secrets/ from full overwrite)
   ...
 
-Rules generated:
+Rules installed:
   ✅ context-hygiene (global — what belongs in CLAUDE.md vs rules vs memory)
   ✅ terraform (scoped to terraform/** — root ownership, lifecycle rules)
   ...
