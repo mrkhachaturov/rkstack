@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.2] - 2026-03-29
+
+The browse daemon now runs from the plugin source tree instead of downloading a standalone binary. The standalone binary couldn't find `server.ts` (which it spawns as a separate process), so the daemon failed to start on installed plugins. A thin wrapper script now invokes `bun` on the source directly.
+
 ## [0.6.1] - 2026-03-28
 
 Fixed `-o` flag parsing in the browse daemon. `screenshot -o path/to/file.png` was treating paths starting with `.` as CSS selectors. `responsive -o prefix` was ignoring the prefix entirely. Both now work correctly.

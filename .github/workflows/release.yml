@@ -79,44 +79,5 @@ jobs:
           omitBody: true
           omitName: true
 
-  build-browse:
-    needs: release
-    strategy:
-      matrix:
-        include:
-          - os: macos-14
-            artifact: rkstack-browse-darwin-arm64
-            target: ''
-          - os: macos-14
-            artifact: rkstack-browse-darwin-x86_64
-            target: bun-darwin-x64
-          - os: ubuntu-latest
-            artifact: rkstack-browse-linux-x86_64
-            target: ''
-          - os: ubuntu-24.04-arm
-            artifact: rkstack-browse-linux-aarch64
-            target: ''
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build browse binary
-        run: |
-          TARGET_FLAG="${{ matrix.target && format('--target={0}', matrix.target) || '' }}"
-          bun build --compile $TARGET_FLAG browse/src/cli.ts --outfile ${{ matrix.artifact }}
-
-      - name: Attach browse binary to release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ github.ref_name }}
-          allowUpdates: true
-          artifacts: ${{ matrix.artifact }}
-          omitBody: true
-          omitName: true
+  # browse daemon runs from plugin source tree (bun browse/src/cli.ts),
+  # no standalone binary needed — server.ts must be adjacent to cli.ts
