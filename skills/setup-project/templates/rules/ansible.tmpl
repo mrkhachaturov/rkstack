@@ -3,20 +3,21 @@ paths:
   - "ansible/**"
 ---
 
-# Ansible -- Working Rules
+# Ansible — Working Rules
 
-## Role architecture
+## Safety
 
-[GENERATED: List roles from ansible/roles/]
+- Never run playbooks against production without `--check` (dry run) first.
+- Use `any_errors_fatal: true` for critical playbooks.
+- Never store secrets in plaintext. Use vault, 1Password references, or environment variables.
 
-## Secret resolution
+## Conventions
 
-[GENERATED: Detect secret management approach]
+- One role per concern. Roles should be reusable across inventories.
+- Inventory files are the source of truth for host groups and variables.
+- Use `ansible-lint` and `yamllint` to validate before committing.
 
-## Playbook conventions
+## Variables
 
-[GENERATED: Detect playbook patterns, any_errors_fatal, callbacks]
-
-## Inventory
-
-[GENERATED: List inventories from ansible/inventories/]
+- Group variables go in `group_vars/`. Host-specific overrides in `host_vars/`.
+- Never put secrets in `group_vars` — use vault-encrypted files or external references.

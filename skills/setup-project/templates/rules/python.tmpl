@@ -3,16 +3,20 @@ paths:
   - "**/*.py"
 ---
 
-# Python -- Working Rules
+# Python — Working Rules
 
 ## Package management
 
-[GENERATED: Detect pip/poetry/uv from config]
+- Check for the project's package manager: `pyproject.toml` (poetry/uv), `requirements.txt` (pip), `setup.py` (setuptools).
+- Always install in a virtual environment. Never `pip install` globally.
+- If `.venv/` or `venv/` exists, activate it before running commands.
 
 ## Testing
 
-[GENERATED: Detect pytest/unittest from config]
+- Run the test command from CLAUDE.md — never guess the framework.
+- Use `pytest` conventions if `pytest.ini` or `pyproject.toml [tool.pytest]` exists.
 
-## Virtual environment
+## Style
 
-[GENERATED: Detect .venv, venv, or conda]
+- Follow PEP 8. Use the project's formatter if configured (black, ruff, yapf).
+- Type hints are preferred for function signatures.

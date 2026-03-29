@@ -3,18 +3,24 @@ paths:
   - "src/**"
   - "*.ts"
   - "*.js"
+  - "*.tsx"
+  - "*.jsx"
 ---
 
-# Node/TypeScript -- Working Rules
+# Node/TypeScript — Working Rules
 
 ## Package management
 
-[GENERATED: Detect package manager from lockfile]
+- Use the lockfile's package manager (bun.lock → bun, package-lock.json → npm, pnpm-lock.yaml → pnpm).
+- Never mix package managers. Check the lockfile before running install commands.
+- Use `--save-exact` for critical dependencies to avoid surprise upgrades.
 
 ## Testing
 
-[GENERATED: Detect test framework from config]
+- Run the test command from CLAUDE.md — never guess the test framework.
+- Prefer integration tests over mocks. Mock only external services.
 
 ## Build
 
-[GENERATED: Detect build tool from package.json scripts]
+- Check `package.json` scripts for the correct build command.
+- Never assume `tsc` or any specific build tool — read the project config.

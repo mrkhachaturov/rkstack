@@ -6,16 +6,21 @@ paths:
   - "compose*.yaml"
 ---
 
-# Docker -- Working Rules
+# Docker — Working Rules
 
-## Compose stack conventions
+## Safety
 
-[GENERATED: List services from compose files]
+- Never run containers as root unless required by the base image.
+- Use named volumes for persistent data. Bind mounts are for development only.
+- Never hardcode secrets in Dockerfiles or compose files. Use secrets or environment variables.
 
-## Volume management
+## Conventions
 
-[GENERATED: Detect named volumes and bind mounts]
+- One service per container. Compose files define the service graph.
+- Use `.env` files for environment-specific values. Never commit `.env` with real secrets.
+- Pin base image versions (use `node:20-slim`, not `node:latest`).
 
-## Network patterns
+## Networks
 
-[GENERATED: Detect custom networks]
+- Use custom networks for service isolation. Don't rely on the default bridge.
+- Only expose ports that need external access.

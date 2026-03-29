@@ -1,22 +1,21 @@
 ---
 paths:
   - "terraform/**"
+  - "*.tf"
 ---
 
-# Terraform -- Working Rules
+# Terraform — Working Rules
 
-## Root ownership
+## Safety
 
-[GENERATED: List terraform root directories and what each owns]
+- Always run `plan` before `apply`. Review the plan output.
+- Never modify `.terraform.lock.hcl` manually — it's managed by `terraform providers lock`.
+- Never modify state files directly. Use `terraform state` commands.
+- Use `prevent_destroy` lifecycle on critical resources (databases, DNS zones, storage).
 
-## Lifecycle rules
+## Conventions
 
-[GENERATED: Detect prevent_destroy, ignore_changes, moved blocks]
-
-## Validation patterns
-
-[GENERATED: Detect check blocks, postconditions, variable validations]
-
-## Provider usage
-
-[GENERATED: List providers from required_providers blocks]
+- One root module per environment or logical boundary.
+- Use `moved` blocks for renames — never delete + recreate stateful resources.
+- Pin provider versions in `required_providers`.
+- Use variables for values that change between environments. Use locals for computed values.
