@@ -122,7 +122,7 @@ const AGENT_TIMEOUT_MS = 300_000; // 5 minutes — multi-page tasks need time
 const MAX_QUEUE = 5;
 
 let sidebarSession: SidebarSession | null = null;
-let agentProcess: ChildProcess | null = null;
+let agentProcess: any = null;
 let agentStatus: 'idle' | 'processing' | 'hung' = 'idle';
 let agentStartTime: number | null = null;
 let messageQueue: Array<{message: string, ts: string, extensionUrl?: string | null}> = [];
@@ -983,7 +983,7 @@ async function start() {
         const entries = chatBuffer.filter(e => e.id >= afterId);
         return new Response(JSON.stringify({ entries, total: chatNextId }), {
           status: 200,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          headers: { 'Content-Type': 'application/json' },
         });
       }
 

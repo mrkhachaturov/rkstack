@@ -336,7 +336,7 @@ document.getElementById('clear-chat').addEventListener('click', async () => {
   agentText = '';
   chatMessages.innerHTML = `
     <div class="chat-welcome" id="chat-welcome">
-      <div class="chat-welcome-icon">G</div>
+      <div class="chat-welcome-icon">R</div>
       <p>Send a message to Claude Code.</p>
       <p class="muted">Your agent will see it and act on it.</p>
     </div>`;

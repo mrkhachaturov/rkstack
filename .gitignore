@@ -15,6 +15,9 @@ bun.lock
 # Compiled binary (platform-specific, not committed)
 bin/rkstack
 
+# Extension auth token (written at runtime by headed mode)
+extension/.auth.json
+
 # Temporary files
 tmp/
 browse/dist/
