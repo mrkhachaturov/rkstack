@@ -47,31 +47,22 @@ if [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
       fi
     fi
 
-    # --- rkstack-browse binary ---
+    # --- rkstack-browse ---
+    # The browse daemon spawns server.ts as a separate process, so it must
+    # run from the source tree (where server.ts lives next to cli.ts).
+    # We create a thin wrapper script that invokes bun on the source.
+    BROWSE_CLI="${CLAUDE_PLUGIN_ROOT}/browse/src/cli.ts"
     RKSTACK_BROWSE="${CLAUDE_PLUGIN_DATA}/bin/rkstack-browse"
-    if [ -x "$RKSTACK_BROWSE" ] && [ "$(cat "${RKSTACK_BROWSE}.version" 2>/dev/null)" = "$WANT_VERSION" ]; then
+    if [ -f "$BROWSE_CLI" ] && command -v bun >/dev/null 2>&1; then
+      # Write wrapper script (recreated each session to pick up plugin updates)
+      cat > "$RKSTACK_BROWSE" <<WRAPPER
+#!/usr/bin/env bash
+exec bun "$BROWSE_CLI" "\$@"
+WRAPPER
+      chmod +x "$RKSTACK_BROWSE"
       BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=${RKSTACK_BROWSE}"
     else
-      ASSET="rkstack-browse-${OS}-${ARCH}"
-      URL="https://github.com/mrkhachaturov/rkstack/releases/download/v${WANT_VERSION}/${ASSET}"
-      FAIL_MARKER="${CLAUDE_PLUGIN_DATA}/bin/.browse-download-failed"
-      find "${CLAUDE_PLUGIN_DATA}/bin" -name ".browse-download-failed" -mmin +60 -delete 2>/dev/null || true
-      if [ -f "$FAIL_MARKER" ]; then
-        BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=UNAVAILABLE (download failed recently, will retry next session)"
-      else
-        TMPBIN="${RKSTACK_BROWSE}.tmp.$$"
-        if curl --connect-timeout 5 --max-time 60 -fsSL "$URL" -o "$TMPBIN" 2>/dev/null \
-           && chmod +x "$TMPBIN"; then
-          mv -f "$TMPBIN" "$RKSTACK_BROWSE"
-          echo "$WANT_VERSION" > "${RKSTACK_BROWSE}.version"
-          rm -f "$FAIL_MARKER"
-          BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=${RKSTACK_BROWSE}"
-        else
-          rm -f "$TMPBIN"
-          touch "$FAIL_MARKER"
-          BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=UNAVAILABLE (download failed or platform ${OS}-${ARCH} not supported)"
-        fi
-      fi
+      BROWSE_BOOTSTRAP_RESULT="RKSTACK_BROWSE=UNAVAILABLE (bun or browse source not found)"
     fi
   fi
 fi

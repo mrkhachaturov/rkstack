@@ -165,9 +165,8 @@ describe('Session-start hook structure', () => {
     expect(hookContent.includes('# === Binary bootstrap')).toBe(true);
   });
 
-  test('contains rkstack-browse binary bootstrap subsection', () => {
-    // The browse bootstrap is a subsection within binary bootstrap
-    expect(hookContent.includes('rkstack-browse binary')).toBe(true);
+  test('contains rkstack-browse bootstrap subsection', () => {
+    expect(hookContent.includes('rkstack-browse')).toBe(true);
   });
 
   test('contains project type detection section', () => {
