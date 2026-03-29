@@ -68,59 +68,75 @@ WRAPPER
 fi
 
 # === Project type detection ===
-PROJECT_TYPE_RESULT=""
-if command -v scc >/dev/null 2>&1; then
-  _SCC=$(scc --format wide --no-cocomo --exclude-dir node_modules,.git,vendor,3rdparty-src . 2>/dev/null | head -20)
+# Try rkstack binary first, fall back to inline SCC detection
+DETECT_RESULT=""
+if [ -x "${RKSTACK_BIN:-}" ]; then
+  DETECT_RESULT=$("$RKSTACK_BIN" detect 2>/dev/null || echo "")
+fi
 
-  _HAS_TS=$(echo "$_SCC" | grep -qi "TypeScript" && echo "yes" || echo "no")
-  _HAS_JS=$(echo "$_SCC" | grep -qi "JavaScript" && echo "yes" || echo "no")
-  _HAS_CSS=$(echo "$_SCC" | grep -qi "CSS\|SCSS\|SASS\|HTML" && echo "yes" || echo "no")
-  _HAS_PY=$(echo "$_SCC" | grep -qi "Python" && echo "yes" || echo "no")
-  _HAS_GO=$(echo "$_SCC" | grep -qi "^Go " && echo "yes" || echo "no")
-  _HAS_TF=$(echo "$_SCC" | grep -qi "Terraform\|HCL" && echo "yes" || echo "no")
+# Fallback: inline detection if binary unavailable
+if [ -z "$DETECT_RESULT" ]; then
+  PROJECT_TYPE_RESULT=""
+  if command -v scc >/dev/null 2>&1; then
+    _SCC=$(scc --format wide --no-cocomo --exclude-dir node_modules,.git,vendor,3rdparty-src . 2>/dev/null | head -20)
 
-  # Web framework config files
-  _HAS_WEB_CONFIG="no"
-  for f in next.config.* vite.config.* nuxt.config.* svelte.config.* angular.json; do
-    if ls $f 1>/dev/null 2>&1; then _HAS_WEB_CONFIG="yes"; break; fi
-  done
+    _HAS_TS=$(echo "$_SCC" | grep -qi "TypeScript" && echo "yes" || echo "no")
+    _HAS_JS=$(echo "$_SCC" | grep -qi "JavaScript" && echo "yes" || echo "no")
+    _HAS_CSS=$(echo "$_SCC" | grep -qi "CSS\|SCSS\|SASS\|HTML" && echo "yes" || echo "no")
+    _HAS_PY=$(echo "$_SCC" | grep -qi "Python" && echo "yes" || echo "no")
+    _HAS_GO=$(echo "$_SCC" | grep -qi "^Go " && echo "yes" || echo "no")
+    _HAS_TF=$(echo "$_SCC" | grep -qi "Terraform\|HCL" && echo "yes" || echo "no")
 
-  # Classification rules (order matters — first match wins)
-  if [ "$_HAS_TS" = "yes" ] || [ "$_HAS_JS" = "yes" ]; then
-    if [ "$_HAS_CSS" = "yes" ] || [ "$_HAS_WEB_CONFIG" = "yes" ]; then
-      PROJECT_TYPE_RESULT="PROJECT_TYPE=web"
+    # Web framework config files
+    _HAS_WEB_CONFIG="no"
+    for f in next.config.* vite.config.* nuxt.config.* svelte.config.* angular.json; do
+      if ls $f 1>/dev/null 2>&1; then _HAS_WEB_CONFIG="yes"; break; fi
+    done
+
+    # Classification rules (order matters — first match wins)
+    if [ "$_HAS_TS" = "yes" ] || [ "$_HAS_JS" = "yes" ]; then
+      if [ "$_HAS_CSS" = "yes" ] || [ "$_HAS_WEB_CONFIG" = "yes" ]; then
+        PROJECT_TYPE_RESULT="PROJECT_TYPE=web"
+      else
+        PROJECT_TYPE_RESULT="PROJECT_TYPE=node"
+      fi
+    elif [ "$_HAS_PY" = "yes" ]; then
+      PROJECT_TYPE_RESULT="PROJECT_TYPE=python"
+    elif [ "$_HAS_GO" = "yes" ]; then
+      PROJECT_TYPE_RESULT="PROJECT_TYPE=go"
+    elif [ "$_HAS_TF" = "yes" ]; then
+      PROJECT_TYPE_RESULT="PROJECT_TYPE=infra"
     else
-      PROJECT_TYPE_RESULT="PROJECT_TYPE=node"
+      # Check for devops (YAML + Shell, no app language)
+      _HAS_YAML=$(echo "$_SCC" | grep -qi "YAML" && echo "yes" || echo "no")
+      _HAS_SHELL=$(echo "$_SCC" | grep -qi "Shell\|BASH" && echo "yes" || echo "no")
+      if [ "$_HAS_YAML" = "yes" ] || [ "$_HAS_SHELL" = "yes" ]; then
+        PROJECT_TYPE_RESULT="PROJECT_TYPE=devops"
+      else
+        PROJECT_TYPE_RESULT="PROJECT_TYPE=general"
+      fi
     fi
-  elif [ "$_HAS_PY" = "yes" ]; then
-    PROJECT_TYPE_RESULT="PROJECT_TYPE=python"
-  elif [ "$_HAS_GO" = "yes" ]; then
-    PROJECT_TYPE_RESULT="PROJECT_TYPE=go"
-  elif [ "$_HAS_TF" = "yes" ]; then
-    PROJECT_TYPE_RESULT="PROJECT_TYPE=infra"
   else
-    # Check for devops (YAML + Shell, no app language)
-    _HAS_YAML=$(echo "$_SCC" | grep -qi "YAML" && echo "yes" || echo "no")
-    _HAS_SHELL=$(echo "$_SCC" | grep -qi "Shell\|BASH" && echo "yes" || echo "no")
-    if [ "$_HAS_YAML" = "yes" ] || [ "$_HAS_SHELL" = "yes" ]; then
-      PROJECT_TYPE_RESULT="PROJECT_TYPE=devops"
-    else
-      PROJECT_TYPE_RESULT="PROJECT_TYPE=general"
-    fi
+    PROJECT_TYPE_RESULT="PROJECT_TYPE=general"
   fi
-else
-  PROJECT_TYPE_RESULT="PROJECT_TYPE=general"
-fi
 
-# === Service detection (Supabase, etc.) ===
-HAS_SUPABASE="no"
-# Check for Supabase MCP server in .mcp.json
-if [ -f .mcp.json ] && grep -qi '"supabase"' .mcp.json 2>/dev/null; then
-  HAS_SUPABASE="yes"
-fi
-# Check for supabase directory (migrations, client code)
-if [ -d supabase ] || find . -maxdepth 3 -type d -name supabase -print -quit 2>/dev/null | grep -q .; then
-  HAS_SUPABASE="yes"
+  # === Service detection (Supabase, etc.) ===
+  HAS_SUPABASE="no"
+  # Check for Supabase MCP server in .mcp.json
+  if [ -f .mcp.json ] && grep -qi '"supabase"' .mcp.json 2>/dev/null; then
+    HAS_SUPABASE="yes"
+  fi
+  # Check for supabase directory (migrations, client code)
+  if [ -d supabase ] || find . -maxdepth 3 -type d -name supabase -print -quit 2>/dev/null | grep -q .; then
+    HAS_SUPABASE="yes"
+  fi
+
+  # Build DETECT_RESULT from inline detection
+  DETECT_RESULT="$PROJECT_TYPE_RESULT"
+  if [ "$HAS_SUPABASE" = "yes" ]; then
+    DETECT_RESULT="${DETECT_RESULT}
+HAS_SUPABASE=yes"
+  fi
 fi
 
 # Read using-rkstack content
@@ -173,12 +189,9 @@ if [ -n "$BROWSE_BOOTSTRAP_RESULT" ]; then
   browse_escaped=$(escape_for_json "$BROWSE_BOOTSTRAP_RESULT")
   bootstrap_prefix="${bootstrap_prefix}${browse_escaped}\n"
 fi
-if [ -n "$PROJECT_TYPE_RESULT" ]; then
-  ptype_escaped=$(escape_for_json "$PROJECT_TYPE_RESULT")
-  bootstrap_prefix="${bootstrap_prefix}${ptype_escaped}\n"
-fi
-if [ "$HAS_SUPABASE" = "yes" ]; then
-  bootstrap_prefix="${bootstrap_prefix}HAS_SUPABASE=yes\n"
+if [ -n "$DETECT_RESULT" ]; then
+  detect_escaped=$(escape_for_json "$DETECT_RESULT")
+  bootstrap_prefix="${bootstrap_prefix}${detect_escaped}\n"
 fi
 if [ -n "$SETUP_SUGGESTION" ]; then
   setup_escaped=$(escape_for_json "$SETUP_SUGGESTION")
