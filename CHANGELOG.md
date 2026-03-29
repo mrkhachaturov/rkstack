@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.0] - 2026-03-29
+
+Upstream sync from gstack v0.12.2 to v0.13.4 -- ported the improvements that matter for rkstack, skipped gstack-specific features (voice directive, skill prefix, design binary).
+
+- **zsh compatibility.** Bare globs in skill templates no longer break on zsh. Affects `/cso`, `/retro`, `/qa`, `/qa-only`, and `/finishing-a-development-branch`. If you run zsh as your default shell, these skills now work without NOMATCH errors.
+- **Smarter CHANGELOG generation.** `/finishing-a-development-branch` now enumerates every commit on the branch, groups them by theme, writes the entry, then cross-checks that every commit is covered. No more missing commits in the CHANGELOG.
+- **Expanded code review checklist.** `/requesting-code-review` now catches LLM-generated URL SSRF, stored prompt injection in vector DBs, Python shell injection (`subprocess` with `shell=True`), async/sync mixing in Python endpoints, and ORM column name mismatches.
+- **Credential safety in browse examples.** The `/browse` skill now uses `$TEST_EMAIL` and `$TEST_PASSWORD` environment variables instead of hardcoded test credentials.
+- **Host-aware co-author trailers.** New `{{CO_AUTHOR_TRAILER}}` resolver generates the correct `Co-Authored-By` line for Claude, Codex, or Gemini. `/document-release` uses it instead of a hardcoded string.
+- **Upstream tracking tooling.** `just upstream-check` shows what changed in gstack/superpowers/claude-code-docs since our pin. `just upstream-bump <name>` advances a submodule to latest. Makes future upstream syncs faster.
+
 ## [0.6.2] - 2026-03-29
 
 The browse daemon now runs from the plugin source tree instead of downloading a standalone binary. The standalone binary couldn't find `server.ts` (which it spawns as a separate process), so the daemon failed to start on installed plugins. A thin wrapper script now invokes `bun` on the source directly.
