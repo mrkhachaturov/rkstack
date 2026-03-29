@@ -57,6 +57,14 @@ Be terse. For each issue: one line describing the problem, one line with the fix
 - LLM output trusted without validation (trust boundary violations)
 - LLM-generated values (emails, URLs, names) written to DB without format validation
 - Structured tool output accepted without type/shape checks before database writes
+- LLM-generated URLs fetched without allowlist -- SSRF risk if URL points to internal network (Python: `urllib.parse.urlparse` -> check hostname against blocklist before `requests.get`/`httpx.get`)
+- LLM output stored in knowledge bases or vector DBs without sanitization -- stored prompt injection risk
+
+#### Shell Injection (Python-specific)
+
+- `subprocess.run()` / `subprocess.call()` / `subprocess.Popen()` with `shell=True` AND f-string/`.format()` interpolation in the command string -- use argument arrays instead
+- `os.system()` with variable interpolation -- replace with `subprocess.run()` using argument arrays
+- `eval()` / `exec()` on LLM-generated code without sandboxing
 
 #### Enum & Value Completeness
 When the diff introduces a new enum value, status string, tier name, or type constant:
@@ -68,7 +76,20 @@ To do this: use Grep to find all references to the sibling values. Read each mat
 
 ### Pass 2 -- INFORMATIONAL
 
+#### Async/Sync Mixing (Python-specific)
+
+- Synchronous `subprocess.run()`, `open()`, `requests.get()` inside `async def` endpoints -- blocks the event loop. Use `asyncio.to_thread()`, `aiofiles`, or `httpx.AsyncClient` instead.
+- `time.sleep()` inside async functions -- use `asyncio.sleep()`
+- Sync DB calls in async context without `run_in_executor()` wrapping
+
+#### Column/Field Name Safety
+
+- Verify column names in ORM queries (`.select()`, `.eq()`, `.gte()`, `.order()`) against actual DB schema -- wrong column names silently return empty results or throw swallowed errors
+- Check `.get()` calls on query results use the column name that was actually selected
+- Cross-reference with schema documentation when available
+
 #### Conditional Side Effects
+
 - Code paths that branch on a condition but forget to apply a side effect on one branch
 - Log messages that claim an action happened but the action was conditionally skipped
 
