@@ -9,6 +9,9 @@ Session starts
   │
   ▼
 hooks/session-start injects using-rkstack/SKILL.md
+  + detects PROJECT_TYPE, HAS_SUPABASE
+  + checks .rkstack/settings.json for setup state
+  + suggests /setup-project if missing or stale
   │
   ▼
 Claude reads using-rkstack:
@@ -85,6 +88,12 @@ Bug / test failure / unexpected behavior
 
 ```
 ┌──────────────────────────────────────────────────┐
+│  /setup-project                                   │
+│    One-time project setup: analyzes stack,         │
+│    generates .claude/hooks/ guards + .claude/rules │
+│    Always-on protection (no skill invocation)      │
+│    Session-start suggests it if not configured     │
+│                                                   │
 │  guard = careful + freeze                         │
 │                                                   │
 │  careful (PreToolUse → Bash)                      │
@@ -316,7 +325,7 @@ cso (T2): Chief Security Officer audit
 |--------|------|---------|
 | WorktreeManager | lib/worktree.ts | Git worktree isolation: create, harvest patches, cleanup, dedup |
 
-## All 33 skills
+## All skills
 
 | Skill | Tier | Source | Category |
 |-------|------|--------|----------|
@@ -326,6 +335,7 @@ cso (T2): Chief Security Officer audit
 | freeze | T1 | gstack | Safety |
 | guard | T1 | gstack | Safety |
 | unfreeze | T1 | gstack | Safety |
+| setup-project | T2 | rkstack (original) | Safety |
 | systematic-debugging | T2 | gstack /investigate + superpowers | Quality |
 | writing-plans | T2 | superpowers (enriched) | Planning |
 | verification-before-completion | T2 | superpowers (enriched) | Quality |
