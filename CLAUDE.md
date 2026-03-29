@@ -313,7 +313,6 @@ template/preamble pattern.
 - Before writing any script, check how gstack does it in `scripts/`.
 - Before adding a resolver, check `scripts/resolvers/` in gstack.
 - Before creating a utility, check gstack `lib/`.
-- If gstack has a working solution, bring it (or adapt it minimally).
 - If superpowers has better skill content, take the content but wrap it in
   gstack's infrastructure.
 
@@ -343,8 +342,27 @@ template/preamble pattern.
 .upstreams/claude-code-docs/  ← official Claude Code docs (auto-updated daily by CI)
 ```
 
-**Do not copy files from upstreams.** Study them, understand the pattern, then
-write your own version following that pattern.
+**How to use upstreams — the adaptation process:**
+
+Upstreams are references, not blind copy sources. Every piece of upstream code
+must go through this decision process before being used:
+
+1. **Read the upstream code.** Understand what it does and why it's built that way.
+2. **Read our code.** Understand our flows, our architecture, our existing patterns.
+   How do our skills connect? What does our build pipeline expect? What do our
+   tests cover?
+3. **Compare and decide.** For each piece of upstream code, choose the right level:
+   - **Copy as-is** — the code is universal, works in our stack, and doesn't conflict
+     with our flows. Rename/rebrand (gstack → rkstack) and use it.
+   - **Copy and adapt** — the logic is right but needs changes to fit our patterns,
+     our preamble tiers, our naming conventions, or our existing skill flows.
+   - **Use as reference only** — the approach is too gstack-specific or our
+     architecture needs something fundamentally different. Study the design,
+     then write our own version.
+
+The key: the decision comes AFTER deep analysis of both sides, not before.
+Don't rewrite tested code from scratch when it fits. Don't blindly copy code
+that doesn't match our flows. Let the analysis tell you which level is right.
 
 ## CI Workflows
 
@@ -393,8 +411,9 @@ preamble tiers, and the build workflow.
 
 1. **Always** check gstack first: `.upstreams/gstack/scripts/`,
    `.upstreams/gstack/bin/`, `.upstreams/gstack/lib/`
-2. Follow their pattern. Adapt minimally.
-3. If gstack has a working version (like `worktree.ts`), bring it as-is.
+2. Follow the upstream adaptation process (see Upstreams section above):
+   read their code, read our code, then decide copy-as-is / copy-and-adapt /
+   reference-only based on how it fits our flows.
 
 ### Never do this
 
