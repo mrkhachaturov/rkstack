@@ -268,7 +268,7 @@ async function main() {
   fs.mkdirSync(dir, { recursive: true });
   if (!fs.existsSync(QUEUE)) fs.writeFileSync(QUEUE, '');
 
-  lastLine = countLines();
+  lastLine = 0; // Process all pending messages (avoids race with server writing before agent starts)
   await refreshToken();
 
   console.log(`[sidebar-agent] Started. Watching ${QUEUE} from line ${lastLine}`);
