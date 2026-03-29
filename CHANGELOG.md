@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.9.0] - 2026-03-29
+
+Watch Claude browse in real time. `rkstack-browse connect` opens a visible Chromium window with a Chrome extension side panel showing live activity feed and chat.
+
+### Added
+- **Headed browser mode.** `connect` launches Playwright Chromium with a visible window, amber shimmer indicator, and the rkstack Chrome extension auto-loaded. `disconnect` returns to headless.
+- **Chrome extension with side panel.** Activity feed shows every browse command in real time. Chat tab lets you send natural language instructions to a sidebar Claude agent. Ref overlays and connection status pill on every page.
+- **Sidebar agent.** A child Claude process handles chat messages from the side panel. It can navigate, click, fill forms, and take screenshots in the shared browser.
+- **Handoff and resume.** `handoff` transitions from headless to headed mid-session, preserving cookies and open tabs. `resume` returns control to the AI after manual interaction.
+- **Watch mode.** `watch` observes user browsing with periodic snapshots. `watch stop` returns a summary.
+- **Activity streaming.** Real-time SSE feed of all browse commands with privacy filtering (passwords, auth headers, cookies auto-redacted).
+- **Cookie picker UI.** Interactive dark-themed HTML page for importing cookies from installed Chromium browsers (Chrome, Arc, Brave, Edge).
+- **7 new browse commands:** `connect`, `disconnect`, `handoff`, `resume`, `focus`, `watch`, `inbox`.
+- **`/connect-chrome` skill.** Guides you through launching headed Chrome, opening the side panel, and using the sidebar chat.
+
+### Fixed
+- Sidebar agent now processes messages that arrive before the agent starts (race condition fix vs gstack upstream).
+
 ## [0.8.1] - 2026-03-29
 
 Detection timestamps now show your local time instead of UTC. The `detectedAt` field in `.rkstack/settings.json` uses your timezone offset (e.g. `+03:00`) so you can tell at a glance when detection last ran.
