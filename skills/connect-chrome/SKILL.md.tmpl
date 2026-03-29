@@ -1,0 +1,137 @@
+---
+name: connect-chrome
+preamble-tier: 1
+version: 1.0.0
+description: |
+  Launch real Chrome controlled by rkstack with the Side Panel extension auto-loaded.
+  One command: connects Claude to a visible Chrome window where you can watch every
+  action in real time. The extension shows a live activity feed in the Side Panel.
+  Use when asked to "connect chrome", "open chrome", "real browser", "launch chrome",
+  "side panel", or "control my browser".
+user-invocable: true
+allowed-tools:
+  - Bash
+  - Read
+  - AskUserQuestion
+
+---
+
+{{PREAMBLE}}
+
+# /connect-chrome — Launch Real Chrome with Side Panel
+
+Connect Claude to a visible Chrome window with the rkstack extension auto-loaded.
+You see every click, every navigation, every action in real time.
+
+{{BROWSE_SETUP}}
+
+## Step 0: Pre-flight cleanup
+
+Before connecting, kill any stale browse servers and clean up lock files that
+may have persisted from a crash. This prevents "already connected" false
+positives and Chromium profile lock conflicts.
+
+```bash
+# Kill any existing browse server
+if [ -f "$(git rev-parse --show-toplevel 2>/dev/null)/.rkstack/browse.json" ]; then
+  _OLD_PID=$(cat "$(git rev-parse --show-toplevel)/.rkstack/browse.json" 2>/dev/null | grep -o '"pid":[0-9]*' | grep -o '[0-9]*')
+  [ -n "$_OLD_PID" ] && kill "$_OLD_PID" 2>/dev/null || true
+  sleep 1
+  [ -n "$_OLD_PID" ] && kill -9 "$_OLD_PID" 2>/dev/null || true
+  rm -f "$(git rev-parse --show-toplevel)/.rkstack/browse.json"
+fi
+# Clean Chromium profile locks (can persist after crashes)
+_PROFILE_DIR="$HOME/.rkstack/chromium-profile"
+for _LF in SingletonLock SingletonSocket SingletonCookie; do
+  rm -f "$_PROFILE_DIR/$_LF" 2>/dev/null || true
+done
+echo "Pre-flight cleanup done"
+```
+
+## Step 1: Connect
+
+```bash
+$RKSTACK_BROWSE connect
+```
+
+This launches Playwright's bundled Chromium in headed mode with:
+- A visible window you can watch (not your regular Chrome — it stays untouched)
+- The rkstack Chrome extension auto-loaded via `launchPersistentContext`
+- A golden shimmer line at the top of every page so you know which window is controlled
+- A sidebar agent process for chat commands
+
+The `connect` command auto-discovers the extension from the rkstack install
+directory. It always uses port **34567** so the extension can auto-connect.
+
+After connecting, print the full output to the user. Confirm you see
+`Mode: headed` in the output.
+
+If the output shows an error or the mode is not `headed`, run `$RKSTACK_BROWSE status` and
+share the output with the user before proceeding.
+
+## Step 2: Verify
+
+```bash
+$RKSTACK_BROWSE status
+```
+
+Confirm the output shows `Mode: headed`. The port should be **34567**.
+
+## Step 3: Guide the user to the Side Panel
+
+Use AskUserQuestion:
+
+> Chrome is launched with rkstack control. You should see Playwright's Chromium
+> (not your regular Chrome) with a golden shimmer line at the top of the page.
+>
+> The Side Panel extension should be auto-loaded. To open it:
+> 1. Look for the **puzzle piece icon** (Extensions) in the toolbar
+> 2. Click the **puzzle piece** → find **rkstack browse** → click the **pin icon**
+> 3. Click the pinned **rkstack icon** in the toolbar
+> 4. The Side Panel should open on the right showing a live activity feed
+>
+> **Port:** 34567 (auto-detected — the extension connects automatically).
+
+Options:
+- A) I can see the Side Panel — let's go!
+- B) I can see Chrome but can't find the extension
+- C) Something went wrong
+
+If B: Guide the user to check `chrome://extensions` and load unpacked if needed.
+
+If C: Run `$RKSTACK_BROWSE status`, re-run cleanup + connect if needed, try `$RKSTACK_BROWSE focus`.
+
+## Step 4: Demo
+
+After the user confirms the Side Panel is working:
+
+```bash
+$RKSTACK_BROWSE goto https://news.ycombinator.com
+```
+
+Wait 2 seconds, then:
+
+```bash
+$RKSTACK_BROWSE snapshot -i
+```
+
+Tell the user to check the Side Panel activity feed.
+
+## Step 5: Sidebar chat
+
+Tell the user about the chat tab — they can type natural language commands
+and a sidebar agent executes them in the browser.
+
+## Step 6: What's next
+
+Tell the user:
+
+> You're all set! Here's what you can do:
+>
+> **Watch Claude work:** Run any browse-dependent skill (`/qa`, `/design-review`,
+> `/benchmark`) and watch every action in the visible Chrome + Side Panel feed.
+>
+> **Control directly:** Sidebar chat, or `$RKSTACK_BROWSE` commands.
+>
+> **Window management:** `$RKSTACK_BROWSE focus` (bring to front),
+> `$RKSTACK_BROWSE disconnect` (return to headless).
