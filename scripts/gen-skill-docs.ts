@@ -139,6 +139,10 @@ const SKILL_REFS: Record<string, string[]> = {
     'skills.md', 'hooks.md', 'hooks-guide.md', 'sub-agents.md',
     'memory.md', 'permissions.md', 'best-practices.md',
   ],
+  'setup-project': [
+    'permissions.md', 'hooks.md', 'hooks-guide.md', 'settings.md',
+    'permission-modes.md', 'sandboxing.md', 'security.md',
+  ],
 };
 
 function copyRefs() {
