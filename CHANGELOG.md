@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.1] - 2026-03-29
+
+Detection timestamps now show your local time instead of UTC. The `detectedAt` field in `.rkstack/settings.json` uses your timezone offset (e.g. `+03:00`) so you can tell at a glance when detection last ran.
+
 ## [0.8.0] - 2026-03-29
 
 Protect any project from destructive AI operations with one command, and stop wasting 200ms on SCC every time a skill loads.

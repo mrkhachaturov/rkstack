@@ -19,6 +19,18 @@ export interface DetectionResult {
   detectedAt: string;
 }
 
+/** ISO 8601 timestamp in the user's local timezone (e.g. "2026-03-29T21:24:32+03:00") */
+function localISOString(): string {
+  const d = new Date();
+  const off = d.getTimezoneOffset(); // minutes, negative = east of UTC
+  const sign = off <= 0 ? '+' : '-';
+  const absOff = Math.abs(off);
+  const hh = String(Math.floor(absOff / 60)).padStart(2, '0');
+  const mm = String(absOff % 60).padStart(2, '0');
+  const local = new Date(d.getTime() - off * 60_000);
+  return local.toISOString().replace('Z', `${sign}${hh}:${mm}`);
+}
+
 /** Map SCC language names to stack keys. Returns null for non-code languages to skip. */
 const LANG_MAP: Record<string, string | null> = {
   'TypeScript': 'typescript',
@@ -258,7 +270,7 @@ export function run(args: string[]): void {
     repoMode,
     totalFiles,
     totalCode,
-    detectedAt: new Date().toISOString(),
+    detectedAt: localISOString(),
   };
 
   writeDetectionCache(projectRoot, detection);
