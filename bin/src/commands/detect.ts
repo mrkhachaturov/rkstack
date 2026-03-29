@@ -88,3 +88,61 @@ export function parseSccOutput(output: string): Pick<DetectionResult, 'langs' | 
 
   return { langs, totalFiles, totalCode };
 }
+
+/** Classify project type from parsed language data. */
+export function classifyProjectType(
+  langs: Record<string, LangInfo>,
+  hasWebConfig: boolean,
+): string {
+  const hasTs = 'ts' in langs;
+  const hasJs = 'js' in langs;
+  const hasCss = 'css' in langs || 'html' in langs;
+  const hasPy = 'py' in langs;
+  const hasGo = 'go' in langs;
+  const hasHcl = 'hcl' in langs;
+  const hasShell = 'shell' in langs;
+
+  if (hasTs || hasJs) {
+    return (hasCss || hasWebConfig) ? 'web' : 'node';
+  }
+  if (hasPy) return 'python';
+  if (hasGo) return 'go';
+  if (hasHcl) return 'infra';
+  if (hasShell) return 'devops';
+  return 'general';
+}
+
+/** Detect tooling by checking for marker files. */
+export function detectTools(fileExists: (path: string) => boolean): Record<string, boolean> {
+  return {
+    docker: fileExists('Dockerfile'),
+    terraform: fileExists('main.tf') || fileExists('terraform'),
+    ansible: fileExists('ansible') || fileExists('ansible.cfg'),
+    compose: fileExists('docker-compose.yml') || fileExists('docker-compose.yaml') ||
+             fileExists('compose.yml') || fileExists('compose.yaml'),
+    just: fileExists('justfile') || fileExists('Justfile'),
+    mise: fileExists('.mise.toml') || fileExists('mise.toml'),
+  };
+}
+
+/** Detect services (Supabase, etc.). */
+export function detectServices(
+  fileExists: (path: string) => boolean,
+  fileContains: (path: string, pattern: string) => boolean,
+): Record<string, boolean> {
+  const supabase = fileExists('supabase') ||
+    (fileExists('.mcp.json') && fileContains('.mcp.json', 'supabase'));
+  return { supabase };
+}
+
+/** Check for web framework config files. */
+export function hasWebFrameworkConfig(fileExists: (path: string) => boolean): boolean {
+  const configs = [
+    'next.config.js', 'next.config.ts', 'next.config.mjs',
+    'vite.config.js', 'vite.config.ts', 'vite.config.mjs',
+    'nuxt.config.js', 'nuxt.config.ts',
+    'svelte.config.js', 'svelte.config.ts',
+    'angular.json',
+  ];
+  return configs.some(f => fileExists(f));
+}

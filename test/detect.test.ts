@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { parseSccOutput, type LangInfo } from '../bin/src/commands/detect';
+import { parseSccOutput, classifyProjectType, detectTools, detectServices, hasWebFrameworkConfig, type LangInfo } from '../bin/src/commands/detect';
 
 const SAMPLE_SCC = `─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 Language                              Files     Lines   Blanks  Comments     Code Complexity Complexity/Lines
@@ -54,5 +54,104 @@ describe('parseSccOutput', () => {
     expect('markdown' in result.langs).toBe(false);
     expect('json' in result.langs).toBe(false);
     expect('license' in result.langs).toBe(false);
+  });
+});
+
+describe('classifyProjectType', () => {
+  test('TS + CSS = web', () => {
+    const langs = { ts: { files: 10, code: 1000, complexity: 50 }, css: { files: 3, code: 200, complexity: 0 } };
+    expect(classifyProjectType(langs, false)).toBe('web');
+  });
+
+  test('TS + web config = web', () => {
+    const langs = { ts: { files: 10, code: 1000, complexity: 50 } };
+    expect(classifyProjectType(langs, true)).toBe('web');
+  });
+
+  test('TS only = node', () => {
+    const langs = { ts: { files: 10, code: 1000, complexity: 50 } };
+    expect(classifyProjectType(langs, false)).toBe('node');
+  });
+
+  test('JS only = node', () => {
+    const langs = { js: { files: 5, code: 500, complexity: 20 } };
+    expect(classifyProjectType(langs, false)).toBe('node');
+  });
+
+  test('Python = python', () => {
+    const langs = { py: { files: 10, code: 2000, complexity: 100 } };
+    expect(classifyProjectType(langs, false)).toBe('python');
+  });
+
+  test('Go = go', () => {
+    const langs = { go: { files: 5, code: 1000, complexity: 50 } };
+    expect(classifyProjectType(langs, false)).toBe('go');
+  });
+
+  test('HCL = infra', () => {
+    const langs = { hcl: { files: 10, code: 500, complexity: 0 } };
+    expect(classifyProjectType(langs, false)).toBe('infra');
+  });
+
+  test('Shell only = devops', () => {
+    const langs = { shell: { files: 5, code: 200, complexity: 30 } };
+    expect(classifyProjectType(langs, false)).toBe('devops');
+  });
+
+  test('empty = general', () => {
+    expect(classifyProjectType({}, false)).toBe('general');
+  });
+});
+
+describe('detectTools', () => {
+  test('detects docker when Dockerfile exists', () => {
+    const tools = detectTools((p) => p === 'Dockerfile');
+    expect(tools.docker).toBe(true);
+    expect(tools.terraform).toBe(false);
+  });
+
+  test('detects compose variants', () => {
+    const tools = detectTools((p) => p === 'compose.yaml');
+    expect(tools.compose).toBe(true);
+  });
+
+  test('detects just and mise', () => {
+    const tools = detectTools((p) => p === 'justfile' || p === '.mise.toml');
+    expect(tools.just).toBe(true);
+    expect(tools.mise).toBe(true);
+  });
+});
+
+describe('detectServices', () => {
+  test('detects supabase directory', () => {
+    const services = detectServices((p) => p === 'supabase', () => false);
+    expect(services.supabase).toBe(true);
+  });
+
+  test('detects supabase in .mcp.json', () => {
+    const services = detectServices(
+      (p) => p === '.mcp.json',
+      (p, pattern) => p === '.mcp.json' && pattern === 'supabase',
+    );
+    expect(services.supabase).toBe(true);
+  });
+
+  test('no supabase when nothing matches', () => {
+    const services = detectServices(() => false, () => false);
+    expect(services.supabase).toBe(false);
+  });
+});
+
+describe('hasWebFrameworkConfig', () => {
+  test('detects next.config.ts', () => {
+    expect(hasWebFrameworkConfig((p) => p === 'next.config.ts')).toBe(true);
+  });
+
+  test('detects vite.config.js', () => {
+    expect(hasWebFrameworkConfig((p) => p === 'vite.config.js')).toBe(true);
+  });
+
+  test('no web config when nothing matches', () => {
+    expect(hasWebFrameworkConfig(() => false)).toBe(false);
   });
 });
