@@ -1,0 +1,13 @@
+{
+  "description": "YAML lint after ansible edits, vault file protection",
+  "detect": "dir:ansible/ OR file:ansible.cfg",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/post-edit.sh" }]
+      }
+    ]
+  },
+  "script": "post-edit.sh"
+}

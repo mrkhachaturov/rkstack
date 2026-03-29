@@ -1,0 +1,13 @@
+{
+  "description": "Guard kubectl delete on Kubernetes resources",
+  "detect": "file:*.yaml AND content:kind:",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/guard-kubernetes.sh" }]
+      }
+    ]
+  },
+  "script": "guard-kubernetes.sh"
+}

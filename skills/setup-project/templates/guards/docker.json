@@ -1,0 +1,13 @@
+{
+  "description": "Guard destructive Docker operations",
+  "detect": "file:Dockerfile OR file:compose.yml OR file:docker-compose.yml",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/guard-docker.sh" }]
+      }
+    ]
+  },
+  "script": "guard-docker.sh"
+}

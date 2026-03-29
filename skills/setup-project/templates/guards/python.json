@@ -1,0 +1,13 @@
+{
+  "description": "Guard dangerous Python patterns (eval/exec in commands)",
+  "detect": "PROJECT_TYPE=python",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/guard-python.sh" }]
+      }
+    ]
+  },
+  "script": "guard-python.sh"
+}
