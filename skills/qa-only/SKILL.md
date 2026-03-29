@@ -210,6 +210,7 @@ Before falling back to git diff heuristics, check for richer test plan sources:
 
 1. **Prior QA reports:** Check `.rkstack/qa-reports/` for recent reports for this repo
    ```bash
+   setopt +o nomatch 2>/dev/null || true  # zsh compat
    ls -t .rkstack/qa-reports/qa-report-*.md 2>/dev/null | head -1
    ```
 2. **Conversation context:** Check if a prior review skill produced test plan output in this conversation

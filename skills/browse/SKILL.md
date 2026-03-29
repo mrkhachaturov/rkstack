@@ -137,11 +137,14 @@ $B is visible ".main-content"    # key elements present?
 
 ### 2. Test a user flow
 
+> **Credential safety:** Use environment variables for test credentials.
+> Set them before running: `export TEST_EMAIL="..." TEST_PASSWORD="..."`
+
 ```bash
 $B goto https://app.com/login
 $B snapshot -i                   # see all interactive elements
-$B fill @e3 "user@test.com"
-$B fill @e4 "password"
+$B fill @e3 "$TEST_EMAIL"
+$B fill @e4 "$TEST_PASSWORD"
 $B click @e5                     # submit
 $B snapshot -D                   # diff: what changed after submit?
 $B is visible ".dashboard"       # success state present?

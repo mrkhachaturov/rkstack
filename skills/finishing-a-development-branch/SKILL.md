@@ -246,6 +246,7 @@ Read the test command from CLAUDE.md (look for a `## Testing` section). If no te
 # Check CLAUDE.md for test command
 grep -A 3 "^## Testing" CLAUDE.md 2>/dev/null | head -5
 # Detect test infrastructure
+setopt +o nomatch 2>/dev/null || true  # zsh compat
 ls jest.config.* vitest.config.* playwright.config.* .rspec pytest.ini setup.py Cargo.toml go.mod 2>/dev/null
 ls package.json Gemfile pyproject.toml 2>/dev/null
 ```
@@ -542,10 +543,26 @@ ls CHANGELOG.md 2>/dev/null
    head -20 CHANGELOG.md
    ```
 
-2. Auto-generate an entry from ALL commits on the branch:
-   - Use `git log <base>..HEAD --oneline` to see every commit being shipped
-   - Use `git diff <base>...HEAD` to understand the full scope of changes
-   - The entry must cover ALL changes, not just recent ones
+2. **Enumerate every commit on the branch:**
+   ```bash
+   git log <base>..HEAD --oneline
+   ```
+   Copy the full list. Count the commits. You will use this as a checklist.
+
+3. **Read the full diff** to understand what each commit actually changed:
+   ```bash
+   git diff <base>...HEAD
+   ```
+
+4. **Group commits by theme** before writing anything. Common themes:
+   - New features / capabilities
+   - Bug fixes
+   - Performance improvements
+   - Dead code removal / cleanup
+   - Infrastructure / tooling / tests
+   - Refactoring
+
+5. **Write the CHANGELOG entry** covering ALL groups:
    - Write for **users**, not contributors: describe what changed in plain language
    - Apply **humanizer** constraints — CHANGELOG entries and PR descriptions are human-facing prose
    - Categorize into applicable sections:
@@ -555,6 +572,11 @@ ls CHANGELOG.md 2>/dev/null
      - `### Removed` -- removed features
    - Format: `## [Unreleased] - YYYY-MM-DD` (or match the project's existing format)
    - Insert after the file header, before existing entries
+
+6. **Cross-check:** Compare your CHANGELOG entry against the commit list from step 2.
+   Every commit must map to at least one bullet point. If any commit is unrepresented,
+   add it now. If the branch has N commits spanning K themes, the CHANGELOG must
+   reflect all K themes.
 
 3. Commit the CHANGELOG update:
    ```bash

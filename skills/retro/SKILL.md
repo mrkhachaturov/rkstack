@@ -379,6 +379,7 @@ For each contributor (including the current user), compute:
 Before saving the new snapshot, check for prior retro history:
 
 ```bash
+setopt +o nomatch 2>/dev/null || true  # zsh compat
 ls -t .context/retros/*.json 2>/dev/null
 ```
 
@@ -407,6 +408,7 @@ mkdir -p .context/retros
 
 Determine the next sequence number for today:
 ```bash
+setopt +o nomatch 2>/dev/null || true  # zsh compat
 today=$(date +%Y-%m-%d)
 existing=$(ls .context/retros/${today}-*.json 2>/dev/null | wc -l | tr -d ' ')
 next=$((existing + 1))
