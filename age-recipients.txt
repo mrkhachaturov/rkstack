@@ -1,0 +1,3 @@
+# age recipients — one public key per line
+# Share this file in git. Share the private key out of band.
+age1gdesg3zattge86vdt78c8k0nhym5u3jvnvy2x7lpv8vcaa3qqerssajus8

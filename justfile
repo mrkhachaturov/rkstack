@@ -62,6 +62,16 @@ upstream-bump NAME:
     echo "Run 'git add $REPO && git commit' to pin the new version"
   fi
 
+[group("setup")]
+[doc("Configure age encryption for docs/rkstack/ (opt-in, per project)")]
+setup-age:
+  bash scripts/setup-age-encryption.sh
+
+[group("check")]
+[doc("Verify docs are encrypted if age-recipients.txt exists")]
+check-age:
+  bash scripts/check-age-encryption.sh
+
 [group("build")]
 [doc("Compile the rkstack binary for the current platform")]
 build-bin:
