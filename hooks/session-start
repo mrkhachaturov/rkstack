@@ -141,6 +141,28 @@ escape_for_json() {
 
 using_rkstack_escaped=$(escape_for_json "$using_rkstack_content")
 
+# === Setup-project state check ===
+SETUP_SUGGESTION=""
+RKSTACK_SETTINGS=".rkstack/settings.json"
+_PLUGIN_VERSION=$(cat "${PLUGIN_ROOT}/VERSION" 2>/dev/null || echo "")
+if [ -f "$RKSTACK_SETTINGS" ]; then
+  SETUP_VERSION=$(python3 -c "
+import json, sys
+try:
+  d = json.load(open('$RKSTACK_SETTINGS'))
+  print(d.get('meta', {}).get('setupVersion', ''))
+except:
+  print('')
+" 2>/dev/null || echo "")
+  if [ -n "$_PLUGIN_VERSION" ] && [ -z "$SETUP_VERSION" ]; then
+    SETUP_SUGGESTION="SETUP_MISSING: .rkstack/settings.json exists but has no setup metadata. Run /setup-project to configure project-level protection."
+  elif [ -n "$_PLUGIN_VERSION" ] && [ -n "$SETUP_VERSION" ] && [ "$SETUP_VERSION" != "$_PLUGIN_VERSION" ]; then
+    SETUP_SUGGESTION="SETUP_STALE: Project safety config is from v${SETUP_VERSION}, rkstack is now v${_PLUGIN_VERSION}. Run /setup-project --update to get new guards and rules."
+  fi
+else
+  SETUP_SUGGESTION="SETUP_MISSING: This project has no safety guards configured. Run /setup-project to set up project-level protection."
+fi
+
 # Build session context — prepend bootstrap results if available
 bootstrap_prefix=""
 if [ -n "$RKSTACK_BOOTSTRAP_RESULT" ]; then
@@ -157,6 +179,10 @@ if [ -n "$PROJECT_TYPE_RESULT" ]; then
 fi
 if [ "$HAS_SUPABASE" = "yes" ]; then
   bootstrap_prefix="${bootstrap_prefix}HAS_SUPABASE=yes\n"
+fi
+if [ -n "$SETUP_SUGGESTION" ]; then
+  setup_escaped=$(escape_for_json "$SETUP_SUGGESTION")
+  bootstrap_prefix="${bootstrap_prefix}${setup_escaped}\n"
 fi
 if [ -n "$bootstrap_prefix" ]; then
   bootstrap_prefix="${bootstrap_prefix}\n"
