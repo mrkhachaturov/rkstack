@@ -213,7 +213,7 @@ If anything looks wrong, fix it BEFORE claiming completion.
 
 ## Web project verification additions
 
-If `PROJECT_TYPE` is `web` (from session context):
+If `flowType` is `web` (from detection cache):
 
 In addition to the test suite, run visual verification:
 
@@ -227,7 +227,7 @@ In addition to the test suite, run visual verification:
 
 5. **Supabase data check.** If `HAS_SUPABASE=yes`, use Supabase MCP tools to verify that any data mutations from this feature are correctly reflected in the database. Check that new tables/columns have appropriate RLS policies.
 
-If `PROJECT_TYPE` is not `web`, skip this section entirely.
+If `flowType` is not `web`, skip this section entirely.
 
 ---
 

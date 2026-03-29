@@ -1,6 +1,6 @@
 {
   "description": "Guard dangerous Python patterns (eval/exec in commands)",
-  "detect": "PROJECT_TYPE=python",
+  "detect": "stack.python",
   "hooks": {
     "PreToolUse": [
       {

@@ -44,7 +44,7 @@ echo "CLAUDE_MD: $_HAS_CLAUDE_MD"
 ```
 
 Use the detection cache and preamble output to adapt your behavior:
-- **TypeScript/JavaScript** — see `detection.projectType` (web or node). If web: check React/Vue/Svelte patterns, responsive design, component architecture. If node: CLI tools, MCP servers, backend scripts.
+- **TypeScript/JavaScript** — see `detection.flowType` (web or default). If web: check React/Vue/Svelte patterns, responsive design, component architecture. If default: CLI tools, MCP servers, backend scripts.
 - **Python** — backend/ML/scripts. Check PEP8 conventions, pytest for testing.
 - **Go** — backend/infra. Check error handling patterns, go test.
 - **Rust** — systems. Check ownership patterns, cargo test.
@@ -56,7 +56,7 @@ Use the detection cache and preamble output to adapt your behavior:
 - **justfile** — task runner present. Use `just` commands instead of raw shell.
 - **mise** — tool version manager. Versions are pinned — don't suggest global installs.
 - **CLAUDE.md exists** — read it for project-specific commands and conventions.
-- Read `detection.langs` for project scale (files, lines of code, complexity per language).
+- Read `detection.stack` for what's in the project and `detection.stats` for scale (files, code, complexity).
 - Read `detection.repoMode` for solo vs collaborative.
 - Read `detection.services` for Supabase and other service integrations.
 
@@ -136,9 +136,9 @@ fi
 If `.rkstack/settings.json` does not exist, tell the user: "Detection cache not found. Please start a new session so rkstack can detect your project stack, then run `/setup-project` again." and stop.
 
 Parse the detection cache JSON. The relevant fields are:
-- `detection.langs` — map of language keys (e.g., `ts`, `py`, `go`, `hcl`) to stats
-- `detection.tools` — map of tool names (e.g., `docker`, `terraform`, `ansible`, `compose`) to booleans
-- `detection.projectType` — high-level classification (web, node, python, go, infra, devops, general)
+- `detection.stack` — flat boolean map of what's in the project (e.g., `typescript`, `python`, `terraform`, `docker`)
+- `detection.stats` — SCC numbers per stack item (files, code, complexity)
+- `detection.flowType` — `web` or `default`
 
 Also check the existing project setup state:
 
@@ -193,13 +193,13 @@ Using the detection cache from Step 0, determine which guard templates are relev
 
 | Template | Condition (from detection cache) |
 |----------|-----------|
-| terraform | `detection.tools.terraform` is true OR `hcl` in `detection.langs` |
+| terraform | `detection.stack.terraform` is true |
 | secrets | `.env` files or `secrets/` directory exists (check filesystem) |
-| docker | `detection.tools.docker` is true OR `detection.tools.compose` is true |
+| docker | `detection.stack.docker` is true OR `detection.stack.compose` is true |
 | kubernetes | files matching `*.yaml` with `kind:` content exist (check filesystem) |
-| python | `py` in `detection.langs` |
-| node | `ts` in `detection.langs` OR `js` in `detection.langs` |
-| ansible | `detection.tools.ansible` is true |
+| python | `detection.stack.python` is true |
+| node | `detection.stack.typescript` is true OR `detection.stack.javascript` is true |
+| ansible | `detection.stack.ansible` is true |
 
 For the filesystem checks (secrets, kubernetes), run:
 

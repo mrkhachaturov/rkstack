@@ -64,7 +64,7 @@ This structure informs the task decomposition. Each task should produce self-con
 
 ## Web project plan additions
 
-If `PROJECT_TYPE` is `web` (from session context) and a task involves UI:
+If `flowType` is `web` (from detection cache) and a task involves UI:
 
 1. **Visual verification step.** Every task that creates or modifies a visible component gets an explicit verification step at the end:
 
@@ -76,7 +76,7 @@ If `PROJECT_TYPE` is `web` (from session context) and a task involves UI:
 
 2. **Design reference.** If the spec includes a design reference (mockup, DESIGN.md section), include it in the task description so the implementer can compare their result against the intended design.
 
-If `PROJECT_TYPE` is not `web`, skip this section entirely.
+If `flowType` is not `web`, skip this section entirely.
 
 ## Plan Document Header
 

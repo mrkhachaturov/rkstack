@@ -175,7 +175,7 @@ After all tasks are executed (or all non-blocked tasks are done):
 
 ## Web project execution additions
 
-If `PROJECT_TYPE` is `web` (from session context):
+If `flowType` is `web` (from detection cache):
 
 1. **After implementing a UI task**, before marking it done, run visual verification:
    - Ensure dev server is running (see `skills/browse/dev-server-discovery.md`)
@@ -190,7 +190,7 @@ If `PROJECT_TYPE` is `web` (from session context):
 
 4. **If `HAS_SUPABASE=yes`** and the task involves data mutations, verify via Supabase MCP that the data was written correctly. This catches cases where the UI shows success but the backend silently failed.
 
-If `PROJECT_TYPE` is not `web`, skip this section entirely.
+If `flowType` is not `web`, skip this section entirely.
 
 ## Rules
 

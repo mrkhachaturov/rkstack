@@ -38,7 +38,7 @@ echo "CLAUDE_MD: $_HAS_CLAUDE_MD"
 ```
 
 Use the detection cache and preamble output to adapt your behavior:
-- **TypeScript/JavaScript** — see `detection.projectType` (web or node). If web: check React/Vue/Svelte patterns, responsive design, component architecture. If node: CLI tools, MCP servers, backend scripts.
+- **TypeScript/JavaScript** — see `detection.flowType` (web or default). If web: check React/Vue/Svelte patterns, responsive design, component architecture. If default: CLI tools, MCP servers, backend scripts.
 - **Python** — backend/ML/scripts. Check PEP8 conventions, pytest for testing.
 - **Go** — backend/infra. Check error handling patterns, go test.
 - **Rust** — systems. Check ownership patterns, cargo test.
@@ -50,7 +50,7 @@ Use the detection cache and preamble output to adapt your behavior:
 - **justfile** — task runner present. Use `just` commands instead of raw shell.
 - **mise** — tool version manager. Versions are pinned — don't suggest global installs.
 - **CLAUDE.md exists** — read it for project-specific commands and conventions.
-- Read `detection.langs` for project scale (files, lines of code, complexity per language).
+- Read `detection.stack` for what's in the project and `detection.stats` for scale (files, code, complexity).
 - Read `detection.repoMode` for solo vs collaborative.
 - Read `detection.services` for Supabase and other service integrations.
 
@@ -220,13 +220,13 @@ Use the preamble output to understand the tech stack. Adapt your questions to th
 
 ## Web project design additions
 
-If `PROJECT_TYPE` is `web` (from session context):
+If `flowType` is `web` (from detection cache):
 
 1. **Design system check.** If the project has no `DESIGN.md`, mention it as a recommendation: "This project has no documented design system. Consider running `/design-consultation` to establish one before implementing UI features." Do not force this — just mention it once.
 
 2. **Visual design review.** If the feature involves UI changes, invoke the `/plan-design-review` skill after the user approves the design but before writing the spec. This rates visual design dimensions (layout, typography, spacing, responsiveness) and suggests improvements to the design.
 
-If `PROJECT_TYPE` is not `web`, skip this section entirely.
+If `flowType` is not `web`, skip this section entirely.
 
 ---
 

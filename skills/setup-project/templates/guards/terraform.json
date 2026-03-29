@@ -1,6 +1,6 @@
 {
   "description": "Block direct tofu/terraform commands (require project wrapper)",
-  "detect": "PROJECT_TYPE=infra OR file:*.tf",
+  "detect": "stack.terraform",
   "hooks": {
     "PreToolUse": [
       {

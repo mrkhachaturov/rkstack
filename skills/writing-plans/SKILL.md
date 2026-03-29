@@ -40,7 +40,7 @@ echo "CLAUDE_MD: $_HAS_CLAUDE_MD"
 ```
 
 Use the detection cache and preamble output to adapt your behavior:
-- **TypeScript/JavaScript** — see `detection.projectType` (web or node). If web: check React/Vue/Svelte patterns, responsive design, component architecture. If node: CLI tools, MCP servers, backend scripts.
+- **TypeScript/JavaScript** — see `detection.flowType` (web or default). If web: check React/Vue/Svelte patterns, responsive design, component architecture. If default: CLI tools, MCP servers, backend scripts.
 - **Python** — backend/ML/scripts. Check PEP8 conventions, pytest for testing.
 - **Go** — backend/infra. Check error handling patterns, go test.
 - **Rust** — systems. Check ownership patterns, cargo test.
@@ -52,7 +52,7 @@ Use the detection cache and preamble output to adapt your behavior:
 - **justfile** — task runner present. Use `just` commands instead of raw shell.
 - **mise** — tool version manager. Versions are pinned — don't suggest global installs.
 - **CLAUDE.md exists** — read it for project-specific commands and conventions.
-- Read `detection.langs` for project scale (files, lines of code, complexity per language).
+- Read `detection.stack` for what's in the project and `detection.stats` for scale (files, code, complexity).
 - Read `detection.repoMode` for solo vs collaborative.
 - Read `detection.services` for Supabase and other service integrations.
 
@@ -150,7 +150,7 @@ This structure informs the task decomposition. Each task should produce self-con
 
 ## Web project plan additions
 
-If `PROJECT_TYPE` is `web` (from session context) and a task involves UI:
+If `flowType` is `web` (from detection cache) and a task involves UI:
 
 1. **Visual verification step.** Every task that creates or modifies a visible component gets an explicit verification step at the end:
 
@@ -162,7 +162,7 @@ If `PROJECT_TYPE` is `web` (from session context) and a task involves UI:
 
 2. **Design reference.** If the spec includes a design reference (mockup, DESIGN.md section), include it in the task description so the implementer can compare their result against the intended design.
 
-If `PROJECT_TYPE` is not `web`, skip this section entirely.
+If `flowType` is not `web`, skip this section entirely.
 
 ## Plan Document Header
 

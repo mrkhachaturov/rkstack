@@ -1,6 +1,6 @@
 {
   "description": "Guard npm publish, protect lockfiles from full overwrite",
-  "detect": "PROJECT_TYPE=node OR PROJECT_TYPE=web",
+  "detect": "stack.typescript OR stack.javascript",
   "hooks": {
     "PreToolUse": [
       {

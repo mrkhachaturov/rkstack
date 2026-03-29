@@ -50,9 +50,9 @@ fi
 If `.rkstack/settings.json` does not exist, tell the user: "Detection cache not found. Please start a new session so rkstack can detect your project stack, then run `/setup-project` again." and stop.
 
 Parse the detection cache JSON. The relevant fields are:
-- `detection.langs` — map of language keys (e.g., `ts`, `py`, `go`, `hcl`) to stats
-- `detection.tools` — map of tool names (e.g., `docker`, `terraform`, `ansible`, `compose`) to booleans
-- `detection.projectType` — high-level classification (web, node, python, go, infra, devops, general)
+- `detection.stack` — flat boolean map of what's in the project (e.g., `typescript`, `python`, `terraform`, `docker`)
+- `detection.stats` — SCC numbers per stack item (files, code, complexity)
+- `detection.flowType` — `web` or `default`
 
 Also check the existing project setup state:
 
@@ -107,13 +107,13 @@ Using the detection cache from Step 0, determine which guard templates are relev
 
 | Template | Condition (from detection cache) |
 |----------|-----------|
-| terraform | `detection.tools.terraform` is true OR `hcl` in `detection.langs` |
+| terraform | `detection.stack.terraform` is true |
 | secrets | `.env` files or `secrets/` directory exists (check filesystem) |
-| docker | `detection.tools.docker` is true OR `detection.tools.compose` is true |
+| docker | `detection.stack.docker` is true OR `detection.stack.compose` is true |
 | kubernetes | files matching `*.yaml` with `kind:` content exist (check filesystem) |
-| python | `py` in `detection.langs` |
-| node | `ts` in `detection.langs` OR `js` in `detection.langs` |
-| ansible | `detection.tools.ansible` is true |
+| python | `detection.stack.python` is true |
+| node | `detection.stack.typescript` is true OR `detection.stack.javascript` is true |
+| ansible | `detection.stack.ansible` is true |
 
 For the filesystem checks (secrets, kubernetes), run:
 
