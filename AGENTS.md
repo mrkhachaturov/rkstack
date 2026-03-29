@@ -37,6 +37,7 @@ Skills live in `skills/`. Invoke them by name (e.g., `/brainstorming`).
 
 | Skill | What it does |
 |-------|-------------|
+| `/setup-project` | Configure project-level safety guards and working rules. Analyzes your stack, generates hooks and rules. |
 | `/careful` | Warn before destructive commands (rm -rf, DROP TABLE, force-push). |
 | `/freeze` | Lock edits to one directory. Hard block, not just a warning. |
 | `/guard` | Activate both careful + freeze at once. |
@@ -57,7 +58,7 @@ just build         # generate SKILL.md files from templates
 just check         # verify generated files are fresh
 just skill-check   # health dashboard for all skills
 just dev           # watch mode: auto-regen on change
-just setup         # install tools via mise
+just install       # install tools via mise
 ```
 
 ## Key Conventions
