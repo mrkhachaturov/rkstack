@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.0] - 2026-03-29
+
+Protect any project from destructive AI operations with one command, and stop wasting 200ms on SCC every time a skill loads.
+
+- **`/setup-project` skill.** Run it once in any project. It reads your stack from the detection cache, offers matching guard hooks (destructive commands, terraform, secrets, docker, kubernetes, python, ansible) and best-practice rules (terraform, node, python, docker, ansible, secrets, context hygiene). Everything installs to `.claude/` with proper `settings.json` registration. Guards use "ask" mode so you can always override.
+- **`rkstack detect` command.** SCC detection moved from the per-skill preamble into the CLI binary. Session-start calls it once, caches the full result (languages with file counts and complexity, tooling, services, repo mode) to `.rkstack/settings.json`. Skills read the cache instead of re-running SCC. Detection runs once per session, not once per skill.
+- **Stack-based detection.** The old `projectType` label (web/node/python/go/infra/devops/general) is gone. Detection now produces a flat `stack` map (typescript, python, terraform, docker, ansible, etc.) and a `flowType` (web or default). `/setup-project` matches guards and rules against the stack. Skills branch on `flowType`.
+- **Curated rule templates.** Rule templates ship with real best practices instead of `[GENERATED]` placeholders. Terraform safety rules, Python virtual environment conventions, Docker security practices, Ansible vault patterns, secrets rotation guidance. You get working rules out of the box, not AI-generated content.
+- **Session-start suggests `/setup-project`.** When a project has no safety guards, or when a new rkstack version ships new templates, session-start tells you.
+- **Smarter dual-review.** Codex reads spec and plan files directly from disk instead of receiving them pasted into the prompt. Shorter prompts, faster reviews.
+- **Guard auto-invocation fixed.** `/guard` no longer has `disable-model-invocation`. Claude auto-activates safety mode when it detects risky context.
+- **Modular justfile.** Commands split into `.just/skills.just`, `.just/upstream.just`, `.just/setup.just`. Top-level aliases (`just build`, `just check`) still work.
+- **`just upstream::bump-all`** bumps all upstream submodules and commits the pin in one command.
+- **Age encryption for docs.** Specs and plans in `docs/rkstack/` can be transparently encrypted with age. Git clean/smudge filters handle encryption on commit and decryption on checkout. Opt-in via `just setup::age`.
+
 ## [0.7.0] - 2026-03-29
 
 Upstream sync from gstack v0.12.2 to v0.13.4 -- ported the improvements that matter for rkstack, skipped gstack-specific features (voice directive, skill prefix, design binary).
