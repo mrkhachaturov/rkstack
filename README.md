@@ -1,8 +1,12 @@
-# RKstack
+<img src=".github/assets/RKstack.png" alt="RKstack" width="200" align="left">
+
+<br>
 
 > Engineering discipline system for AI coding agents.
 >
 > One plugin. Install once, adapts to your project.
+
+<br clear="left">
 
 [![Check](https://github.com/mrkhachaturov/rkstack/actions/workflows/check.yml/badge.svg)](https://github.com/mrkhachaturov/rkstack/actions/workflows/check.yml)
 [![Docs](https://github.com/mrkhachaturov/rkstack/actions/workflows/update-refs.yml/badge.svg)](https://github.com/mrkhachaturov/rkstack/actions/workflows/update-refs.yml)
