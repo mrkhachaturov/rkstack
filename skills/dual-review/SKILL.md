@@ -183,67 +183,43 @@ Run this loop for both embedded and standalone modes.
 
 Read `ARTIFACT_PATH` fully.
 
-**2. Build context for Codex**
+**2. Build the Codex prompt**
 
-Gather these files (skip any that don't exist):
+Codex runs with `-C <repo-root> -s read-only` and can read all project files. Tell it to read the files itself instead of pasting their contents.
 
-| Context | Source | Limit |
-|---------|--------|-------|
-| Project conventions | `CLAUDE.md` from repo root | Full file |
-| Repo description | `README.md` from repo root | First 50 lines |
-| Source files referenced in document | Scan document text for file paths (patterns like `src/`, `lib/`, `skills/`, `.ts`, `.py`, `.go`). For each, read the file. | Max 10 files, ~200 lines each |
-| Linked spec (plans only) | Path from `**Spec:**` header | Full file |
-
-**3. Build the Codex prompt**
-
-Read the appropriate prompt template:
+Read the appropriate prompt template for review criteria:
 - For specs: `skills/dual-review/spec-review-prompt.md`
 - For plans: `skills/dual-review/plan-review-prompt.md`
 
-Construct the full prompt by replacing the placeholder sections in the template with actual content gathered in step 2. Each template has clearly marked sections — replace each with the real content:
+For specs, construct this prompt:
+"Read and review the spec at `<ARTIFACT_PATH>`. Also read CLAUDE.md for project conventions and the first 50 lines of README.md for context. Read any source files the spec references.
 
-| Template placeholder | Replace with |
-|---------------------|-------------|
-| `[Full spec content inserted here]` | Full contents of the spec file |
-| `[Full plan content inserted here]` | Full contents of the plan file |
-| `[Linked spec content inserted here]` | Full contents of the spec linked in the plan header |
-| `[CLAUDE.md content inserted here, or "Not available" if missing]` | CLAUDE.md contents or "Not available" |
-| `[First 50 lines of README inserted here, or "Not available" if missing]` | README.md first 50 lines or "Not available" |
-| `[Source files referenced in the spec inserted here, or "No source files referenced"]` | Each referenced source file with its path as a header |
-| `[Source files the plan will touch, inserted here, or "No source files referenced"]` | Each referenced source file with its path as a header |
+<review criteria from spec-review-prompt.md>"
 
-**4. Call Codex**
+For plans, construct this prompt:
+"Read and review the plan at `<ARTIFACT_PATH>`. Also read the linked spec at `<SPEC_PATH>`. Read CLAUDE.md for project conventions. Read any source files the plan references.
 
-The assembled prompt is too large for a shell argument. Write it to a temp file and pass it to `codex exec`:
+<review criteria from plan-review-prompt.md>"
+
+**3. Call Codex**
+
+The prompt is short — no temp file needed:
 
 ```bash
-PROMPT_FILE=$(mktemp /tmp/dual-review-prompt-XXXXXX.md)
 STDERR_FILE=$(mktemp /tmp/dual-review-err-XXXXXX.txt)
-```
-
-Write the assembled prompt to `PROMPT_FILE` using the Write tool.
-
-Then run Codex with a 5-minute timeout:
-
-```bash
-codex exec "$(cat $PROMPT_FILE)" \
+codex exec "<assembled prompt>" \
   -C "$(git rev-parse --show-toplevel)" \
   -s read-only \
   -c 'model_reasoning_effort="medium"' \
   2>"$STDERR_FILE"
 ```
 
-Use `timeout: 300000` on the Bash tool call.
+Use `timeout: 300000` on the Bash tool call. Codex reads the actual files from disk.
 
-**Flags explained:**
-- `-C <dir>` — working directory (repo root, so Codex can read source files)
-- `-s read-only` — sandbox mode (Codex cannot modify files)
-- `-c 'model_reasoning_effort="medium"'` — sufficient for document review; no need for `xhigh`
-
-**After the call**, read stderr for diagnostics:
+After the call, read stderr:
 
 ```bash
-cat "$STDERR_FILE" 2>/dev/null; rm -f "$PROMPT_FILE" "$STDERR_FILE"
+cat "$STDERR_FILE" 2>/dev/null; rm -f "$STDERR_FILE"
 ```
 
 **Error handling:**
