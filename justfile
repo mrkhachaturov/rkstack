@@ -58,8 +58,9 @@ upstream-bump NAME:
   if [ "$OLD" = "$NEW" ]; then
     echo "{{ NAME }}: already at latest ($OLD)"
   else
-    echo "{{ NAME }}: bumped $OLD → $NEW"
-    echo "Run 'git add $REPO && git commit' to pin the new version"
+    git add "$REPO"
+    git commit -m "chore: bump {{ NAME }} submodule to latest ($NEW)"
+    echo "{{ NAME }}: pinned $OLD → $NEW"
   fi
 
 [group("setup")]
