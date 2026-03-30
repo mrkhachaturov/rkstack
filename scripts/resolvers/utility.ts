@@ -1,6 +1,24 @@
 import type { TemplateContext } from './types';
 
 /**
+ * Skill announcement line — tells the user which skill is active.
+ * Reads `announce-action` from frontmatter for the action phrase.
+ * Returns empty string if no announce-action is set.
+ */
+export function generateAnnounceAtStart(ctx: TemplateContext): string {
+  if (!ctx.announceAction) return '';
+  return `**Announce at start:** "I'm using the ${ctx.skillName} skill to ${ctx.announceAction}."`;
+}
+
+/**
+ * Spirit-over-letter principle — universal discipline anchor.
+ * Used by skills that enforce strict process (TDD, verification, debugging, humanizer).
+ */
+export function generateSpiritOverLetter(_ctx: TemplateContext): string {
+  return '**Violating the letter of the rules is violating the spirit of the rules.**';
+}
+
+/**
  * Co-author trailer for git commits — adapts to the target host.
  */
 export function generateCoAuthorTrailer(ctx: TemplateContext): string {

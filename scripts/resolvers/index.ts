@@ -1,6 +1,6 @@
 import type { Resolver } from './types';
 import { generatePreamble, generateTestFailureTriage } from './preamble';
-import { generateBaseBranchDetect, generateCoAuthorTrailer, generateQAMethodology } from './utility';
+import { generateAnnounceAtStart, generateSpiritOverLetter, generateBaseBranchDetect, generateCoAuthorTrailer, generateQAMethodology } from './utility';
 import { generateCommandReference, generateSnapshotFlags, generateBrowseSetup } from './browse';
 import { generateDesignMethodology, generateDesignHardRules } from './design';
 import { generateTestBootstrap, generateTestCoverageAuditShip, generateTestCoverageAuditReview } from './testing';
@@ -16,6 +16,8 @@ import { generateAdversarialStep, generatePlanCompletionAuditShip, generatePlanC
  * 3. Use {{PLACEHOLDER_NAME}} in any .tmpl file
  */
 export const RESOLVERS: Record<string, Resolver> = {
+  ANNOUNCE_AT_START: generateAnnounceAtStart,
+  SPIRIT_OVER_LETTER: generateSpiritOverLetter,
   PREAMBLE: generatePreamble,
   TEST_FAILURE_TRIAGE: generateTestFailureTriage,
   BASE_BRANCH_DETECT: generateBaseBranchDetect,

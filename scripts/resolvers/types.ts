@@ -44,6 +44,8 @@ export interface TemplateContext {
   paths: HostPaths;
   /** Preamble tier 1-4 (from frontmatter `preamble-tier:`) */
   preambleTier?: number;
+  /** Action phrase for skill announcement (from frontmatter `announce-action:`) */
+  announceAction?: string;
 }
 
 /** A placeholder resolver: takes context, returns the replacement string */

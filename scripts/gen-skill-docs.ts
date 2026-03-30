@@ -60,6 +60,12 @@ function extractPreambleTier(fm: string): number | undefined {
   return match ? parseInt(match[1], 10) : undefined;
 }
 
+/** Extract `announce-action:` from YAML frontmatter */
+function extractAnnounceAction(fm: string): string | undefined {
+  const match = fm.match(/^announce-action:\s*(.+)$/m);
+  return match ? match[1].trim() : undefined;
+}
+
 /** Extract `benefits-from:` list from YAML frontmatter */
 function extractBenefitsFrom(fm: string): string[] | undefined {
   // Inline: benefits-from: [a, b, c]
@@ -93,6 +99,7 @@ function processTemplate(tmplRel: string): string {
   const skillName = extractedName || path.basename(path.dirname(tmplPath));
   const preambleTier = extractPreambleTier(fm);
   const benefitsFrom = extractBenefitsFrom(fm);
+  const announceAction = extractAnnounceAction(fm);
 
   const ctx: TemplateContext = {
     skillName,
@@ -101,6 +108,7 @@ function processTemplate(tmplRel: string): string {
     host: HOST,
     paths: HOST_PATHS[HOST],
     preambleTier,
+    announceAction,
   };
 
   // Resolve placeholders — fail on unknown
