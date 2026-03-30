@@ -1,6 +1,6 @@
 import type { Resolver } from './types';
 import { generatePreamble, generateTestFailureTriage } from './preamble';
-import { generateBaseBranchDetect, generateCoAuthorTrailer } from './utility';
+import { generateBaseBranchDetect, generateCoAuthorTrailer, generateQAMethodology } from './utility';
 import { generateCommandReference, generateSnapshotFlags, generateBrowseSetup } from './browse';
 import { generateDesignMethodology, generateDesignHardRules } from './design';
 
@@ -23,4 +23,5 @@ export const RESOLVERS: Record<string, Resolver> = {
   BROWSE_SETUP: generateBrowseSetup,
   DESIGN_METHODOLOGY: generateDesignMethodology,
   DESIGN_HARD_RULES: generateDesignHardRules,
+  QA_METHODOLOGY: generateQAMethodology,
 };

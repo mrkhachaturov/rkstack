@@ -328,6 +328,7 @@ Before falling back to git diff heuristics, check for richer test plan sources:
 
 ---
 
+
 ## Phases 1-6: QA Baseline
 
 ## Modes
@@ -338,10 +339,9 @@ This is the **primary mode** for developers verifying their work. When the user 
 
 1. **Analyze the branch diff** to understand what changed:
    ```bash
-   git diff <base>...HEAD --name-only
-   git log <base>..HEAD --oneline
+   git diff main...HEAD --name-only
+   git log main..HEAD --oneline
    ```
-   (Use the base branch detected in Step 0.)
 
 2. **Identify affected pages/routes** from the changed files:
    - Controller/route files -> which URL paths they serve
@@ -396,7 +396,8 @@ Run full mode, then load `baseline.json` from a previous run. Diff: which issues
 
 1. Find browse binary (see Setup above)
 2. Create output directories
-3. Start timer for duration tracking
+3. Copy report template from `qa/templates/qa-report-template.md` to output dir
+4. Start timer for duration tracking
 
 ### Phase 2: Authenticate (if needed)
 
@@ -428,12 +429,10 @@ Get a map of the application:
 
 ```bash
 $RKSTACK_BROWSE goto <target-url>
-$RKSTACK_BROWSE snapshot -i -a -o ".rkstack/qa-reports/screenshots/initial.png"
+$RKSTACK_BROWSE snapshot -i -a -o "$REPORT_DIR/screenshots/initial.png"
 $RKSTACK_BROWSE links                          # map navigation structure
 $RKSTACK_BROWSE console --errors               # any errors on landing?
 ```
-
-After the screenshot, use the Read tool on the PNG to show the user what the page looks like.
 
 **Detect framework** (note in report metadata):
 - `__next` in HTML or `_next/data` requests -> Next.js
@@ -449,34 +448,22 @@ Visit pages systematically. At each page:
 
 ```bash
 $RKSTACK_BROWSE goto <page-url>
-$RKSTACK_BROWSE snapshot -i -a -o ".rkstack/qa-reports/screenshots/page-name.png"
+$RKSTACK_BROWSE snapshot -i -a -o "$REPORT_DIR/screenshots/page-name.png"
 $RKSTACK_BROWSE console --errors
 ```
 
-After each screenshot, use the Read tool on the PNG so the user can see the page.
-
-Then follow the **per-page exploration checklist**:
+Then follow the **per-page exploration checklist** (see `qa/references/issue-taxonomy.md`):
 
 1. **Visual scan** -- Look at the annotated screenshot for layout issues
 2. **Interactive elements** -- Click buttons, links, controls. Do they work?
-   ```bash
-   $RKSTACK_BROWSE click <@ref>
-   $RKSTACK_BROWSE snapshot -D
-   ```
 3. **Forms** -- Fill and submit. Test empty, invalid, edge cases
-   ```bash
-   $RKSTACK_BROWSE fill <@ref> "test value"
-   $RKSTACK_BROWSE click <submit-ref>
-   $RKSTACK_BROWSE snapshot -D
-   $RKSTACK_BROWSE console --errors
-   ```
 4. **Navigation** -- Check all paths in and out
 5. **States** -- Empty state, loading, error, overflow
 6. **Console** -- Any new JS errors after interactions?
 7. **Responsiveness** -- Check mobile viewport if relevant:
    ```bash
    $RKSTACK_BROWSE viewport 375x812
-   $RKSTACK_BROWSE screenshot ".rkstack/qa-reports/screenshots/page-mobile.png"
+   $RKSTACK_BROWSE screenshot "$REPORT_DIR/screenshots/page-mobile.png"
    $RKSTACK_BROWSE viewport 1280x720
    ```
 
@@ -498,9 +485,9 @@ Document each issue **immediately when found** -- don't batch them.
 5. Write repro steps referencing screenshots
 
 ```bash
-$RKSTACK_BROWSE screenshot ".rkstack/qa-reports/screenshots/issue-001-step-1.png"
+$RKSTACK_BROWSE screenshot "$REPORT_DIR/screenshots/issue-001-step-1.png"
 $RKSTACK_BROWSE click @e5
-$RKSTACK_BROWSE screenshot ".rkstack/qa-reports/screenshots/issue-001-result.png"
+$RKSTACK_BROWSE screenshot "$REPORT_DIR/screenshots/issue-001-result.png"
 $RKSTACK_BROWSE snapshot -D
 ```
 
@@ -509,10 +496,10 @@ $RKSTACK_BROWSE snapshot -D
 2. Describe what's wrong
 
 ```bash
-$RKSTACK_BROWSE snapshot -i -a -o ".rkstack/qa-reports/screenshots/issue-002.png"
+$RKSTACK_BROWSE snapshot -i -a -o "$REPORT_DIR/screenshots/issue-002.png"
 ```
 
-**Write each issue to the report immediately.**
+**Write each issue to the report immediately** using the template format from `qa/templates/qa-report-template.md`.
 
 ### Phase 6: Wrap Up
 
@@ -528,7 +515,7 @@ $RKSTACK_BROWSE snapshot -i -a -o ".rkstack/qa-reports/screenshots/issue-002.png
      "url": "<target>",
      "healthScore": N,
      "issues": [{ "id": "ISSUE-001", "title": "...", "severity": "...", "category": "..." }],
-     "categoryScores": { "console": N, "links": N, ... }
+     "categoryScores": { "console": N, "links": N }
    }
    ```
 
@@ -575,9 +562,7 @@ Minimum 0 per category.
 | Accessibility | 15% |
 
 ### Final Score
-`score = sum (category_score * weight)`
-
-Record baseline health score at end of Phase 6.
+`score = sum(category_score * weight)`
 
 ---
 
@@ -609,42 +594,22 @@ Record baseline health score at end of Phase 6.
 
 ---
 
-## Output Structure
-
-```
-.rkstack/qa-reports/
-├── qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
-├── screenshots/
-│   ├── initial.png                        # Landing page annotated screenshot
-│   ├── issue-001-step-1.png               # Per-issue evidence
-│   ├── issue-001-result.png
-│   ├── issue-001-before.png               # Before fix (if fixed)
-│   ├── issue-001-after.png                # After fix (if fixed)
-│   └── ...
-└── baseline.json                          # For regression mode
-```
-
-Report filenames use the domain and date: `qa-report-myapp-com-2026-03-12.md`
-
----
-
 ## Important Rules
 
 1. **Repro is everything.** Every issue needs at least one screenshot. No exceptions.
 2. **Verify before documenting.** Retry the issue once to confirm it's reproducible, not a fluke.
 3. **Never include credentials.** Write `[REDACTED]` for passwords in repro steps.
 4. **Write incrementally.** Append each issue to the report as you find it. Don't batch.
-5. **Never read source code during QA phases.** Test as a user, not a developer. (Source code is read only during the fix phase.)
+5. **Never read source code.** Test as a user, not a developer.
 6. **Check console after every interaction.** JS errors that don't surface visually are still bugs.
 7. **Test like a user.** Use realistic data. Walk through complete workflows end-to-end.
 8. **Depth over breadth.** 5-10 well-documented issues with evidence > 20 vague descriptions.
 9. **Never delete output files.** Screenshots and reports accumulate -- that's intentional.
 10. **Use `snapshot -C` for tricky UIs.** Finds clickable divs that the accessibility tree misses.
 11. **Show screenshots to the user.** After every `$RKSTACK_BROWSE screenshot`, `$RKSTACK_BROWSE snapshot -a -o`, or `$RKSTACK_BROWSE responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical -- without it, screenshots are invisible to the user.
-12. **Never refuse to use the browser.** When the user invokes /qa, they are requesting browser-based testing. Never suggest evals, unit tests, or other alternatives as a substitute. Even if the diff appears to have no UI changes, backend changes affect app behavior -- always open the browser and test.
+12. **Never refuse to use the browser.** When the user invokes /qa or /qa-only, they are requesting browser-based testing. Never suggest evals, unit tests, or other alternatives as a substitute. Even if the diff appears to have no UI changes, backend changes affect app behavior -- always open the browser and test.
 
 ---
-
 ## Phase 7: Triage
 
 Sort all discovered issues by severity, then decide which to fix based on the selected tier:
