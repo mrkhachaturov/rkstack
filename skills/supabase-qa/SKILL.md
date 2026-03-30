@@ -14,6 +14,7 @@ allowed-tools:
   - Glob
   - Grep
   - AskUserQuestion
+announce-action: run deep Supabase testing
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: just build -->

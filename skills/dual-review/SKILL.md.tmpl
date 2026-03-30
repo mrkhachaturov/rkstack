@@ -15,6 +15,7 @@ allowed-tools:
   - Glob
   - Edit
   - AskUserQuestion
+announce-action: run a Codex review loop on `<path>`
 ---
 
 {{PREAMBLE}}
@@ -28,7 +29,7 @@ You are reviewing a spec or plan with Codex as a second opinion. This skill runs
 
 Both modes use the same mechanism: sequential loops where Codex reviews, Claude evaluates findings, and fixes valid ones until Codex returns clean or max rounds are reached.
 
-**Announce at start:** "I'm using the dual-review skill to run a Codex review loop on `<path>`."
+{{ANNOUNCE_AT_START}}
 
 **Core principle:** Source code informs context, not intent. Proposed changes in a spec or plan are not defects just because current code does not implement them. Codex should flag conflicts with existing contracts, circular dependencies, or missed documented constraints — not "this doesn't exist yet."
 

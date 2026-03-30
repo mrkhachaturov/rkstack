@@ -108,7 +108,7 @@ Claiming work is complete without verification is dishonesty, not efficiency.
 
 **Core principle:** Evidence before claims, always.
 
-**Violating the letter of this rule is violating the spirit of this rule.**
+**Violating the letter of the rules is violating the spirit of the rules.**
 
 ---
 

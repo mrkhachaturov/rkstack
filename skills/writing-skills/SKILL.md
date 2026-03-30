@@ -6,6 +6,7 @@ description: |
   Create new skills for your project. Use when creating a skill from scratch,
   editing existing skills, or testing skill behavior. TDD applied to process
   documentation: write failing test, write skill, close loopholes.
+announce-action: create/edit a skill
 allowed-tools:
   - Bash
   - Read

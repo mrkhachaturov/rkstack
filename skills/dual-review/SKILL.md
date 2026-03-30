@@ -15,6 +15,7 @@ allowed-tools:
   - Glob
   - Edit
   - AskUserQuestion
+announce-action: run a Codex review loop on `<path>`
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: just build -->

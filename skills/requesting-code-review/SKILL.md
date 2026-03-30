@@ -16,6 +16,7 @@ allowed-tools:
   - Glob
   - Agent
   - AskUserQuestion
+announce-action: review the current branch
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: just build -->

@@ -16,6 +16,7 @@ allowed-tools:
   - Glob
   - Agent
   - AskUserQuestion
+announce-action: review the current branch
 ---
 
 {{PREAMBLE}}
@@ -26,7 +27,7 @@ allowed-tools:
 
 You are running the `/requesting-code-review` workflow. Dispatch a focused code-reviewer agent to catch structural issues that tests don't catch. The reviewer gets precisely crafted context — never your session's history.
 
-**Announce at start:** "I'm using the requesting-code-review skill to review the current branch."
+{{ANNOUNCE_AT_START}}
 
 **Core principle:** Review early, review often. Fix first, ask second.
 

@@ -15,6 +15,7 @@ allowed-tools:
   - Glob
   - Agent
   - AskUserQuestion
+announce-action: process this feedback
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: just build -->

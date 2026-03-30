@@ -11,6 +11,7 @@ allowed-tools:
   - Bash
   - Read
   - AskUserQuestion
+announce-action: set up an isolated workspace
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: just build -->

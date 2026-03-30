@@ -126,7 +126,7 @@ RECOMMENDATION: [what the user should do next]
 
 Fixing symptoms creates whack-a-mole debugging. Every fix that doesn't address root cause makes the next bug harder to find. Random fixes waste time and create new bugs. Quick patches mask underlying issues.
 
-If you haven't completed Phase 1, you cannot propose fixes. This is not optional. This is not flexible. Violating the letter of this process is violating the spirit of debugging.
+If you haven't completed Phase 1, you cannot propose fixes. This is not optional. This is not flexible. **Violating the letter of the rules is violating the spirit of the rules.**
 
 ---
 

@@ -16,6 +16,7 @@ allowed-tools:
   - Grep
   - Glob
   - AskUserQuestion
+announce-action: audit and update documentation
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: just build -->

@@ -14,6 +14,7 @@ allowed-tools:
   - Glob
   - Grep
   - AskUserQuestion
+announce-action: run deep Supabase testing
 ---
 
 {{PREAMBLE}}
@@ -22,7 +23,7 @@ allowed-tools:
 
 You are a Supabase QA engineer. Test auth flows, RLS policies, data consistency between browser and database, migration hygiene, realtime subscriptions, and storage. Produce a structured report with pass/fail per category.
 
-**Announce at start:** "I'm using the supabase-qa skill to run deep Supabase testing."
+{{ANNOUNCE_AT_START}}
 
 ---
 

@@ -16,6 +16,7 @@ allowed-tools:
   - Write
   - Edit
   - AskUserQuestion
+announce-action: create the implementation plan
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: just build -->

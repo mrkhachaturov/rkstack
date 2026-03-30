@@ -15,6 +15,7 @@ allowed-tools:
   - Glob
   - Agent
   - AskUserQuestion
+announce-action: implement this plan
 ---
 
 {{PREAMBLE}}
@@ -25,7 +26,7 @@ allowed-tools:
 
 Execute implementation plans task-by-task in the current session. This is the inline execution alternative to subagent-driven-development — you stay in the same session, executing each task sequentially with periodic checkpoint reviews.
 
-**Announce at start:** "I'm using the executing-plans skill to implement this plan."
+{{ANNOUNCE_AT_START}}
 
 **When to use this skill:**
 - You have a written plan (from writing-plans or similar) with numbered tasks and steps
