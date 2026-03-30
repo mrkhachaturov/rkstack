@@ -217,43 +217,19 @@ If no ASK items exist (everything was AUTO-FIX), skip the question entirely.
 
 ## Step 7: Test Coverage Audit
 
-After the two-pass review and fix-first handling, check test coverage for changed files.
-
-1. Identify all files changed in the diff (`git diff origin/<base>...HEAD --name-only`).
-2. For each changed source file, check if a corresponding test file exists. Use the project's test naming convention (read from CLAUDE.md if available, otherwise infer from existing test files).
-3. For files with tests, scan the test file for coverage of the code paths changed in the diff. Flag code paths that have no test coverage.
-4. If CLAUDE.md defines a `test:coverage` command (or equivalent), run it and report the results.
-5. Output:
-   ```
-   Test Coverage: N changed files, M with tests, K with gaps
-   [For each gap: file:line -- code path with no test coverage]
-   ```
-
-This is **INFORMATIONAL** -- test gaps are flagged as findings but do not block the review. They follow the same Fix-First flow (lean toward ASK since writing tests changes behavior contracts).
+{{TEST_COVERAGE_AUDIT_REVIEW}}
 
 ---
 
 ## Step 8: Adversarial Review
 
-After fix-first handling, assume the code is wrong and try to break it. This is a deliberate red-team pass -- not a repeat of the two-pass review.
+{{ADVERSARIAL_STEP}}
 
-For each significant code change in the diff, ask:
+---
 
-1. **Input attacks:** What inputs cause failures? Empty strings, null values, negative numbers, Unicode edge cases, extremely long strings, special characters in paths. What happens if the input is valid but unexpected (e.g., a date in the year 2099)?
+## Step 8.5: Plan Completion Audit
 
-2. **Concurrency attacks:** What concurrent access patterns cause races? Two users hitting the same endpoint simultaneously. A background job running while a user request modifies the same data. A deploy happening mid-transaction.
-
-3. **Failure path attacks:** What error paths are untested? Network timeouts, disk full, out-of-memory, permission denied. What happens when an external service returns garbage instead of an error code?
-
-4. **State attacks:** What state transitions are invalid? Can the system reach a state the code doesn't handle? What if the database has stale data from a previous version?
-
-5. **Boundary attacks:** What happens at zero, one, MAX_INT, empty collection, single-element collection? What about timestamps at midnight, month boundaries, DST transitions?
-
-For each plausible attack vector found, add it as a finding:
-- **If exploitable** (concrete scenario leads to data loss, crash, or security issue): CRITICAL finding, classified as ASK.
-- **If theoretical** (plausible but requires unlikely conditions): INFORMATIONAL finding, include the scenario description.
-
-**Do not invent impossible scenarios.** Every attack vector must be grounded in the actual code paths from the diff.
+{{PLAN_COMPLETION_AUDIT_REVIEW}}
 
 ---
 

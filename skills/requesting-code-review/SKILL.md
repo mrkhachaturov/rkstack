@@ -351,43 +351,322 @@ If no ASK items exist (everything was AUTO-FIX), skip the question entirely.
 
 ## Step 7: Test Coverage Audit
 
-After the two-pass review and fix-first handling, check test coverage for changed files.
+100% coverage is the goal. Evaluate every codepath changed in the diff and identify test gaps. Gaps become INFORMATIONAL findings that follow the Fix-First flow.
 
-1. Identify all files changed in the diff (`git diff origin/<base>...HEAD --name-only`).
-2. For each changed source file, check if a corresponding test file exists. Use the project's test naming convention (read from CLAUDE.md if available, otherwise infer from existing test files).
-3. For files with tests, scan the test file for coverage of the code paths changed in the diff. Flag code paths that have no test coverage.
-4. If CLAUDE.md defines a `test:coverage` command (or equivalent), run it and report the results.
-5. Output:
-   ```
-   Test Coverage: N changed files, M with tests, K with gaps
-   [For each gap: file:line -- code path with no test coverage]
-   ```
+### Test Framework Detection
 
-This is **INFORMATIONAL** -- test gaps are flagged as findings but do not block the review. They follow the same Fix-First flow (lean toward ASK since writing tests changes behavior contracts).
+Before analyzing coverage, detect the project's test framework:
+
+1. **Read CLAUDE.md** -- look for a `## Testing` section with test command and framework name. If found, use that as the authoritative source.
+2. **If CLAUDE.md has no testing section, auto-detect:**
+
+```bash
+setopt +o nomatch 2>/dev/null || true  # zsh compat
+# Detect project runtime
+[ -f Gemfile ] && echo "RUNTIME:ruby"
+[ -f package.json ] && echo "RUNTIME:node"
+[ -f requirements.txt ] || [ -f pyproject.toml ] && echo "RUNTIME:python"
+[ -f go.mod ] && echo "RUNTIME:go"
+[ -f Cargo.toml ] && echo "RUNTIME:rust"
+# Check for existing test infrastructure
+ls jest.config.* vitest.config.* playwright.config.* cypress.config.* .rspec pytest.ini phpunit.xml 2>/dev/null
+ls -d test/ tests/ spec/ __tests__/ cypress/ e2e/ 2>/dev/null
+```
+
+3. **If no framework detected:** still produce the coverage diagram, but skip test generation.
+
+**Step 1. Trace every codepath changed** using `git diff origin/<base>...HEAD`:
+
+Read every changed file. For each one, trace how data flows through the code -- don't just list functions, actually follow the execution:
+
+1. **Read the diff.** For each changed file, read the full file (not just the diff hunk) to understand context.
+2. **Trace data flow.** Starting from each entry point (route handler, exported function, event listener, component render), follow the data through every branch:
+   - Where does input come from? (request params, props, database, API call)
+   - What transforms it? (validation, mapping, computation)
+   - Where does it go? (database write, API response, rendered output, side effect)
+   - What can go wrong at each step? (null/undefined, invalid input, network failure, empty collection)
+3. **Diagram the execution.** For each changed file, draw an ASCII diagram showing:
+   - Every function/method that was added or modified
+   - Every conditional branch (if/else, switch, ternary, guard clause, early return)
+   - Every error path (try/catch, rescue, error boundary, fallback)
+   - Every call to another function (trace into it -- does IT have untested branches?)
+   - Every edge: what happens with null input? Empty array? Invalid type?
+
+This is the critical step -- you're building a map of every line of code that can execute differently based on input. Every branch in this diagram needs a test.
+
+**Step 2. Map user flows, interactions, and error states:**
+
+Code coverage isn't enough -- you need to cover how real users interact with the changed code. For each changed feature, think through:
+
+- **User flows:** What sequence of actions does a user take that touches this code? Map the full journey. Each step in the journey needs a test.
+- **Interaction edge cases:** Double-click/rapid resubmit, navigate away mid-operation, submit with stale data, slow connection, concurrent actions
+- **Error states the user can see:** For every error the code handles, what does the user actually experience? Can the user recover?
+- **Empty/zero/boundary states:** What does the UI show with zero results? With 10,000 results? With maximum-length input?
+
+Add these to your diagram alongside the code branches.
+
+**Step 3. Check each branch against existing tests:**
+
+Go through your diagram branch by branch -- both code paths AND user flows. For each one, search for a test that exercises it:
+- Function `processPayment()` -> look for `billing.test.ts`, `billing.spec.ts`
+- An if/else -> look for tests covering BOTH the true AND false path
+- An error handler -> look for a test that triggers that specific error condition
+- A user flow -> look for an integration or E2E test that walks through the journey
+
+Quality scoring rubric:
+- 3-star: Tests behavior with edge cases AND error paths
+- 2-star: Tests correct behavior, happy path only
+- 1-star: Smoke test / existence check / trivial assertion
+
+### E2E Test Decision Matrix
+
+**RECOMMEND E2E:**
+- Common user flow spanning 3+ components/services
+- Integration point where mocking hides real failures
+- Auth/payment/data-destruction flows
+
+**STICK WITH UNIT TESTS:**
+- Pure function with clear inputs/outputs
+- Internal helper with no side effects
+- Edge case of a single function
+
+### REGRESSION RULE (mandatory)
+
+**IRON RULE:** When the coverage audit identifies a REGRESSION -- code that previously worked but the diff broke -- a regression test is written immediately. No AskUserQuestion. No skipping. Regressions are the highest-priority test because they prove something broke.
+
+Format: commit as `test: regression test for {what broke}`
+
+**Step 4. Output ASCII coverage diagram:**
+
+```
+CODE PATH COVERAGE
+===========================
+[+] src/services/billing.ts
+    |
+    +-- processPayment()
+    |   +-- [3-star TESTED] Happy path + card declined + timeout -- billing.test.ts:42
+    |   +-- [GAP]           Network timeout -- NO TEST
+    |   +-- [GAP]           Invalid currency -- NO TEST
+    |
+    +-- refundPayment()
+        +-- [2-star TESTED] Full refund -- billing.test.ts:89
+        +-- [1-star TESTED] Partial refund (checks non-throw only) -- billing.test.ts:101
+
+------------------------------
+COVERAGE: 3/5 paths tested (60%)
+QUALITY:  3-star: 1  2-star: 1  1-star: 1
+GAPS: 2 paths need tests
+------------------------------
+```
+
+**Fast path:** All paths covered -> "All new code paths have test coverage." Continue.
+
+**Step 5. Generate tests for gaps (Fix-First):**
+
+If test framework is detected and gaps were identified:
+- Classify each gap as AUTO-FIX or ASK per the Fix-First Heuristic:
+  - **AUTO-FIX:** Simple unit tests for pure functions, edge cases of existing tested functions
+  - **ASK:** E2E tests, tests requiring new test infrastructure, tests for ambiguous behavior
+- For AUTO-FIX gaps: generate the test, run it, commit as `test: coverage for {feature}`
+- For ASK gaps: include in the Fix-First batch question with the other review findings
+
+If no test framework detected -> include gaps as INFORMATIONAL findings only, no generation.
+
+**Diff is test-only changes:** Skip entirely: "No new application code paths to audit."
+
+### Coverage Warning
+
+After producing the coverage diagram, check the coverage percentage. Read CLAUDE.md for a `## Test Coverage` section with a `Minimum:` field. If not found, use default: 60%.
+
+If coverage is below the minimum threshold, output a prominent warning:
+
+```
+WARNING: COVERAGE WARNING: AI-assessed coverage is {X}%. {N} code paths untested.
+Consider writing tests before running /finishing-a-development-branch.
+```
+
+This is INFORMATIONAL -- does not block the review. But it makes low coverage visible early.
 
 ---
 
 ## Step 8: Adversarial Review
 
-After fix-first handling, assume the code is wrong and try to break it. This is a deliberate red-team pass -- not a repeat of the two-pass review.
+## Adversarial Review (auto-scaled)
 
-For each significant code change in the diff, ask:
+Adversarial review thoroughness scales automatically based on diff size.
 
-1. **Input attacks:** What inputs cause failures? Empty strings, null values, negative numbers, Unicode edge cases, extremely long strings, special characters in paths. What happens if the input is valid but unexpected (e.g., a date in the year 2099)?
+**Detect diff size:**
 
-2. **Concurrency attacks:** What concurrent access patterns cause races? Two users hitting the same endpoint simultaneously. A background job running while a user request modifies the same data. A deploy happening mid-transaction.
+```bash
+DIFF_INS=$(git diff origin/<base> --stat | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
+DIFF_DEL=$(git diff origin/<base> --stat | tail -1 | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+' || echo "0")
+DIFF_TOTAL=$((DIFF_INS + DIFF_DEL))
+echo "DIFF_SIZE: $DIFF_TOTAL"
+```
 
-3. **Failure path attacks:** What error paths are untested? Network timeouts, disk full, out-of-memory, permission denied. What happens when an external service returns garbage instead of an error code?
+**Auto-select tier based on diff size:**
+- **Small (< 50 lines changed):** Skip adversarial review entirely. Print: "Small diff ($DIFF_TOTAL lines) -- adversarial review skipped." Continue.
+- **Medium (50-199 lines changed):** Run Claude adversarial subagent.
+- **Large (200+ lines changed):** Run Claude adversarial subagent with comprehensive scope.
 
-4. **State attacks:** What state transitions are invalid? Can the system reach a state the code doesn't handle? What if the database has stale data from a previous version?
+**User override:** If the user explicitly requested a thorough or paranoid review, honor that regardless of diff size.
 
-5. **Boundary attacks:** What happens at zero, one, MAX_INT, empty collection, single-element collection? What about timestamps at midnight, month boundaries, DST transitions?
+---
 
-For each plausible attack vector found, add it as a finding:
-- **If exploitable** (concrete scenario leads to data loss, crash, or security issue): CRITICAL finding, classified as ASK.
-- **If theoretical** (plausible but requires unlikely conditions): INFORMATIONAL finding, include the scenario description.
+### Medium tier (50-199 lines)
 
-**Do not invent impossible scenarios.** Every attack vector must be grounded in the actual code paths from the diff.
+Claude's structured review already ran. Now add a **cross-model adversarial challenge** via a fresh subagent.
+
+**Claude adversarial subagent:**
+
+Dispatch via the Agent tool. The subagent has fresh context -- no checklist bias from the structured review. This genuine independence catches things the primary reviewer is blind to.
+
+Subagent prompt:
+"Read the diff for this branch with `git diff origin/<base>`. Think like an attacker and a chaos engineer. Your job is to find ways this code will fail in production. Look for: edge cases, race conditions, security holes, resource leaks, failure modes, silent data corruption, logic errors that produce wrong results silently, error handling that swallows failures, and trust boundary violations. Be adversarial. Be thorough. No compliments -- just the problems. For each finding, classify as FIXABLE (you know how to fix it) or INVESTIGATE (needs human judgment)."
+
+Present findings under an `ADVERSARIAL REVIEW (subagent):` header. **FIXABLE findings** flow into the same Fix-First pipeline as the structured review. **INVESTIGATE findings** are presented as informational.
+
+If the subagent fails or times out: "Adversarial subagent unavailable. Continuing without adversarial review."
+
+---
+
+### Large tier (200+ lines)
+
+Run the adversarial subagent with expanded scope:
+
+1. **Claude adversarial subagent** (same prompt as medium tier)
+2. **Architecture review subagent** -- dispatch a second subagent focused on structural issues:
+
+"Read the diff for this branch with `git diff origin/<base>`. Focus on architecture and design: does the code introduce unnecessary coupling? Are abstractions at the right level? Are there circular dependencies? Is the error handling strategy consistent? Are there patterns that will be hard to extend or test? For each finding, cite file:line."
+
+Present findings under `ADVERSARIAL REVIEW (architecture):` header.
+
+---
+
+### Synthesis (medium and large tiers)
+
+After all passes complete, synthesize:
+
+```
+ADVERSARIAL REVIEW SYNTHESIS (TIER, N lines):
+  High confidence (found by multiple sources): [findings agreed on by >1 pass]
+  Unique to structured review: [from earlier step]
+  Unique to adversarial: [from subagent]
+  Unique to architecture: [from architecture subagent, if ran]
+```
+
+High-confidence findings (agreed on by multiple sources) should be prioritized for fixes.
+
+---
+
+## Step 8.5: Plan Completion Audit
+
+### Plan File Discovery
+
+1. **Conversation context (primary):** Check if there is an active plan file in this conversation. If found, use it directly.
+
+2. **Content-based search (fallback):** If no plan file is referenced in conversation context, search by content:
+
+```bash
+setopt +o nomatch 2>/dev/null || true  # zsh compat
+BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-')
+REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")
+# Search common plan file locations
+for PLAN_DIR in "docs/rkstack/plans" "docs/plans" ".rkstack/plans"; do
+  [ -d "$PLAN_DIR" ] || continue
+  PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$BRANCH" 2>/dev/null | head -1)
+  [ -z "$PLAN" ] && PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$REPO" 2>/dev/null | head -1)
+  [ -z "$PLAN" ] && PLAN=$(find "$PLAN_DIR" -name '*.md' -mmin -1440 -maxdepth 1 2>/dev/null | xargs ls -t 2>/dev/null | head -1)
+  [ -n "$PLAN" ] && break
+done
+[ -n "$PLAN" ] && echo "PLAN_FILE: $PLAN" || echo "NO_PLAN_FILE"
+```
+
+3. **Validation:** If a plan file was found via content-based search, read the first 20 lines and verify it is relevant to the current branch's work. If it appears to be from a different project or feature, treat as "no plan file found."
+
+**Error handling:**
+- No plan file found -> skip with "No plan file detected -- skipping."
+- Plan file found but unreadable -> skip with "Plan file found but unreadable -- skipping."
+
+### Actionable Item Extraction
+
+Read the plan file. Extract every actionable item -- anything that describes work to be done. Look for:
+
+- **Checkbox items:** `- [ ] ...` or `- [x] ...`
+- **Numbered steps** under implementation headings: "1. Create ...", "2. Add ...", "3. Modify ..."
+- **Imperative statements:** "Add X to Y", "Create a Z service", "Modify the W controller"
+- **File-level specifications:** "New file: path/to/file.ts", "Modify path/to/existing.rb"
+- **Test requirements:** "Test that X", "Add test for Y", "Verify Z"
+
+**Ignore:**
+- Context/Background sections
+- Questions and open items (marked with ?, "TBD", "TODO: decide")
+- Explicitly deferred items ("Future:", "Out of scope:", "P2:", "P3:")
+
+**Cap:** Extract at most 50 items. If the plan has more, note: "Showing top 50 of N plan items."
+
+For each item, note:
+- The item text (verbatim or concise summary)
+- Its category: CODE | TEST | MIGRATION | CONFIG | DOCS
+
+### Cross-Reference Against Diff
+
+Run `git diff origin/<base>...HEAD` and `git log origin/<base>..HEAD --oneline` to understand what was implemented.
+
+For each extracted plan item, check the diff and classify:
+
+- **DONE** -- Clear evidence in the diff that this item was implemented. Cite the specific file(s) changed.
+- **PARTIAL** -- Some work toward this item exists but it's incomplete.
+- **NOT DONE** -- No evidence in the diff that this item was addressed.
+- **CHANGED** -- Implemented using a different approach than the plan described, but the same goal is achieved.
+
+**Be conservative with DONE** -- require clear evidence in the diff.
+**Be generous with CHANGED** -- if the goal is met by different means, that counts.
+
+### Output Format
+
+```
+PLAN COMPLETION AUDIT
+===========================
+Plan: {plan file path}
+
+## Implementation Items
+  [DONE]      Create UserService -- src/services/user_service.rb (+142 lines)
+  [PARTIAL]   Add validation -- model validates but missing controller checks
+  [NOT DONE]  Add caching layer -- no cache-related changes in diff
+  [CHANGED]   "Redis queue" -> implemented with Sidekiq instead
+
+## Test Items
+  [DONE]      Unit tests for UserService -- test/services/user_service_test.rb
+  [NOT DONE]  E2E test for signup flow
+
+------------------------------
+COMPLETION: 4/7 DONE, 1 PARTIAL, 1 NOT DONE, 1 CHANGED
+------------------------------
+```
+
+### Integration with Scope Drift Detection
+
+The plan completion results augment the existing Scope Drift Detection. If a plan file is found:
+
+- **NOT DONE items** become additional evidence for **MISSING REQUIREMENTS** in the scope drift report.
+- **Items in the diff that don't match any plan item** become evidence for **SCOPE CREEP** detection.
+
+This is **INFORMATIONAL** -- does not block the review.
+
+Update the scope drift output to include plan file context:
+
+```
+Scope Check: [CLEAN / DRIFT DETECTED / REQUIREMENTS MISSING]
+Intent: <from plan file -- 1-line summary>
+Plan: <plan file path>
+Delivered: <1-line summary of what the diff actually does>
+Plan items: N DONE, M PARTIAL, K NOT DONE
+[If NOT DONE: list each missing item]
+[If scope creep: list each out-of-scope change not in the plan]
+```
+
+**No plan file found:** Fall back to existing scope drift behavior (check TODOS.md and PR description only).
 
 ---
 

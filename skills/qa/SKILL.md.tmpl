@@ -95,70 +95,7 @@ After the user chooses, execute their choice, then continue.
 
 {{BROWSE_SETUP}}
 
-**Check test framework (bootstrap if needed):**
-
-Detect existing test framework and project runtime:
-
-```bash
-# Detect project runtime
-[ -f Gemfile ] && echo "RUNTIME:ruby"
-[ -f package.json ] && echo "RUNTIME:node"
-[ -f requirements.txt ] || [ -f pyproject.toml ] && echo "RUNTIME:python"
-[ -f go.mod ] && echo "RUNTIME:go"
-[ -f Cargo.toml ] && echo "RUNTIME:rust"
-[ -f composer.json ] && echo "RUNTIME:php"
-[ -f mix.exs ] && echo "RUNTIME:elixir"
-# Detect sub-frameworks
-[ -f Gemfile ] && grep -q "rails" Gemfile 2>/dev/null && echo "FRAMEWORK:rails"
-[ -f package.json ] && grep -q '"next"' package.json 2>/dev/null && echo "FRAMEWORK:nextjs"
-# Check for existing test infrastructure
-setopt +o nomatch 2>/dev/null || true  # zsh compat
-ls jest.config.* vitest.config.* playwright.config.* .rspec pytest.ini pyproject.toml phpunit.xml 2>/dev/null
-ls -d test/ tests/ spec/ __tests__/ cypress/ e2e/ 2>/dev/null
-# Check opt-out marker
-[ -f .rkstack/no-test-bootstrap ] && echo "BOOTSTRAP_DECLINED"
-```
-
-**If test framework detected** (config files or test directories found):
-Print "Test framework detected: {name} ({N} existing tests). Skipping bootstrap."
-Read 2-3 existing test files to learn conventions (naming, imports, assertion style, setup patterns).
-Store conventions as prose context for use in Phase 8e.5. **Skip the rest of bootstrap.**
-
-**If BOOTSTRAP_DECLINED** appears: Print "Test bootstrap previously declined -- skipping." **Skip the rest of bootstrap.**
-
-**If NO runtime detected** (no config files found): Use AskUserQuestion:
-"I couldn't detect your project's language. What runtime are you using?"
-Options: A) Node.js/TypeScript B) Ruby/Rails C) Python D) Go E) Rust F) PHP G) Elixir H) This project doesn't need tests.
-If user picks H, write `.rkstack/no-test-bootstrap` and continue without tests.
-
-**If runtime detected but no test framework -- bootstrap:**
-
-1. Research best practices: Use WebSearch to find current best practices for the detected runtime. If WebSearch is unavailable, use this built-in table:
-
-   | Runtime | Primary recommendation | Alternative |
-   |---------|----------------------|-------------|
-   | Ruby/Rails | minitest + fixtures + capybara | rspec + factory_bot + shoulda-matchers |
-   | Node.js | vitest + @testing-library | jest + @testing-library |
-   | Next.js | vitest + @testing-library/react + playwright | jest + cypress |
-   | Python | pytest + pytest-cov | unittest |
-   | Go | stdlib testing + testify | stdlib only |
-   | Rust | cargo test (built-in) + mockall | -- |
-   | PHP | phpunit + mockery | pest |
-   | Elixir | ExUnit (built-in) + ex_machina | -- |
-
-2. Framework selection: AskUserQuestion with options including Skip (writes `.rkstack/no-test-bootstrap`).
-
-3. Install, configure, create directory structure, write one example test.
-
-4. Generate 3-5 real tests for existing code (prioritize by risk: error handlers > business logic > API endpoints > pure functions).
-
-5. Verify: run the full test suite. If tests fail, debug once. If still failing, revert all bootstrap changes.
-
-6. Update CLAUDE.md with a Testing section if one does not already exist.
-
-7. Commit bootstrap files: `git commit -m "chore: bootstrap test framework ({framework name})"`
-
----
+{{TEST_BOOTSTRAP}}
 
 **Create output directories:**
 

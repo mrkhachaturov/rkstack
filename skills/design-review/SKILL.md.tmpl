@@ -82,32 +82,7 @@ If dirty, **STOP** and use AskUserQuestion:
 
 {{BROWSE_SETUP}}
 
-**Check test framework (bootstrap if needed):**
-
-Detect existing test framework and project runtime:
-
-```bash
-# Detect project runtime
-[ -f Gemfile ] && echo "RUNTIME:ruby"
-[ -f package.json ] && echo "RUNTIME:node"
-[ -f requirements.txt ] || [ -f pyproject.toml ] && echo "RUNTIME:python"
-[ -f go.mod ] && echo "RUNTIME:go"
-[ -f Cargo.toml ] && echo "RUNTIME:rust"
-[ -f composer.json ] && echo "RUNTIME:php"
-[ -f mix.exs ] && echo "RUNTIME:elixir"
-# Detect sub-frameworks
-[ -f Gemfile ] && grep -q "rails" Gemfile 2>/dev/null && echo "FRAMEWORK:rails"
-[ -f package.json ] && grep -q '"next"' package.json 2>/dev/null && echo "FRAMEWORK:nextjs"
-# Check for existing test infrastructure
-ls jest.config.* vitest.config.* playwright.config.* .rspec pytest.ini pyproject.toml phpunit.xml 2>/dev/null
-ls -d test/ tests/ spec/ __tests__/ cypress/ e2e/ 2>/dev/null
-# Check opt-out marker
-[ -f .rkstack/no-test-bootstrap ] && echo "BOOTSTRAP_DECLINED"
-```
-
-**If test framework detected:** Read 2-3 existing test files to learn conventions. Store for use in Phase 8e.5. **Skip bootstrap.**
-**If BOOTSTRAP_DECLINED:** Skip bootstrap.
-**If no test framework and no opt-out:** Follow the same bootstrap procedure as /qa (research, select, install, verify, commit).
+{{TEST_BOOTSTRAP}}
 
 **Create output directories:**
 

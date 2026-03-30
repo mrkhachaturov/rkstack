@@ -99,6 +99,10 @@ ls package.json Gemfile pyproject.toml 2>/dev/null
 
 Run the detected test command. **Never hardcode** `npm test` or `cargo test` -- use whatever the project uses.
 
+**If no test framework detected:** Follow the Test Framework Bootstrap procedure:
+
+{{TEST_BOOTSTRAP}}
+
 **If tests fail:** Do NOT immediately stop. Apply the Test Failure Ownership Triage:
 
 {{TEST_FAILURE_TRIAGE}}
@@ -438,6 +442,36 @@ Before pushing, check if code changed during Steps 4.5-4.7:
    - "It's a trivial change" -- Trivial changes break production.
 
 Claiming work is complete without verification is dishonesty, not efficiency.
+
+---
+
+## Step 4.85: Test Coverage Audit
+
+{{TEST_COVERAGE_AUDIT_SHIP}}
+
+---
+
+## Step 4.86: Plan Completion Audit
+
+{{PLAN_COMPLETION_AUDIT_SHIP}}
+
+---
+
+## Step 4.87: Plan Verification
+
+{{PLAN_VERIFICATION_EXEC}}
+
+---
+
+## Step 4.88: Adversarial Review
+
+{{ADVERSARIAL_STEP}}
+
+---
+
+## Step 4.89: Review Readiness Dashboard
+
+{{REVIEW_DASHBOARD}}
 
 ---
 
