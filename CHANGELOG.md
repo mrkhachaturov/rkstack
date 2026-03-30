@@ -9,12 +9,16 @@ Skills now know every browse command. The AI can crop screenshots to specific el
 - **14 new resolvers.** `COMMAND_REFERENCE`, `SNAPSHOT_FLAGS`, `BROWSE_SETUP`, `DESIGN_METHODOLOGY`, `DESIGN_HARD_RULES`, `QA_METHODOLOGY`, `TEST_BOOTSTRAP`, `TEST_COVERAGE_AUDIT_SHIP`, `TEST_COVERAGE_AUDIT_REVIEW`, `ADVERSARIAL_STEP`, `PLAN_COMPLETION_AUDIT_SHIP`, `PLAN_COMPLETION_AUDIT_REVIEW`, `PLAN_VERIFICATION_EXEC`, `REVIEW_DASHBOARD`. All adapted from gstack upstream, single source of truth.
 - **Pre-merge gates for `/finishing-a-development-branch`.** Test coverage audit, plan completion audit, plan verification, adversarial review, and review readiness dashboard — 5 verification steps that were missing entirely.
 - **Plan completion audit for `/requesting-code-review`.** Cross-references plan items against the diff to catch missing requirements and scope creep.
+- **`ANNOUNCE_AT_START` resolver.** Skills announce themselves on load ("I'm using the X skill to Y"). 10 skills converted, and you can add it to any skill with one frontmatter field (`announce-action:`).
+- **`SPIRIT_OVER_LETTER` resolver.** The discipline anchor ("Violating the letter of the rules is violating the spirit of the rules") is now shared across TDD, verification, debugging, and humanizer. One change propagates everywhere.
+- **BROWSER.md.** Full technical reference for rkstack's headless browser — architecture, snapshot system, screenshot modes, real browser mode, Chrome extension, sidebar agent, environment variables.
 
 ### Fixed
 - Browse command reference had wrong syntax (`eval <expression>` instead of `eval <file>`, `network [--failed]` instead of `[--clear]`) and was missing 15+ commands (`js`, `css`, `attrs`, `perf`, `watch`, `inbox`, `handoff`, `resume`, `connect`, `disconnect`, `focus`).
 - 7 skills had copy-pasted browse setup blocks that could drift. Now all share one resolver.
 - Design hard rules, AI slop blacklist, and QA methodology were duplicated across 2-4 templates. Now shared via resolvers.
 - Test bootstrap procedure was hand-written in qa and design-review. Now shared via `TEST_BOOTSTRAP` resolver.
+- Worktree tests no longer flake under parallel load. Setup now checks git exit codes instead of silently ignoring failures.
 
 ## [0.9.0] - 2026-03-29
 
