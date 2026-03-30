@@ -2,6 +2,7 @@ import type { Resolver } from './types';
 import { generatePreamble, generateTestFailureTriage } from './preamble';
 import { generateBaseBranchDetect, generateCoAuthorTrailer } from './utility';
 import { generateCommandReference, generateSnapshotFlags, generateBrowseSetup } from './browse';
+import { generateDesignMethodology, generateDesignHardRules } from './design';
 
 /**
  * Registry of all placeholder resolvers.
@@ -20,4 +21,6 @@ export const RESOLVERS: Record<string, Resolver> = {
   COMMAND_REFERENCE: generateCommandReference,
   SNAPSHOT_FLAGS: generateSnapshotFlags,
   BROWSE_SETUP: generateBrowseSetup,
+  DESIGN_METHODOLOGY: generateDesignMethodology,
+  DESIGN_HARD_RULES: generateDesignHardRules,
 };

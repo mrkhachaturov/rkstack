@@ -382,18 +382,19 @@ FIX TO 10: Rewrite vague UI descriptions with specific alternatives.
 - "If deleting 30% of the copy improves it, keep deleting"
 - Cards earn their existence -- no decorative card grids
 
-**AI slop hard rules -- never allow these in a plan you approve:**
+**AI Slop blacklist** (the 10 patterns that scream "AI-generated"):
+1. Purple/violet/indigo gradient backgrounds or blue-to-purple color schemes
+2. **The 3-column feature grid:** icon-in-colored-circle + bold title + 2-line description, repeated 3x symmetrically. THE most recognizable AI layout.
+3. Icons in colored circles as section decoration (SaaS starter template look)
+4. Centered everything (`text-align: center` on all headings, descriptions, cards)
+5. Uniform bubbly border-radius on every element (same large radius on everything)
+6. Decorative blobs, floating circles, wavy SVG dividers (if a section feels empty, it needs better content, not decoration)
+7. Emoji as design elements (rockets in headings, emoji as bullet points)
+8. Colored left-border on cards (`border-left: 3px solid <accent>`)
+9. Generic hero copy ("Welcome to [X]", "Unlock the power of...", "Your all-in-one solution for...")
+10. Cookie-cutter section rhythm (hero -> 3 features -> testimonials -> pricing -> CTA, every section same height)
 
-- Purple/violet gradients as default accent
-- 3-column feature grid with icons in colored circles
-- Centered everything with uniform spacing
-- Uniform bubbly border-radius on all elements
-- Gradient buttons as the primary CTA pattern
-- Generic hero sections with stock imagery
-- Decorative blobs, floating circles, wavy SVG dividers
-- Emoji as design elements (rockets in headings, emoji as bullet points)
-- Colored left-border on cards
-- Cookie-cutter section rhythm (hero -> 3 features -> testimonials -> pricing -> CTA)
+Source: [OpenAI "Designing Delightful Frontends with GPT-5.4"](https://developers.openai.com/blog/designing-delightful-frontends-with-gpt-5-4) (Mar 2026).
 
 Replace vague descriptions:
 - "Cards with icons" -> what differentiates these from every SaaS template?

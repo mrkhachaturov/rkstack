@@ -262,14 +262,14 @@ Run full audit, then load previous `design-baseline.json`. Compare: per-category
 The most uniquely designer-like output. Form a gut reaction before analyzing anything.
 
 1. Navigate to the target URL
-2. Take a full-page desktop screenshot: `$RKSTACK_BROWSE screenshot ".rkstack/design-reports/screenshots/first-impression.png"`
+2. Take a full-page desktop screenshot: `$RKSTACK_BROWSE screenshot "$REPORT_DIR/screenshots/first-impression.png"`
 3. Write the **First Impression** using this structured critique format:
    - "The site communicates **[what]**." (what it says at a glance -- competence? playfulness? confusion?)
    - "I notice **[observation]**." (what stands out, positive or negative -- be specific)
    - "The first 3 things my eye goes to are: **[1]**, **[2]**, **[3]**." (hierarchy check -- are these intentional?)
    - "If I had to describe this in one word: **[word]**." (gut verdict)
 
-After the screenshot, use the Read tool on the PNG to show the user. This is the section users read first. Be opinionated. A designer doesn't hedge -- they react.
+This is the section users read first. Be opinionated. A designer doesn't hedge -- they react.
 
 ---
 
@@ -310,13 +310,11 @@ For each page in scope:
 
 ```bash
 $RKSTACK_BROWSE goto <url>
-$RKSTACK_BROWSE snapshot -i -a -o ".rkstack/design-reports/screenshots/{page}-annotated.png"
-$RKSTACK_BROWSE responsive ".rkstack/design-reports/screenshots/{page}"
+$RKSTACK_BROWSE snapshot -i -a -o "$REPORT_DIR/screenshots/{page}-annotated.png"
+$RKSTACK_BROWSE responsive "$REPORT_DIR/screenshots/{page}"
 $RKSTACK_BROWSE console --errors
 $RKSTACK_BROWSE perf
 ```
-
-After each screenshot, use the Read tool on the PNG so the user can see the page. For `responsive` (3 files), Read all three.
 
 ### Auth Detection
 
@@ -324,7 +322,7 @@ After the first navigation, check if the URL changed to a login-like path:
 ```bash
 $RKSTACK_BROWSE url
 ```
-If URL contains `/login`, `/signin`, `/auth`, or `/sso`: the site requires authentication. Use AskUserQuestion to ask if the user wants to provide credentials or cookies.
+If URL contains `/login`, `/signin`, `/auth`, or `/sso`: the site requires authentication. AskUserQuestion: "This site requires authentication. Want to import cookies from your browser? Run `/setup-browser-cookies` first if needed."
 
 ### Design Audit Checklist (10 categories, ~80 items)
 
@@ -351,7 +349,7 @@ Apply these at each page. Each finding gets an impact rating (high/medium/polish
 - If primary font is Inter/Roboto/Open Sans/Poppins -> flag as potentially generic
 - `text-wrap: balance` or `text-pretty` on headings (check via `$RKSTACK_BROWSE css <heading> text-wrap`)
 - Curly quotes used, not straight quotes
-- Ellipsis character (single character) not three dots
+- Ellipsis character (…) not three dots (...)
 - `font-variant-numeric: tabular-nums` on number columns
 - Body text >= 16px
 - Caption/label >= 12px
@@ -479,6 +477,22 @@ Compare screenshots and observations across pages for:
 
 ## Phase 6: Compile Report
 
+### Output Location
+
+`.rkstack/design-reports/design-audit-{domain}-{YYYY-MM-DD}.md`
+
+**Baseline:** Write `design-baseline.json` for regression mode:
+```json
+{
+  "date": "YYYY-MM-DD",
+  "url": "<target>",
+  "designScore": "B",
+  "aiSlopScore": "C",
+  "categoryGrades": { "hierarchy": "A", "typography": "B" },
+  "findings": [{ "id": "FINDING-001", "title": "...", "impact": "high", "category": "typography" }]
+}
+```
+
 ### Scoring System
 
 **Dual headline scores:**
@@ -510,19 +524,6 @@ Compare screenshots and observations across pages for:
 
 AI Slop is 5% of Design Score but also graded independently as a headline metric.
 
-### Baseline
-Write `design-baseline.json` for regression mode:
-```json
-{
-  "date": "YYYY-MM-DD",
-  "url": "<target>",
-  "designScore": "B",
-  "aiSlopScore": "C",
-  "categoryGrades": { "hierarchy": "A", "typography": "B", ... },
-  "findings": [{ "id": "FINDING-001", "title": "...", "impact": "high", "category": "typography" }]
-}
-```
-
 ### Regression Output
 
 When previous `design-baseline.json` exists or `--regression` flag is used:
@@ -544,7 +545,21 @@ Tie everything to user goals and product objectives. Always suggest specific imp
 
 ---
 
-## Design Hard Rules
+## Important Rules
+
+1. **Think like a designer, not a QA engineer.** You care whether things feel right, look intentional, and respect the user. You do NOT just care whether things "work."
+2. **Screenshots are evidence.** Every finding needs at least one screenshot. Use annotated screenshots (`snapshot -a`) to highlight elements.
+3. **Be specific and actionable.** "Change X to Y because Z" -- not "the spacing feels off."
+4. **Never read source code during audit phases.** Evaluate the rendered site, not the implementation. (Exception: offer to write DESIGN.md from extracted observations.)
+5. **AI Slop detection is your superpower.** Most developers can't evaluate whether their site looks AI-generated. You can. Be direct about it.
+6. **Quick wins matter.** Always include a "Quick Wins" section -- the 3-5 highest-impact fixes that take <30 minutes each.
+7. **Use `snapshot -C` for tricky UIs.** Finds clickable divs that the accessibility tree misses.
+8. **Responsive is design, not just "not broken."** A stacked desktop layout on mobile is not responsive design -- it's lazy. Evaluate whether the mobile layout makes *design* sense.
+9. **Document incrementally.** Write each finding to the report as you find it. Don't batch.
+10. **Depth over breadth.** 5-10 well-documented findings with screenshots and specific suggestions > 20 vague observations.
+11. **Show screenshots to the user.** After every `$RKSTACK_BROWSE screenshot`, `$RKSTACK_BROWSE snapshot -a -o`, or `$RKSTACK_BROWSE responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical -- without it, screenshots are invisible to the user.
+
+### Design Hard Rules
 
 **Classifier -- determine rule set before evaluating:**
 - **MARKETING/LANDING PAGE** (hero-driven, brand-forward, conversion-focused) -> apply Landing Page Rules
@@ -599,23 +614,21 @@ Tie everything to user goals and product objectives. Always suggest specific imp
 - "If deleting 30% of the copy improves it, keep deleting"
 - Cards earn their existence -- no decorative card grids
 
+**AI Slop blacklist** (the 10 patterns that scream "AI-generated"):
+1. Purple/violet/indigo gradient backgrounds or blue-to-purple color schemes
+2. **The 3-column feature grid:** icon-in-colored-circle + bold title + 2-line description, repeated 3x symmetrically. THE most recognizable AI layout.
+3. Icons in colored circles as section decoration (SaaS starter template look)
+4. Centered everything (`text-align: center` on all headings, descriptions, cards)
+5. Uniform bubbly border-radius on every element (same large radius on everything)
+6. Decorative blobs, floating circles, wavy SVG dividers (if a section feels empty, it needs better content, not decoration)
+7. Emoji as design elements (rockets in headings, emoji as bullet points)
+8. Colored left-border on cards (`border-left: 3px solid <accent>`)
+9. Generic hero copy ("Welcome to [X]", "Unlock the power of...", "Your all-in-one solution for...")
+10. Cookie-cutter section rhythm (hero -> 3 features -> testimonials -> pricing -> CTA, every section same height)
+
+Source: [OpenAI "Designing Delightful Frontends with GPT-5.4"](https://developers.openai.com/blog/designing-delightful-frontends-with-gpt-5-4) (Mar 2026).
+
 Record baseline design score and AI slop score at end of Phase 6.
-
----
-
-## Important Rules
-
-1. **Think like a designer, not a QA engineer.** You care whether things feel right, look intentional, and respect the user. You do NOT just care whether things "work."
-2. **Screenshots are evidence.** Every finding needs at least one screenshot. Use annotated screenshots (`snapshot -a`) to highlight elements.
-3. **Be specific and actionable.** "Change X to Y because Z" -- not "the spacing feels off."
-4. **Never read source code during audit phases.** Evaluate the rendered site, not the implementation. (Exception: offer to write DESIGN.md from extracted observations.)
-5. **AI Slop detection is your superpower.** Most developers can't evaluate whether their site looks AI-generated. You can. Be direct about it.
-6. **Quick wins matter.** Always include a "Quick Wins" section -- the 3-5 highest-impact fixes that take <30 minutes each.
-7. **Use `snapshot -C` for tricky UIs.** Finds clickable divs that the accessibility tree misses.
-8. **Responsive is design, not just "not broken."** A stacked desktop layout on mobile is not responsive design -- it's lazy. Evaluate whether the mobile layout makes *design* sense.
-9. **Document incrementally.** Write each finding to the report as you find it. Don't batch.
-10. **Depth over breadth.** 5-10 well-documented findings with screenshots and specific suggestions > 20 vague observations.
-11. **Show screenshots to the user.** After every `$RKSTACK_BROWSE screenshot`, `$RKSTACK_BROWSE snapshot -a -o`, or `$RKSTACK_BROWSE responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical -- without it, screenshots are invisible to the user.
 
 ---
 
