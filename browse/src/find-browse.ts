@@ -56,7 +56,7 @@ export function locateBinary(): string | null {
 
 // ─── Main ───────────────────────────────────────────────────────
 
-function main() {
+if (import.meta.main) {
   const bin = locateBinary();
   if (!bin) {
     process.stderr.write('ERROR: rkstack-browse binary not found.\n');
@@ -65,5 +65,3 @@ function main() {
 
   console.log(bin);
 }
-
-main();
