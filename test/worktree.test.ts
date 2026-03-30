@@ -14,19 +14,31 @@ import * as path from 'path';
 import * as os from 'os';
 
 /** Create a minimal git repo in a tmpdir for testing. */
+/** Run a git command in the test repo, throwing on failure. */
+function gitSync(args: string[], cwd: string): void {
+  const result = spawnSync('git', args, { cwd, stdio: 'pipe', timeout: 10_000 });
+  if (result.status !== 0) {
+    const stderr = result.stderr?.toString().trim() ?? '';
+    throw new Error(`git ${args.join(' ')} failed (exit ${result.status}): ${stderr}`);
+  }
+}
+
 function createTestRepo(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'worktree-test-'));
-  spawnSync('git', ['init'], { cwd: dir, stdio: 'pipe' });
-  spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: dir, stdio: 'pipe' });
-  spawnSync('git', ['config', 'user.name', 'Test'], { cwd: dir, stdio: 'pipe' });
+  gitSync(['init'], dir);
+  gitSync(['config', 'user.email', 'test@test.com'], dir);
+  gitSync(['config', 'user.name', 'Test'], dir);
 
   // Create initial commit so HEAD exists
   fs.writeFileSync(path.join(dir, 'README.md'), '# Test repo\n');
   // Add .gitignore matching rkstack paths
   fs.writeFileSync(path.join(dir, '.gitignore'), '.rkstack-worktrees/\n');
 
-  spawnSync('git', ['add', 'README.md', '.gitignore'], { cwd: dir, stdio: 'pipe' });
-  spawnSync('git', ['commit', '-m', 'Initial commit'], { cwd: dir, stdio: 'pipe' });
+  gitSync(['add', 'README.md', '.gitignore'], dir);
+  gitSync(['commit', '-m', 'Initial commit'], dir);
+
+  // Verify HEAD exists — if this fails, the test would give a confusing error later
+  gitSync(['rev-parse', 'HEAD'], dir);
 
   return dir;
 }
