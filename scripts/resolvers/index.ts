@@ -3,6 +3,8 @@ import { generatePreamble, generateTestFailureTriage } from './preamble';
 import { generateBaseBranchDetect, generateCoAuthorTrailer, generateQAMethodology } from './utility';
 import { generateCommandReference, generateSnapshotFlags, generateBrowseSetup } from './browse';
 import { generateDesignMethodology, generateDesignHardRules } from './design';
+import { generateTestBootstrap, generateTestCoverageAuditShip, generateTestCoverageAuditReview } from './testing';
+import { generateAdversarialStep, generatePlanCompletionAuditShip, generatePlanCompletionAuditReview, generatePlanVerificationExec, generateReviewDashboard } from './review';
 
 /**
  * Registry of all placeholder resolvers.
@@ -24,4 +26,12 @@ export const RESOLVERS: Record<string, Resolver> = {
   DESIGN_METHODOLOGY: generateDesignMethodology,
   DESIGN_HARD_RULES: generateDesignHardRules,
   QA_METHODOLOGY: generateQAMethodology,
+  TEST_BOOTSTRAP: generateTestBootstrap,
+  TEST_COVERAGE_AUDIT_SHIP: generateTestCoverageAuditShip,
+  TEST_COVERAGE_AUDIT_REVIEW: generateTestCoverageAuditReview,
+  ADVERSARIAL_STEP: generateAdversarialStep,
+  PLAN_COMPLETION_AUDIT_SHIP: generatePlanCompletionAuditShip,
+  PLAN_COMPLETION_AUDIT_REVIEW: generatePlanCompletionAuditReview,
+  PLAN_VERIFICATION_EXEC: generatePlanVerificationExec,
+  REVIEW_DASHBOARD: generateReviewDashboard,
 };
