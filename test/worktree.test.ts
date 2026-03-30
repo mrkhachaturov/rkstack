@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect, afterEach } from 'bun:test';
+process.env.WORKTREE_QUIET = '1';
 import { WorktreeManager } from '../lib/worktree';
 import type { HarvestResult } from '../lib/worktree';
 import { spawnSync } from 'child_process';

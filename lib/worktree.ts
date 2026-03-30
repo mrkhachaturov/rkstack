@@ -142,7 +142,9 @@ export class WorktreeManager {
     try {
       // Check if worktree directory still exists (agent may have deleted it)
       if (!fs.existsSync(info.path)) {
-        process.stderr.write(`  HARVEST [${testName}]: worktree dir deleted, skipping\n`);
+        if (!process.env.WORKTREE_QUIET) {
+          process.stderr.write(`  HARVEST [${testName}]: worktree dir deleted, skipping\n`);
+        }
         return null;
       }
 

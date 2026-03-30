@@ -212,16 +212,23 @@ describe('config command', () => {
     expect(isValidKey('foo..bar')).toBe(false);
     expect(isValidKey('valid.key')).toBe(true);
     expect(isValidKey('simple')).toBe(true);
-    // set with invalid key should not create a file
+    // set with invalid key should not create a file — suppress expected stderr warning
+    const origWrite = process.stderr.write;
+    process.stderr.write = () => true;
     configSet(configPath, '', 'value');
+    process.stderr.write = origWrite;
     expect(fs.existsSync(configPath)).toBe(false);
   });
 
   test('set warns when overwriting non-object with nested key', async () => {
     const { configSet, configGet } = await import('../bin/src/commands/config.ts');
+    // Suppress expected stderr warnings for intentional overwrite
+    const origWrite = process.stderr.write;
+    process.stderr.write = () => true;
     configSet(configPath, 'x', 'hello');
     // This overwrites the string 'hello' at 'x' with an object {y: 'world'}
     configSet(configPath, 'x.y', 'world');
+    process.stderr.write = origWrite;
     expect(configGet(configPath, 'x.y')).toBe('world');
     // Original scalar at 'x' is gone (replaced with object)
     expect(configGet(configPath, 'x')).toBe('');
