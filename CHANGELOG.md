@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.1] - 2026-03-30
+
+Skills now know every browse command. The AI can crop screenshots to specific elements, use `--clip` for regions, and check computed CSS — capabilities that existed in the browse binary but were invisible because skill docs never mentioned them.
+
+### Added
+- **Auto-generated command reference.** Browse skill documents all 60 commands with correct syntax, pulled directly from source code. When a command is added, `just build` picks it up automatically.
+- **14 new resolvers.** `COMMAND_REFERENCE`, `SNAPSHOT_FLAGS`, `BROWSE_SETUP`, `DESIGN_METHODOLOGY`, `DESIGN_HARD_RULES`, `QA_METHODOLOGY`, `TEST_BOOTSTRAP`, `TEST_COVERAGE_AUDIT_SHIP`, `TEST_COVERAGE_AUDIT_REVIEW`, `ADVERSARIAL_STEP`, `PLAN_COMPLETION_AUDIT_SHIP`, `PLAN_COMPLETION_AUDIT_REVIEW`, `PLAN_VERIFICATION_EXEC`, `REVIEW_DASHBOARD`. All adapted from gstack upstream, single source of truth.
+- **Pre-merge gates for `/finishing-a-development-branch`.** Test coverage audit, plan completion audit, plan verification, adversarial review, and review readiness dashboard — 5 verification steps that were missing entirely.
+- **Plan completion audit for `/requesting-code-review`.** Cross-references plan items against the diff to catch missing requirements and scope creep.
+
+### Fixed
+- Browse command reference had wrong syntax (`eval <expression>` instead of `eval <file>`, `network [--failed]` instead of `[--clear]`) and was missing 15+ commands (`js`, `css`, `attrs`, `perf`, `watch`, `inbox`, `handoff`, `resume`, `connect`, `disconnect`, `focus`).
+- 7 skills had copy-pasted browse setup blocks that could drift. Now all share one resolver.
+- Design hard rules, AI slop blacklist, and QA methodology were duplicated across 2-4 templates. Now shared via resolvers.
+- Test bootstrap procedure was hand-written in qa and design-review. Now shared via `TEST_BOOTSTRAP` resolver.
+
 ## [0.9.0] - 2026-03-29
 
 Watch Claude browse in real time. `rkstack-browse connect` opens a visible Chromium window with a Chrome extension side panel showing live activity feed and chat.
