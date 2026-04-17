@@ -1,6 +1,6 @@
 {
   "name": "rkstack",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "AI development workflow — skills for Claude Code, Codex, and Gemini",
   "license": "MIT",
   "type": "module",

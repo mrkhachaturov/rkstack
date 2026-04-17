@@ -18,3 +18,10 @@ This project incorporates material from the following sources:
 - **Source:** https://github.com/anthropics/skills
 - **License:** Apache 2.0 (example skills), Source-available (document skills)
 - **Skills referenced:** webapp-testing, frontend-design, skill-creator
+
+## codex-plugin-cc (OpenAI)
+- **Source:** https://github.com/openai/codex-plugin-cc
+- **License:** Apache 2.0
+- **Version tracked:** 6a5c2ba53b734f3cdd8daacbd49f68f3e6c8c167
+- **Vendored runtime at:** `scripts/codex/` (companion + lib, schemas, session hooks — unmodified). `LICENSE` and `NOTICE` preserved alongside the code.
+- **Skills derived from:** codex-cli-runtime, codex-result-handling, gpt-5-4-prompting (internal), rescue (user-facing wrapper), codex-rescue subagent. Dual-review's spec/plan prompt structure is adapted from upstream `prompts/adversarial-review.md`; `schemas/review-output.schema.json` is vendored verbatim at `skills/dual-review/review-schema.json`.

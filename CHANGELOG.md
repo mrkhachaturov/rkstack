@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.9.2] - 2026-04-18
+
+Dual-review gets an adversarial second opinion with structured JSON findings, and a new `/rescue` skill hands substantial tasks over to Codex when you want a second set of eyes that can actually edit.
+
+### Added
+- **`/rescue` skill.** Delegate investigation, diagnosis, or implementation to Codex through a thin forwarding subagent. Supports `--background` for long runs, `--resume` / `--fresh` for thread control, `--model` (including `spark` → `gpt-5.3-codex-spark`), and `--effort` levels. Default is write-capable so Codex can apply fixes directly.
+- **Vendored Codex companion runtime at `scripts/codex/`.** Pin `6a5c2ba` from [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) (Apache 2.0). Pure Node stdlib, zero npm runtime dependencies, cross-platform. Gives dual-review and rescue access to `setup --json` readiness checks, `task` with resume support, background job tracking, and the JSON-RPC broker.
+- **`session-lifecycle-hook` wired on SessionStart + SessionEnd.** Scopes Codex job tracking per Claude session, kills orphaned jobs on exit, and shuts down the broker so no stale processes linger.
+- **Three supporting internal skills:** `codex-result-handling` (presentation contract for any Codex output — preserve evidence boundaries, never auto-apply review fixes, never fabricate substitutes), `gpt-5-4-prompting` (XML-block prompt guidance for composing Codex prompts — attack surfaces, grounding rules, verification loops), and `codex-cli-runtime` (task-forwarding contract for the rescue subagent).
+
+### Changed
+- **Dual-review v1.0.0 → v2.0.0.** The review loop now enforces structured JSON findings via `codex exec --output-schema skills/dual-review/review-schema.json`. Each finding carries `file`, `line_start`, `line_end`, `confidence`, `severity`, and `recommendation` — no more paragraph-extraction guesswork. Verdict is an enum (`approve` / `needs-attention`), so approve + empty findings exits the loop cleanly.
+- **Spec and plan review prompts rewritten with XML blocks** (`<role>`, `<task>`, `<operating_stance>`, `<grounding_rules>`, `<attack_surface>`, `<review_method>`, `<finding_bar>`, `<structured_output_contract>`, `<calibration_rules>`, `<final_check>`) adapted from upstream's adversarial-review prompt and specialized per document type. The "source code informs context, not intent" principle is now an explicit `<grounding_rules>` block Codex must honor.
+- **Dual-review accepts a free-form focus text argument.** Everything after flags and the path gets passed as `USER_FOCUS` so you can weight the review toward a specific concern (auth, rollback, concurrency, etc.).
+- **Readiness check uses the companion's `setup --json`.** Replaces the lightweight `command -v codex` probe with a single source of truth on Codex state (binary + auth + provider), and emits actionable `!codex login` guidance when auth is missing.
+
+### Security
+- Apache 2.0 NOTICE and LICENSE preserved next to the vendored code at `scripts/codex/`.
+
 ## [0.9.1] - 2026-03-30
 
 Skills now know every browse command. The AI can crop screenshots to specific elements, use `--clip` for regions, and check computed CSS — capabilities that existed in the browse binary but were invisible because skill docs never mentioned them.

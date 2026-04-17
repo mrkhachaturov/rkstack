@@ -139,10 +139,26 @@ graph TD
 
 Each round gets tighter. Codex catches issues Claude missed (missing CI path trigger, version mismatch guard). Claude rejects findings where Codex lacked context (standard patterns, intentional parallelism). Three rounds, zero remaining issues is common.
 
+Codex runs under an adversarial prompt contract (attack surfaces, grounding rules, one-strong-finding-over-many-weak calibration) and emits **structured JSON findings** — each with `file`, `line_start`, `line_end`, `severity`, `confidence`, and a concrete recommendation. Claude parses deterministically, no free-form extraction.
+
 ```
-/dual-review path/to/spec.md            # review any spec or plan
-/dual-review path/to/plan.md --rounds 5 # up to 5 rounds
+/dual-review path/to/spec.md                        # review any spec or plan
+/dual-review path/to/plan.md --rounds 5             # up to 5 rounds
+/dual-review path/to/spec.md auth and rollback      # focus text steers the review
 ```
+
+### /rescue: hand a task to Codex
+
+When Claude is stuck on a bug, wants a second implementation pass, or should offload long-running work, `/rescue` delegates the task to Codex through a thin forwarding subagent. Codex reads or writes code depending on the request and returns its output verbatim.
+
+```
+/rescue investigate why CI tests started failing
+/rescue --background fix the flaky async test with smallest safe patch
+/rescue --model spark --effort low investigate the regression
+/rescue --resume apply the top fix from the last run
+```
+
+Default is write-capable so Codex can actually apply fixes. Use `--background` for open-ended work; session-lifecycle hooks clean up orphaned jobs when the session ends.
 
 ---
 
@@ -171,7 +187,8 @@ Each round gets tighter. Codex catches issues Claude missed (missing CI path tri
 | **retro** | Weekly retrospective with commit analysis and trends. |
 | **receiving-code-review** | Respond to feedback with technical rigor. |
 | **humanizer** | Write like a person. 35 anti-AI constraints active during composition. |
-| **dual-review** | Claude writes, Codex reviews. Sequential rounds until clean. |
+| **dual-review** | Claude writes, Codex reviews. Structured JSON findings, sequential rounds until clean. |
+| **rescue** | Hand a task to Codex. Investigate, diagnose, or fix — background, resume, model selection. |
 
 ### Safety guardrails
 
