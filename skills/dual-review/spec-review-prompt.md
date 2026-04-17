@@ -69,6 +69,19 @@ A finding should answer:
 4. What concrete change to the spec would reduce the risk?
 </finding_bar>
 
+<default_follow_through_policy>
+After finding the first plausible issue, keep searching for second-order
+problems, edge cases, and dependencies before finalizing. Only stop when
+you are confident you have identified the highest-impact issues worthy
+of blocking or revision.
+</default_follow_through_policy>
+
+<dig_deeper_nudge>
+After you find the first plausible issue, check for second-order failures,
+empty-state behavior, retries, stale state, and rollback paths before you
+finalize.
+</dig_deeper_nudge>
+
 <structured_output_contract>
 Return only valid JSON matching the provided schema.
 Keep the output compact and specific.

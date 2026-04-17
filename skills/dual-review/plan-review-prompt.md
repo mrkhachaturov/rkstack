@@ -72,6 +72,19 @@ A finding should answer:
 4. What concrete change to the plan would unblock the executor?
 </finding_bar>
 
+<default_follow_through_policy>
+After finding the first plausible gap, keep searching for spec-coverage gaps,
+task ordering problems, and executability issues before finalizing. Only stop
+when you are confident you have identified the highest-impact issues worthy
+of blocking or revision.
+</default_follow_through_policy>
+
+<dig_deeper_nudge>
+After you find the first plausible gap, check for cascading dependencies,
+missing state setup, task interleaving issues, and spec requirements that
+have no task accountable for them before you finalize.
+</dig_deeper_nudge>
+
 <structured_output_contract>
 Return only valid JSON matching the provided schema.
 Keep the output compact and specific.
