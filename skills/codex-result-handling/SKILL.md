@@ -1,0 +1,65 @@
+---
+name: codex-result-handling
+preamble-tier: 4
+version: 1.0.0
+description: |
+  Internal contract for presenting Codex companion output back to the user.
+  Referenced by dual-review (structured findings) and rescue (task output).
+  Not user-invocable.
+user-invocable: false
+allowed-tools:
+  - Read
+---
+<!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
+<!-- Regenerate: just build -->
+
+# Codex Result Handling
+
+Use this contract when returning output produced by the vendored Codex
+companion runtime at `${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs`.
+
+## Rules
+
+- Preserve the companion's verdict, summary, findings, and next-steps structure.
+- For review output, present findings first and order them by severity
+  (`critical` → `high` → `medium` → `low`).
+- Use file paths and line numbers exactly as the companion reports them.
+  Format as `path/to/file.ts:42-51` so they render as clickable links.
+- Preserve evidence boundaries. If Codex marked a claim as an inference,
+  uncertainty, or open question, keep that distinction — do not harden it
+  into a definitive statement.
+- Preserve output sections when the prompt asked for them: observed facts,
+  inferences, open questions, touched files, next steps.
+- If there are no findings, say that explicitly and keep any residual-risk
+  note brief. Do not invent findings to fill space.
+- If Codex made edits (task mode with `--write`), state that explicitly and
+  list the touched files when the companion provides them.
+
+## Never do this
+
+- **Never turn a failed or incomplete Codex run into a Claude-side
+  implementation attempt.** Report the failure, stop, and let the user decide.
+- **Never generate a substitute answer** when Codex was never successfully
+  invoked (missing binary, auth failure, broker crash).
+- **Never auto-apply fixes from a review.** After presenting findings, STOP.
+  You MUST explicitly ask the user which issues (if any) they want fixed
+  before touching a single file. Auto-applying review fixes is strictly
+  forbidden, even if the fix is obvious.
+- **Never invent file paths or line numbers** not present in the companion
+  output. If the companion gave a location, use it verbatim; if it did not,
+  say so rather than guessing.
+
+## Error surfaces
+
+- If the companion reports malformed output or a failed Codex run, include
+  the most actionable stderr lines and stop there instead of guessing.
+- If the companion reports that setup or authentication is required, direct
+  the user to run `!codex login` or to install Codex — do not improvise
+  alternate auth flows.
+- If the companion reports a timeout, say so and suggest `--background` or
+  a smaller scope.
+
+## Provenance
+
+Adapted from openai/codex-plugin-cc skill `codex-result-handling`
+(Apache 2.0). See `scripts/codex/LICENSE`.
