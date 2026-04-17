@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.3] - 2026-04-18
+
+Patch release aligning dual-review's Codex invocation with OpenAI's own design: routes calls through the Codex app-server broker instead of raw `codex exec` + shell temp files, and adopts the two review-specialized prompt blocks from the Codex prompt block catalog that our prompts were missing.
+
+### Fixed
+- **Plugin manifest path in `scripts/codex/lib/app-server.mjs`.** The `PLUGIN_MANIFEST_URL` used two `../` levels which landed in `scripts/` instead of the repo root — `node scripts/codex/codex-companion.mjs setup --json` now returns `{"ready": true, ...}` instead of ENOENT.
+
+### Changed
+- **Dual-review's Codex transport.** The review loop no longer shells out to `codex exec` with three `mktemp` temp files for prompt / output / stderr. Instead it calls `scripts/codex/review-doc.mjs`, a small Node helper that reads the prompt from stdin, runs one Codex turn through the shared app-server broker with the output schema enforced at the RPC layer, and prints the parsed JSON findings on stdout. From Claude's side, Step 2 is a single Bash call with a quoted HEREDOC — no temp files written from Bash, no BSD/GNU `mktemp` portability concerns. Rounds share the same Codex session via broker reuse; `CODEX_COMPANION_SESSION_ID` from the existing session-lifecycle hook scopes job tracking.
+- **Review prompts gained two blocks.** Added `<default_follow_through_policy>` and `<dig_deeper_nudge>` to `spec-review-prompt.md` and `plan-review-prompt.md`, placed between `<finding_bar>` and `<structured_output_contract>` as the Codex prompt block catalog recommends. These instruct Codex to keep searching after the first plausible issue with concrete second-order checks (empty-state behavior, retries, stale state, rollback paths for specs; cascading dependencies, state setup, task interleaving, uncovered spec requirements for plans). Without them Codex can stop at the first finding and call the review done.
+- **Stripped editorial noise from skill docs.** Removed "Provenance" sections and inline license / upstream-attribution language from `codex-cli-runtime`, `codex-result-handling`, and `gpt-5-4-prompting` skills. Skill files are runtime instructions for the agent, not attribution documentation. Attribution stays in `THIRD_PARTY_NOTICES.md` and `scripts/codex/LICENSE`.
+
 ## [0.9.2] - 2026-04-18
 
 Dual-review gets an adversarial second opinion with structured JSON findings, and a new `/rescue` skill hands substantial tasks over to Codex when you want a second set of eyes that can actually edit.
