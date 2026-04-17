@@ -57,14 +57,14 @@ follow-through defaults, and the small set of extra constraints that matter.
 
 ## How to choose prompt shape
 
-- Use the vendored `review` or `adversarial-review` companion subcommands
-  when reviewing local git changes. Those prompts already carry the review
-  contract and should not be rewritten.
-- Use `task` when the work is diagnosis, planning, research, or implementation
-  and you need to control the prompt directly.
-- Use `task --resume-last` for follow-up instructions on the same Codex thread.
-  Send only the *delta* instruction instead of restating the whole prompt,
-  unless the direction changed materially.
+- Use the `review` or `adversarial-review` companion subcommands when the
+  job is reviewing local git changes. Those prompts already carry the
+  review contract and should not be rewritten.
+- Use `task` when the work is diagnosis, planning, research, or
+  implementation and you need to control the prompt directly.
+- Use `task --resume-last` for follow-up instructions on the same Codex
+  thread. Send only the *delta* instruction instead of restating the
+  whole prompt, unless the direction changed materially.
 
 ## Working rules
 
@@ -91,8 +91,3 @@ follow-through defaults, and the small set of extra constraints that matter.
 - Reusable blocks: [references/prompt-blocks.md](references/prompt-blocks.md)
 - End-to-end templates: [references/codex-prompt-recipes.md](references/codex-prompt-recipes.md)
 - Common failure modes: [references/codex-prompt-antipatterns.md](references/codex-prompt-antipatterns.md)
-
-## Provenance
-
-Adapted from openai/codex-plugin-cc skill `gpt-5-4-prompting` (Apache 2.0).
-References are vendored verbatim. See `scripts/codex/LICENSE`.

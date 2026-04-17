@@ -3,7 +3,7 @@ name: codex-result-handling
 preamble-tier: 4
 version: 1.0.0
 description: |
-  Internal contract for presenting Codex companion output back to the user.
+  Internal contract for presenting Codex output back to the user.
   Referenced by dual-review (structured findings) and rescue (task output).
   Not user-invocable.
 user-invocable: false
@@ -118,8 +118,9 @@ RECOMMENDATION: [what the user should do next]
 
 # Codex Result Handling
 
-Use this contract when returning output produced by the vendored Codex
-companion runtime at `${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs`.
+Use this contract when returning output produced by
+`${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs` or
+`${CLAUDE_PLUGIN_ROOT}/scripts/codex/review-doc.mjs`.
 
 ## Rules
 
@@ -161,8 +162,3 @@ companion runtime at `${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs`.
   alternate auth flows.
 - If the companion reports a timeout, say so and suggest `--background` or
   a smaller scope.
-
-## Provenance
-
-Adapted from openai/codex-plugin-cc skill `codex-result-handling`
-(Apache 2.0). See `scripts/codex/LICENSE`.

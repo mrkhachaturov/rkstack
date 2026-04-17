@@ -3,8 +3,8 @@ name: codex-cli-runtime
 preamble-tier: 4
 version: 1.0.0
 description: |
-  Internal helper contract for calling the vendored codex-companion
-  runtime from the codex-rescue subagent. Not user-invocable.
+  Internal helper contract for calling the codex-companion runtime
+  from the codex-rescue subagent. Not user-invocable.
 user-invocable: false
 allowed-tools:
   - Bash
@@ -77,9 +77,3 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs" task "<raw argume
   work of your own.
 - Return the stdout of the `task` command exactly as-is.
 - If the Bash call fails or Codex cannot be invoked, return nothing.
-
-## Provenance
-
-Adapted from openai/codex-plugin-cc skill `codex-cli-runtime` (Apache 2.0).
-Path updated to point at the vendored runtime under
-`scripts/codex/`. See `scripts/codex/LICENSE`.
