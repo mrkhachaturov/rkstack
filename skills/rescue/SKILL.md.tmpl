@@ -1,0 +1,156 @@
+---
+name: rescue
+preamble-tier: 2
+version: 1.0.0
+description: |
+  Delegate a substantial investigation, diagnosis, or implementation task
+  to Codex via the codex-rescue subagent. Use when Claude is stuck, wants
+  a second implementation pass, needs deeper root-cause investigation, or
+  should offload long-running work. Supports background execution, model
+  selection, and thread resume.
+user-invocable: true
+allowed-tools:
+  - Agent
+  - Bash
+  - AskUserQuestion
+announce-action: delegate `<task>` to Codex via rescue
+---
+
+{{PREAMBLE}}
+
+# Rescue: Delegate To Codex
+
+Hand a task to Codex through the `codex-rescue` subagent. Codex reads or
+writes code depending on the task, and the agent returns its output verbatim.
+
+{{ANNOUNCE_AT_START}}
+
+## When to use this skill
+
+- You're stuck on a bug and want a second set of eyes that can actually edit.
+- The task is long-running or open-ended and would block the main thread.
+- You want a cheaper/faster pass with a smaller model (`--model spark`).
+- You want to continue a previous Codex rescue thread (`--resume`).
+
+Do **not** use this for small, clearly-bounded tasks the main thread can
+finish quickly on its own.
+
+## Parse the user's request
+
+The user invokes `/rescue [flags] <task description>`.
+
+Recognized routing flags (strip from the task text before forwarding):
+
+| Flag | Meaning |
+|---|---|
+| `--background` | Run in a detached worker; returns a job ID. Use for long or open-ended work. |
+| `--wait` | Foreground run; block until Codex finishes. |
+| `--resume` | Continue the latest Codex rescue thread for this repo. Appends `--resume-last`. |
+| `--fresh` | Start a new Codex thread even if the phrasing sounds like a follow-up. |
+| `--model <name>` | Override Codex model. `spark` maps to `gpt-5.3-codex-spark`. |
+| `--effort <level>` | Reasoning effort: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`. |
+
+Default: foreground for small/bounded requests, background for open-ended ones,
+write-capable (`--write`) unless the user explicitly wants read-only.
+
+## Step 0: Verify Codex is ready
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs" setup --json
+```
+
+If `ready: false`:
+
+- Codex not installed → `"Codex CLI not found. Run `npm install -g @openai/codex`, then `!codex login` to authenticate."`
+- Codex installed but not logged in → `"Codex is installed but not authenticated. Run `!codex login` (ChatGPT account or API key)."`
+
+Stop with the appropriate message.
+
+## Step 1: Resolve resume-vs-fresh
+
+If the user passed `--resume` or `--fresh`, honor it.
+
+Otherwise, check for a resumable rescue thread from this Claude session:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs" task-resume-candidate --json
+```
+
+If the helper reports `"available": true`, use `AskUserQuestion` exactly once:
+
+- **Re-ground:** name the repo, the current branch (from preamble `_BRANCH`),
+  and the user's task in one sentence.
+- **Options:**
+  - `Continue current Codex thread` — add `--resume`
+  - `Start a new Codex thread` — add `--fresh`
+- **Recommendation:** If the user's phrasing is clearly a follow-up
+  ("continue", "keep going", "apply the top fix", "dig deeper"), put
+  `Continue current Codex thread (Recommended)` first. Otherwise put
+  `Start a new Codex thread (Recommended)` first.
+
+If the helper reports `"available": false`, skip the question and proceed.
+
+## Step 2: Dispatch to the codex-rescue subagent
+
+Use the `Agent` tool with `subagent_type: "codex-rescue"`.
+
+Brief the subagent with:
+
+- The user's task text (with routing flags stripped)
+- The resolved execution flags (`--background` or `--wait`)
+- The resolved resume flag (`--resume` or `--fresh`)
+- Any model/effort flags
+
+The subagent makes one Bash call to the companion's `task` subcommand and
+returns stdout verbatim. Do not add commentary before or after the
+subagent's output.
+
+## Step 3: Apply the codex-result-handling contract
+
+When rendering the subagent's output, follow the `codex-result-handling`
+skill rules:
+
+- Preserve verdict, findings, touched files, and next steps exactly.
+- Preserve file paths and line numbers verbatim. Format as `path:line` so
+  they render as clickable links.
+- If Codex failed or was never invoked, report the failure and stop. Do not
+  substitute a Claude-side answer.
+- If Codex wrote code, say so explicitly and list the touched files.
+
+## Background flow
+
+If `--background` was used (or inferred), the subagent returns a job ID
+instead of completed output. Tell the user:
+
+```
+Codex rescue started in the background. Job ID: <id>
+
+Check progress:
+  node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs" status <id>
+
+Fetch result when done:
+  node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs" result <id>
+
+Cancel if needed:
+  node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs" cancel <id>
+```
+
+The session-lifecycle hook will clean up orphaned jobs at session end.
+
+## Error handling
+
+| Error | Action |
+|---|---|
+| Setup check reports not ready | Stop with install / `!codex login` message |
+| Subagent returns empty stdout | Report that Codex invocation failed, stop |
+| User passed both `--resume` and `--fresh` | Ask which one they meant via AskUserQuestion |
+| User passed no task text | Ask what Codex should investigate or fix |
+
+## Key rules
+
+1. **One `task` invocation per rescue.** The subagent is not an orchestrator.
+2. **Preserve task text.** Strip routing flags, do not rewrite the intent.
+3. **Return stdout verbatim.** The subagent does not summarize. You apply
+   the codex-result-handling contract only for formatting, not paraphrasing.
+4. **Never substitute a Claude answer** when Codex was not successfully invoked.
+5. **Default to write-capable** unless user says read-only.
