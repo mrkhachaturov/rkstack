@@ -211,29 +211,24 @@ For plan mode: also read the linked spec at <spec-path>.
 <remainder of the interpolated prompt template follows>
 ```
 
-Write the assembled prompt to a temp file.
+#### 2. Call Codex
 
-#### 2. Call Codex with the structured-output schema
+`scripts/codex/review-doc.mjs` accepts a prompt on stdin, runs it
+through the shared Codex app-server broker with the structured-output
+schema enforced, and prints the parsed JSON findings on stdout.
+
+Invoke it in one Bash call with a quoted HEREDOC so the prompt is
+passed verbatim — no shell expansion, no temp files:
 
 ```bash
-PROMPT_FILE=$(mktemp /tmp/dual-review-prompt-XXXXXX.txt)
-OUTPUT_FILE=$(mktemp /tmp/dual-review-output-XXXXXX.json)
-STDERR_FILE=$(mktemp /tmp/dual-review-err-XXXXXX.txt)
-
-# Write the assembled prompt to $PROMPT_FILE using the Write tool first.
-
-SCHEMA="${CLAUDE_PLUGIN_ROOT}/skills/dual-review/review-schema.json"
-
-codex exec \
-  --output-schema "$SCHEMA" \
-  --output-last-message "$OUTPUT_FILE" \
-  -C "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" \
-  -s read-only \
-  -c 'model_reasoning_effort="medium"' \
-  < "$PROMPT_FILE" \
-  > /dev/null 2> "$STDERR_FILE"
-
-EXIT=$?
+JSON=$(node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/review-doc.mjs" \
+  --schema "${CLAUDE_PLUGIN_ROOT}/skills/dual-review/review-schema.json" \
+  --cwd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" \
+  --effort medium \
+  <<'CODEX_PROMPT' 2> /tmp/dual-review.stderr
+<full interpolated prompt goes here — see step 1>
+CODEX_PROMPT
+) ; EXIT=$?
 ```
 
 Use `timeout: 300000` (5 min) on the Bash tool call.
@@ -242,13 +237,14 @@ Use `timeout: 300000` (5 min) on the Bash tool call.
 
 | Situation | Action |
 |---|---|
-| `EXIT == 0` and `$OUTPUT_FILE` is non-empty valid JSON | Continue to step 4 |
-| `EXIT != 0` and stderr mentions `auth`/`token`/`login` | Stop: `"Codex authentication failed. Run `!codex login`."` |
+| `EXIT == 0` — `$JSON` contains the parsed findings | Continue to step 4 |
+| `EXIT == 2` | Usage error (missing `--schema`, empty prompt). Fix the invocation. |
+| `EXIT == 3` | Codex CLI not installed. Stop: `"Codex CLI not found. Install: `npm install -g @openai/codex`. Then run `!codex login`."` |
+| `EXIT == 1` — stderr mentions `auth` / `token` / `login` | Stop: `"Codex authentication failed. Run `!codex login`."` |
+| `EXIT == 1` — stderr mentions schema mismatch | Codex's output did not match the schema. Read stderr's `parseError` line; if transient, retry once. Otherwise report and stop. |
 | Bash timeout (5 min) | Stop: `"Codex timed out. Try `/dual-review <path> --rounds 1` with a smaller artifact, or split the document."` |
-| `$OUTPUT_FILE` empty or unparseable | Read stderr, report the most actionable lines, suggest re-run |
 
-Read `$OUTPUT_FILE` and `JSON.parse` it. The structure (from
-`review-schema.json`):
+Parse `$JSON` directly — it is the structured review output:
 
 ```json
 {
@@ -270,7 +266,8 @@ Read `$OUTPUT_FILE` and `JSON.parse` it. The structure (from
 }
 ```
 
-Clean up temp files: `rm -f "$PROMPT_FILE" "$OUTPUT_FILE" "$STDERR_FILE"`.
+No cleanup is required — `review-doc.mjs` does not write any temp files,
+and the broker manages its own lifecycle.
 
 #### 4. Evaluate each finding
 
@@ -375,16 +372,3 @@ finding, include:
    never source code. If a finding implies a code change, that belongs in
    a later skill (brainstorming / writing-plans / executing-plans).
 
----
-
-## Provenance
-
-- Schema `review-schema.json` vendored from openai/codex-plugin-cc
-  (Apache 2.0). See `scripts/codex/LICENSE`.
-- Prompt XML-block structure adapted from upstream `prompts/adversarial-review.md`,
-  specialized for spec and plan review.
-- Runtime setup check uses the vendored companion (`setup --json`).
-- The review call uses `codex exec --output-schema` directly because Codex's
-  schema enforcement is stronger than prompt-only contracts, and each round
-  of dual-review is foreground by design (no need for the companion's
-  background-job machinery here).
