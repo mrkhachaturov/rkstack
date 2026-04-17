@@ -1,12 +1,12 @@
 ---
 name: dual-review
 preamble-tier: 2
-version: 1.0.0
+version: 2.0.0
 description: |
-  Sequential Claude-Codex review loop for specs and plans. Embedded in
-  brainstorming and writing-plans for automatic Codex review after self-review.
-  Also user-invocable for manual ad-hoc review. Max 3 rounds default, early exit
-  if clean.
+  Sequential Claude-Codex review loop for specs and plans with structured
+  JSON findings. Embedded in brainstorming and writing-plans for automatic
+  Codex review after self-review. Also user-invocable for manual ad-hoc
+  review. Max 3 rounds default, early exit if clean.
 user-invocable: true
 allowed-tools:
   - Bash
@@ -14,8 +14,9 @@ allowed-tools:
   - Grep
   - Glob
   - Edit
+  - Write
   - AskUserQuestion
-announce-action: run a Codex review loop on `<path>`
+announce-action: run a Codex adversarial review loop on `<path>`
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: just build -->
@@ -108,42 +109,62 @@ RECOMMENDATION: [what the user should do next]
 
 # Dual-Review: Sequential Claude-Codex Review Loop
 
-You are reviewing a spec or plan with Codex as a second opinion. This skill runs in two modes:
+You are reviewing a spec or plan with Codex as an adversarial second opinion.
+This skill runs in two modes:
 
-1. **Embedded** — called automatically by brainstorming (after self-review) and writing-plans (after self-review)
-2. **Standalone** — user invokes `/dual-review path/to/artifact.md [--rounds N]`
+1. **Embedded** — called automatically by brainstorming (after self-review on
+   the spec) and writing-plans (after self-review on the plan).
+2. **Standalone** — user invokes `/dual-review path/to/artifact.md [--rounds N] [focus text]`.
 
-Both modes use the same mechanism: sequential loops where Codex reviews, Claude evaluates findings, and fixes valid ones until Codex returns clean or max rounds are reached.
+Both modes use the same mechanism: sequential loops where Codex reviews with
+the adversarial-review prompt contract, returns structured JSON findings,
+you evaluate each finding against the document and source code, fix valid
+ones, and loop until Codex returns `approve` (no findings) or max rounds
+are reached.
 
-**Announce at start:** "I'm using the dual-review skill to run a Codex review loop on `<path>`."
+**Announce at start:** "I'm using the dual-review skill to run a Codex adversarial review loop on `<path>`."
 
-**Core principle:** Source code informs context, not intent. Proposed changes in a spec or plan are not defects just because current code does not implement them. Codex should flag conflicts with existing contracts, circular dependencies, or missed documented constraints — not "this doesn't exist yet."
+**Core principle:** Source code informs context, not intent. Proposed
+changes in a spec or plan are not defects just because current code does
+not implement them. Codex should flag conflicts with existing contracts,
+circular dependencies, or missed documented constraints — not "this
+doesn't exist yet." This rule is embedded in `spec-review-prompt.md` and
+`plan-review-prompt.md` as a `<grounding_rules>` block.
 
 ---
 
-## Step 0: Validate Codex CLI
+## Step 0: Verify Codex is ready
 
 ```bash
-command -v codex >/dev/null 2>&1 && echo "codex: available" || echo "codex: NOT FOUND"
+node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/codex-companion.mjs" setup --json
 ```
 
-If Codex is not installed, stop with:
-> "Codex CLI not found. Install: `npm install -g @openai/codex`. Then run `codex login` to authenticate."
+Parse the JSON. If `"ready": false`:
+
+- `codex.available: false` → stop with:
+  > "Codex CLI not found. Install: `npm install -g @openai/codex`. Then run `!codex login` to authenticate."
+- `auth.loggedIn: false` → stop with:
+  > "Codex is installed but not authenticated. Run `!codex login` (ChatGPT account or API key)."
 
 ---
 
 ## Standalone Mode: Parse Arguments
 
-When user invokes `/dual-review path/to/file.md [--rounds N]`:
+When user invokes `/dual-review path/to/file.md [--rounds N] [focus text]`:
 
 1. **File path** — required (first positional argument). Verify it exists.
 2. **--rounds N** — optional, default 3.
-3. **Determine artifact type** by reading the first 50 lines:
+3. **focus text** — optional, anything after flags/path. Interpolated into
+   the prompt at the `USER_FOCUS` placeholder (double-braced, uppercase,
+   literally present in the prompt file) to weight the review toward a
+   specific concern. Default if absent: `"(none — general review)"`.
+4. **Determine artifact type** by reading the first 50 lines:
    - Contains `## Problem` and `## Solution` → **spec**
    - Contains `**Spec:**` and `**Goal:**` and task checkboxes (`- [ ]`) → **plan**
    - If ambiguous: ask user "Is this a spec or a plan?"
-4. **For plans:** must have `**Spec:** filename.md` in the header. If missing, stop with:
+5. **For plans:** must have `**Spec:** filename.md` in the header. If missing, stop with:
    > "Plan must link its spec in the header. Add: `**Spec:** path/to/spec.md`"
+
    Resolve spec path relative to the plan's directory. Verify spec file exists.
 
 ---
@@ -153,138 +174,217 @@ When user invokes `/dual-review path/to/file.md [--rounds N]`:
 Run this loop for both embedded and standalone modes.
 
 **Inputs:**
-- `ARTIFACT_PATH` — the spec or plan file
-- `ARTIFACT_TYPE` — "spec" or "plan"
+- `ARTIFACT_PATH` — absolute path to the spec or plan file
+- `ARTIFACT_TYPE` — `"spec"` or `"plan"`
 - `MAX_ROUNDS` — default 3
-- For plans: `SPEC_PATH` — the linked spec file
+- `USER_FOCUS` — optional focus text (default `"(none — general review)"`)
+- For plans: `SPEC_PATH` — absolute path to the linked spec
 
 ### Round N (repeat up to MAX_ROUNDS):
 
-**1. Read the document**
+#### 1. Assemble the Codex prompt
 
-Read `ARTIFACT_PATH` fully.
+Read the appropriate XML-block prompt template:
 
-**2. Build the Codex prompt**
+- For specs: `${CLAUDE_PLUGIN_ROOT}/skills/dual-review/spec-review-prompt.md`
+- For plans: `${CLAUDE_PLUGIN_ROOT}/skills/dual-review/plan-review-prompt.md`
 
-Codex runs with `-C <repo-root> -s read-only` and can read all project files. Tell it to read the files itself instead of pasting their contents.
+The prompt files use double-braced uppercase placeholders. Find and
+replace each one with the runtime value before sending to Codex:
 
-Read the appropriate prompt template for review criteria:
-- For specs: `skills/dual-review/spec-review-prompt.md`
-- For plans: `skills/dual-review/plan-review-prompt.md`
+| Placeholder (literal text in the prompt file) | Replacement |
+|---|---|
+| `ARTIFACT_PATH` (double-braced) | absolute path to the spec or plan |
+| `SPEC_PATH` (double-braced) | absolute path to linked spec (plan mode only) |
+| `USER_FOCUS` (double-braced) | user focus text, or the default |
 
-For specs, construct this prompt:
-"Read and review the spec at `<ARTIFACT_PATH>`. Also read CLAUDE.md for project conventions and the first 50 lines of README.md for context. Read any source files the spec references.
+Prepend a short instruction block directing Codex to read files itself.
+In the block below, `<artifact-type>`, `<artifact-path>`, and `<spec-path>`
+are shell-style placeholders you fill in at runtime:
 
-<review criteria from spec-review-prompt.md>"
+```text
+Read and review the <artifact-type> at <artifact-path>.
+Also read CLAUDE.md for project conventions and the first 50 lines of
+README.md for context. Read any source files the document references.
+For plan mode: also read the linked spec at <spec-path>.
 
-For plans, construct this prompt:
-"Read and review the plan at `<ARTIFACT_PATH>`. Also read the linked spec at `<SPEC_PATH>`. Read CLAUDE.md for project conventions. Read any source files the plan references.
+<remainder of the interpolated prompt template follows>
+```
 
-<review criteria from plan-review-prompt.md>"
+Write the assembled prompt to a temp file.
 
-**3. Call Codex**
-
-The prompt is short — no temp file needed:
+#### 2. Call Codex with the structured-output schema
 
 ```bash
+PROMPT_FILE=$(mktemp /tmp/dual-review-prompt-XXXXXX.txt)
+OUTPUT_FILE=$(mktemp /tmp/dual-review-output-XXXXXX.json)
 STDERR_FILE=$(mktemp /tmp/dual-review-err-XXXXXX.txt)
-codex exec "<assembled prompt>" \
-  -C "$(git rev-parse --show-toplevel)" \
+
+# Write the assembled prompt to $PROMPT_FILE using the Write tool first.
+
+SCHEMA="${CLAUDE_PLUGIN_ROOT}/skills/dual-review/review-schema.json"
+
+codex exec \
+  --output-schema "$SCHEMA" \
+  --output-last-message "$OUTPUT_FILE" \
+  -C "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" \
   -s read-only \
   -c 'model_reasoning_effort="medium"' \
-  2>"$STDERR_FILE"
+  < "$PROMPT_FILE" \
+  > /dev/null 2> "$STDERR_FILE"
+
+EXIT=$?
 ```
 
-Use `timeout: 300000` on the Bash tool call. Codex reads the actual files from disk.
+Use `timeout: 300000` (5 min) on the Bash tool call.
 
-After the call, read stderr:
+#### 3. Handle outcomes
 
-```bash
-cat "$STDERR_FILE" 2>/dev/null; rm -f "$STDERR_FILE"
+| Situation | Action |
+|---|---|
+| `EXIT == 0` and `$OUTPUT_FILE` is non-empty valid JSON | Continue to step 4 |
+| `EXIT != 0` and stderr mentions `auth`/`token`/`login` | Stop: `"Codex authentication failed. Run `!codex login`."` |
+| Bash timeout (5 min) | Stop: `"Codex timed out. Try `/dual-review <path> --rounds 1` with a smaller artifact, or split the document."` |
+| `$OUTPUT_FILE` empty or unparseable | Read stderr, report the most actionable lines, suggest re-run |
+
+Read `$OUTPUT_FILE` and `JSON.parse` it. The structure (from
+`review-schema.json`):
+
+```json
+{
+  "verdict": "approve" | "needs-attention",
+  "summary": "...",
+  "findings": [
+    {
+      "severity": "critical" | "high" | "medium" | "low",
+      "title": "...",
+      "body": "...",
+      "file": "...",
+      "line_start": 42,
+      "line_end": 47,
+      "confidence": 0.0..1.0,
+      "recommendation": "..."
+    }
+  ],
+  "next_steps": ["..."]
+}
 ```
 
-**Error handling:**
-- Exit code non-zero + stderr contains "auth" or "token" → "Codex authentication failed. Run `codex login` to authenticate."
-- Bash timeout (5 min) → "Codex timed out. The document or context may be too large. Try `/dual-review <path> --rounds 1` with a smaller scope."
-- Empty stdout → treat as zero findings (clean)
-- Malformed output (only stderr, no structured findings) → report stderr and suggest re-running
+Clean up temp files: `rm -f "$PROMPT_FILE" "$OUTPUT_FILE" "$STDERR_FILE"`.
 
-**5. Parse findings**
+#### 4. Evaluate each finding
 
-Extract each finding from Codex stdout. Each finding should have:
-- A category or title
-- The document section it references
-- The specific problem
-- Severity (High/Medium/Low)
+Sort findings by severity (`critical` first). For each:
 
-If Codex output doesn't follow the structured format exactly, treat the entire response as findings text and extract individual issues by paragraph or numbered item.
+1. Read the cited section of `ARTIFACT_PATH` at `line_start..line_end`.
+2. If the finding cites a source file, read it.
+3. Classify:
+   - **Valid** — the spec/plan has a genuine gap, missing edge case, internal
+     contradiction, or conflicts with an existing documented constraint.
+     **Fix it** by editing the document to address the finding's
+     `recommendation`.
+   - **Rejected** — the proposed behavior is intentional and supported by
+     the spec's reasoning, or Codex misread current code as the intended
+     target. **Skip** with a one-line explanation captured for the summary.
+   - **Unclear** — needs human judgment. Queue it for an AskUserQuestion
+     at the end of the loop.
 
-**6. Evaluate each finding**
+Apply the `codex-result-handling` contract when presenting findings: preserve
+file paths and line numbers verbatim (format as `path:L-L`), preserve evidence
+boundaries, do not harden Codex's inferences into definitive claims.
 
-For each finding, read the document section Codex references. If Codex cites source code, read that too. Then classify:
+#### 5. Fix valid findings
 
-- **Valid** — The spec/plan has a genuine gap, missing edge case, internal contradiction, or conflicts with an existing documented constraint. **Fix it** by editing the document.
-- **Rejected** — The proposed behavior is intentional. The spec reasoning supports it, or the spec deliberately proposes something different from current code. **Skip** with a one-line explanation.
-- **Unclear** — Needs human judgment. **Surface to user** with the finding and your analysis.
+Edit the document file directly using the `Edit` tool. Do not modify source
+code — dual-review only edits specs and plans.
 
-**7. Fix valid findings**
+#### 6. Loop decision
 
-Edit the document file directly to address each valid finding.
-
-**8. Loop decision**
-
-- If you made fixes AND rounds < MAX_ROUNDS → next round (go to step 1)
-- If Codex returned zero findings → exit clean
-- If rounds >= MAX_ROUNDS → exit with summary
+- `verdict == "approve"` and `findings == []` → exit **clean** immediately.
+- Made fixes AND rounds < MAX_ROUNDS → next round (go to step 1).
+- `rounds >= MAX_ROUNDS` → exit with **max-rounds** summary.
+- All findings rejected or unclear, none fixed → exit with **no-change** summary
+  (Codex keeps flagging the same thing, you keep rejecting — surface to user).
 
 ---
 
-## Output Format
+## Final Output
 
 After all rounds complete, output:
 
 ```
-DUAL-REVIEW: <artifact_path>
-Rounds: N of M [early exit — clean | max rounds reached]
+DUAL-REVIEW: <artifact_path> (<artifact_type>)
+Rounds: N of M [clean | max-rounds | no-change]
 
 ROUND 1:
-  Codex review: K findings
+  Codex verdict: needs-attention (K findings)
   → X valid (fixed)
   → Y rejected: [one-line reason per rejection]
   → Z unclear: [surfaced to user]
 
 ROUND 2:
-  Codex review: J findings
-  → ...
+  Codex verdict: approve (0 findings) — clean exit
 
-RESULT: total findings, fixed, rejected, unclear
+RESULT: K total findings across N rounds — X fixed, Y rejected, Z unclear
 ```
 
-If there are **unclear** findings, present them to the user with an AskUserQuestion before reporting the final result. Include your analysis of each unclear finding and a recommendation.
+If there are **unclear** findings, present them to the user with a single
+`AskUserQuestion` call before reporting the final result. For each unclear
+finding, include:
+
+- The finding title and Codex's recommendation
+- Your analysis of why it is unclear
+- A recommended action
 
 ---
 
 ## Error Handling
 
 | Error | Action |
-|-------|--------|
-| Codex not installed | Stop with install instructions |
-| Codex auth failed | "Run `codex login` to authenticate" |
-| Codex timeout (5 min) | Report and suggest smaller scope |
-| Codex malformed output | Report stderr, suggest re-run |
+|---|---|
+| Companion setup reports `ready: false` | Stop with install / `!codex login` message |
+| Codex auth failed mid-run | Stop — same message |
+| Codex timeout (5 min) | Report, suggest smaller scope |
+| `$OUTPUT_FILE` empty or invalid JSON | Report stderr actionable lines, suggest re-run |
 | Missing CLAUDE.md | Continue without it |
 | Missing README.md | Continue without it |
-| Source file not found | Skip from context |
+| Source file cited by Codex not found | Skip from context, treat finding as unclear |
 | Spec file not found (plan mode) | Stop — plan must link a valid spec |
-| Zero findings from Codex | Exit clean immediately |
+| `verdict == "approve"`, findings empty | Exit clean immediately |
+| Same finding repeats across 2+ rounds without being fixed | Treat as unclear, surface to user |
 
 ---
 
 ## Key Rules
 
-1. **Source code informs context, not intent** — Proposed changes are not defects just because current code doesn't implement them
-2. **Sequential, never parallel** — Review → evaluate → fix → re-review. One round at a time.
-3. **Evaluate before accepting** — Read referenced document sections and source code before classifying findings
-4. **Early exit on clean** — If Codex returns zero findings, done
-5. **Max 3 rounds default** — Prevents infinite loops; user can override with `--rounds N`
-6. **Fix the document, not the code** — Dual-review edits specs and plans, never source code
+1. **Source code informs context, not intent.** Proposed changes are not
+   defects just because current code doesn't implement them. This rule
+   lives in the prompt as a `<grounding_rules>` block — do not weaken it.
+2. **Sequential, never parallel.** Review → evaluate → fix → re-review.
+   One round at a time.
+3. **Structured output is the contract.** Use `--output-schema` against the
+   vendored `review-schema.json`. Do not fall back to free-form
+   parsing; if the JSON fails to parse, report the failure and stop.
+4. **Evaluate before accepting.** Read referenced document sections and
+   source code before classifying findings.
+5. **Early exit on approve.** If Codex returns `verdict: "approve"` with
+   zero findings, done.
+6. **Max 3 rounds default.** Prevents infinite loops; user can override
+   with `--rounds N`.
+7. **Fix the document, not the code.** Dual-review edits specs and plans,
+   never source code. If a finding implies a code change, that belongs in
+   a later skill (brainstorming / writing-plans / executing-plans).
+
+---
+
+## Provenance
+
+- Schema `review-schema.json` vendored from openai/codex-plugin-cc
+  (Apache 2.0). See `scripts/codex/LICENSE`.
+- Prompt XML-block structure adapted from upstream `prompts/adversarial-review.md`,
+  specialized for spec and plan review.
+- Runtime setup check uses the vendored companion (`setup --json`).
+- The review call uses `codex exec --output-schema` directly because Codex's
+  schema enforcement is stronger than prompt-only contracts, and each round
+  of dual-review is foreground by design (no need for the companion's
+  background-job machinery here).
