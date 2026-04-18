@@ -247,6 +247,59 @@ Never hardcode framework-specific commands, file patterns, or directory structur
 
 Example: don't write `pytest tests/` — read CLAUDE.md to find whether the project uses pytest, vitest, bun test, cargo test, or something else. Put the discovered command in the header and reference it in every task.
 
+## Ask Codex: second opinion on a plan-level decision
+
+When you call `AskUserQuestion` to decide a substantive plan question (task decomposition strategy, test harness choice, which library to pin, rollout order, risky migration sequencing), include `Ask Codex` as an extra option. Skip it on trivial choices (a lint command name, a file-path convention).
+
+If the user picks `Ask Codex`:
+
+### 1. Assemble the consult prompt (XML blocks)
+
+- `<role>` — Codex is a senior design consultant. Claude is writing an implementation plan and hit a decision point. The user picked "Ask Codex".
+- `<task>` — Codex reads the question, your original options with rationale, the spec being implemented, and any constraints from the plan-so-far. Endorses/rejects each option and proposes new ones if warranted. One top recommendation.
+- `<question>` — your question verbatim.
+- `<claude_options>` — each original option with your one-line rationale.
+- `<context>` — the linked spec (read it, include the relevant parts), the plan header (test command, build command from CLAUDE.md), any tasks already written that constrain this decision, the repo state from the preamble. Terse but concrete.
+- `<grounding_rules>` — "Do not invent constraints. If a claim depends on an inference, say so."
+- `<structured_output_contract>` — "Return only valid JSON matching the provided schema. Terse decision-quality rationales — shown to the user inline."
+
+### 2. Call Codex
+
+```bash
+CONSULT=$(node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/consult.mjs" \
+  --cwd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" \
+  --effort medium \
+  <<'CODEX_PROMPT'
+<the assembled prompt>
+CODEX_PROMPT
+) ; EXIT=$?
+```
+
+Use `timeout: 300000` (5 min). Exit codes: 0 ok, 1 Codex/parse failure, 2 usage error, 3 Codex CLI missing (tell the user to run `!codex login`).
+
+### 3. Parse the JSON (schema: `scripts/codex/consult-schema.json`)
+
+```json
+{
+  "analysis": "...",
+  "endorsed_existing": [{"label": "...", "rationale": "..."}],
+  "rejected_existing": [{"label": "...", "reason": "..."}],
+  "new_options":       [{"label": "...", "description": "...", "rationale": "..."}],
+  "recommendation":     {"label": "...", "reason": "..."},
+  "open_questions":    ["..."]
+}
+```
+
+### 4. Re-present `AskUserQuestion` with Codex's input merged in
+
+- One-sentence lead summarizing Codex's `analysis`.
+- Every **original** option with `Codex: <rationale>` appended when endorsed, `Codex ✗ <reason>` when rejected.
+- Every **new option** Codex proposed, labeled `(Codex)`.
+- Mark the recommended label `(Recommended by Codex)`.
+- `open_questions` as a short footer if any.
+
+Do NOT offer `Ask Codex` again on the same question.
+
 ## Self-Review
 
 After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself — not a subagent dispatch.
