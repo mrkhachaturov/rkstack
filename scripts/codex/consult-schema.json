@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codex Consult Response",
+  "description": "Structured response when Claude asks Codex to weigh in on a design-decision question during brainstorming or plan writing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["analysis", "endorsed_existing", "rejected_existing", "new_options", "recommendation", "open_questions"],
+  "properties": {
+    "analysis": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One-paragraph reading of the question and the surrounding context. State what is actually being decided and what constraints matter."
+    },
+    "endorsed_existing": {
+      "type": "array",
+      "description": "Zero or more of Claude's original options that Codex considers viable, with a terse rationale each. Use the exact option label Claude provided.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "rationale"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "rejected_existing": {
+      "type": "array",
+      "description": "Zero or more of Claude's original options that Codex does NOT endorse, with a one-line reason each. Use the exact option label Claude provided.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "reason"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "new_options": {
+      "type": "array",
+      "description": "Zero or more additional options Codex proposes that Claude did not list.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "description", "rationale"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1, "description": "Short label, fit for an AskUserQuestion option (e.g. 'Postgres row-level security')." },
+          "description": { "type": "string", "minLength": 1, "description": "1-2 sentences stating what the option is." },
+          "rationale": { "type": "string", "minLength": 1, "description": "Why this option beats the existing ones, or when it would be preferable." }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "reason"],
+      "description": "Codex's single top pick across endorsed_existing and new_options. Label must match exactly.",
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "description": "Optional: questions Codex would want answered before it would commit harder to a recommendation. One per item.",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}
