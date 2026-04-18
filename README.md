@@ -160,6 +160,12 @@ When Claude is stuck on a bug, wants a second implementation pass, or should off
 
 Default is write-capable so Codex can actually apply fixes. Use `--background` for open-ended work; session-lifecycle hooks clean up orphaned jobs when the session ends.
 
+### Ask Codex during brainstorming and plan writing
+
+On substantive design questions (architecture, tradeoffs, approach, test harness, migration sequencing), `brainstorming` and `writing-plans` include `Ask Codex` as an extra option alongside Claude's own A/B/C. Pick it and Codex weighs in — endorsing some of Claude's options, rejecting others, proposing new ones Claude missed, with a single top recommendation. Claude re-presents the question with the merged set so you decide from the enriched list.
+
+Flow: Claude assembles question + options + project context into an XML-block prompt, pipes it through `scripts/codex/consult.mjs` to the shared Codex app-server broker, gets back structured JSON (analysis / endorsed / rejected / new options / recommendation / open questions), and folds everything into a follow-up `AskUserQuestion` with clear labels — `(Codex)` on new options, `(Recommended by Codex)` on the top pick, `Codex: <reason>` inline on Claude's options when Codex weighs in on them.
+
 ---
 
 ## Skills

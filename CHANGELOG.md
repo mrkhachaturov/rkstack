@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.4] - 2026-04-18
+
+Codex-as-consultant during brainstorming and plan writing. When Claude asks the user a substantive design question, the user can now pick "Ask Codex" and get Codex's read — endorsements of Claude's options, rejections, new options, and a single top recommendation — all merged into a follow-up AskUserQuestion so the user decides from the enriched set.
+
+### Added
+- **`/rescue`-style Codex consultation during ideation.** Both `brainstorming` and `writing-plans` now describe when and how to offer `Ask Codex` as an extra option on `AskUserQuestion` decisions. Trivial choices skip it; substantive ones (architecture, tradeoffs, approach, test harness, migration sequencing, risky decomposition) always include it.
+- **`scripts/codex/consult.mjs`.** Transport helper that reads the consult prompt from stdin, runs one Codex turn through the shared app-server broker with structured-output enforcement, and prints parsed JSON on stdout. Same design as `review-doc.mjs` — one Bash call with a quoted HEREDOC, no temp files.
+- **`scripts/codex/consult-schema.json`.** Defines Codex's response shape: `analysis`, `endorsed_existing[]`, `rejected_existing[]`, `new_options[]`, `recommendation`, `open_questions[]`. Schema is enforced at the RPC layer — Codex's output is deterministic JSON, no paragraph extraction.
+
+### Flow
+1. Claude proposes A/B/C options with rationale in an `AskUserQuestion` + includes `Ask Codex` as an extra option.
+2. User picks `Ask Codex`.
+3. Claude assembles an XML-block consult prompt (question + Claude's options + project context + grounding rules + output contract), pipes it through `consult.mjs`.
+4. Codex returns structured JSON with endorsements, rejections, any new options, and a top recommendation.
+5. Claude re-presents `AskUserQuestion` with the merged set — original options (annotated with Codex's endorsement/rejection rationale), Codex's new options (labeled `(Codex)`), the recommended label marked `(Recommended by Codex)`, and any open questions Codex raised as a brief footer.
+
 ## [0.9.3] - 2026-04-18
 
 Patch release aligning dual-review's Codex invocation with OpenAI's own design: routes calls through the Codex app-server broker instead of raw `codex exec` + shell temp files, and adopts the two review-specialized prompt blocks from the Codex prompt block catalog that our prompts were missing.
