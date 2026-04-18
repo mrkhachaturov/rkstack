@@ -193,6 +193,66 @@ Use the preamble output to understand the tech stack. Adapt your questions to th
 - Lead with your recommended option and explain why
 - Include `Completeness: X/10` for each option (10 = all edges, 7 = happy path, 3 = shortcut)
 - Show effort: `(human: ~X days / CC: ~Y min)`. Recommend the most complete option.
+- **Include an `Ask Codex` option in every `AskUserQuestion` call that decides a substantive design question** (architecture, tradeoff, approach). See the Ask Codex section below for the full flow. Skip it on trivial choices (naming, formatting preferences).
+
+---
+
+## Ask Codex: second opinion on a design decision
+
+When you call `AskUserQuestion` for a substantive design choice, include `Ask Codex` as an extra option alongside your own A/B/C. If the user picks it, Codex weighs in — endorsing some of your options, rejecting others, proposing new ones you missed, with a single top recommendation. You then re-present `AskUserQuestion` with the enriched set so the user decides from the merged list.
+
+**When the user picks `Ask Codex`:**
+
+### 1. Assemble the consult prompt
+
+Build an XML-block prompt with these sections (pass verbatim as heredoc stdin, no escaping needed):
+
+- `<role>` — Codex is a senior design consultant. Claude is brainstorming with the user and the user picked "Ask Codex".
+- `<task>` — Codex reads the question, your original options with rationale, and surrounding context, then endorses/rejects each and proposes new ones if warranted. One top recommendation.
+- `<question>` — your question verbatim.
+- `<claude_options>` — each original option with its label and your one-line rationale.
+- `<context>` — the spec-in-progress so far, relevant CLAUDE.md lines, referenced files, repo mode (solo/team from preamble), any constraints that matter. Terse but concrete — this is Codex's only context.
+- `<grounding_rules>` — "Do not invent constraints. If a claim depends on an inference, say so."
+- `<structured_output_contract>` — "Return only valid JSON matching the provided schema. Terse decision-quality rationales — this gets shown to the user inline in the follow-up AskUserQuestion."
+
+### 2. Call Codex
+
+```bash
+CONSULT=$(node "${CLAUDE_PLUGIN_ROOT}/scripts/codex/consult.mjs" \
+  --cwd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" \
+  --effort medium \
+  <<'CODEX_PROMPT'
+<the assembled prompt from step 1>
+CODEX_PROMPT
+) ; EXIT=$?
+```
+
+Use `timeout: 300000` (5 min). Exit codes: 0 ok, 1 Codex/parse failure, 2 usage error, 3 Codex CLI missing (tell the user to run `!codex login`).
+
+### 3. Parse the JSON
+
+Schema at `scripts/codex/consult-schema.json`. Shape:
+
+```json
+{
+  "analysis": "one-paragraph reading of the decision",
+  "endorsed_existing": [{"label": "<exact label you used>", "rationale": "..."}],
+  "rejected_existing": [{"label": "<exact label you used>", "reason": "..."}],
+  "new_options":       [{"label": "...", "description": "...", "rationale": "..."}],
+  "recommendation":     {"label": "<endorsed or new option>", "reason": "..."},
+  "open_questions":    ["..."]
+}
+```
+
+### 4. Re-present `AskUserQuestion` with Codex's input merged in
+
+- Lead with a one-sentence summary of Codex's `analysis`.
+- Include every **original** option — append `Codex: <endorsement rationale>` when endorsed, `Codex ✗ <reason>` when rejected.
+- Include every **new option** Codex proposed — label with `(Codex)` and show its description.
+- Mark the `recommendation.label` with `(Recommended by Codex)`.
+- If `open_questions` is non-empty, list them below the options as a brief "Codex wants to know:" footer.
+
+Do NOT offer `Ask Codex` again on this same question — the user has already heard from Codex. If they still want to push further, that's a new question.
 
 ---
 
