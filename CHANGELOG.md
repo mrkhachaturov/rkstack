@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.9.5] - 2026-04-18
+
+New standalone skill — `/codex-help` — for when Claude is stuck mid-task and the user wants to pull Codex in for a structured assist. Codex advises, Claude keeps driving. Multi-round loop so Claude can try, verify, and re-ask if the problem isn't resolved.
+
+### Added
+- **`/codex-help` skill.** User invokes anytime Claude is struggling. Claude narrates its own blocker in first person (what I'm trying, what I tried, what's breaking, my current hypothesis), Codex returns a structured diagnosis + concrete next steps, Claude applies them, verifies by re-running whatever surfaced the symptom, and loops.
+- **Multi-round loop via persistent Codex thread.** Default max 3 rounds, overridable via `/codex-help --rounds N`. Round 1 uses `--persist-thread` (new flag), captures the returned `thread_id`. Rounds 2+ use `--resume <thread-id>` and send a short *delta* prompt — what Claude applied, how Claude verified, what changed. Codex's own reasoning persists across rounds via thread memory (same mechanism `/rescue --resume` uses); we don't re-paste a history block. If the broker evicts the thread mid-loop, Claude falls back to a fresh persistent thread with a one-paragraph recap.
+- **Stuck-loop detection.** If this round's diagnosis semantically matches any earlier round's, stop early and escalate (recommend `/rescue` or a fresh angle) instead of burning the full round budget on the same wrong theory.
+- **`skills/codex-help/codex-help-schema.json`** — response schema. Required: `analysis`, `diagnosis`, `next_steps[{action, why}]`, `missing_context[]`, `open_questions[]`. `next_steps` requires at least 1 item; `missing_context` and `open_questions` may be empty.
+- **Missing-context gating.** If Codex says it couldn't verify something from the provided references, Claude gathers that first (Read the file, run the command) before applying the rest of the steps — Codex's own recipe from `<missing_context_gating>`.
+- **Default reasoning effort: `high`.** `/codex-help` is a diagnosis task — Codex benefits from deep reasoning. User can override to `xhigh` for maximum reasoning (the actual enum is `none | minimal | low | medium | high | xhigh`, no "extrahigh").
+
+### Boundaries (intentionally NOT in this skill)
+- Write capability — Codex runs `sandbox: "read-only"` every round. For delegation where Codex should actually edit, user wants `/rescue`.
+- Background mode — help is interactive and verification-driven.
+- Auto-resume of prior help sessions — each invocation is fresh.
+- Per-round approval gating — adds friction, defeats the loop. User can interrupt naturally; destructive actions still gated by `careful` / `guard`.
+
+### Transport
+Reuses `scripts/codex/consult.mjs` via `--schema` flag pointing at `codex-help-schema.json`. Added `--persist-thread` and `--resume <thread-id>` flags to `consult.mjs` for session-aware callers: when either is set, output is an envelope `{thread_id, data}` so callers can thread rounds through the same Codex session. Single-shot callers (dual-review, inline brainstorming Ask Codex, writing-plans Ask Codex) get the raw parsed JSON as before — backwards compatible. One Bash call per round with a quoted HEREDOC — no shell temp files on Claude's side.
+
+### Prompt design choice
+Skipped the `<role>You are Codex...</role>` framing that the vendor's adversarial-review uses. Telling Codex its own identity is redundant when the stance fits inside the `<task>` block, and the vendor's own `stop-review-gate.md` prompt does exactly that (task-direct, no role block). Matched that style for `/codex-help`.
+
 ## [0.9.4] - 2026-04-18
 
 Codex-as-consultant during brainstorming and plan writing. When Claude asks the user a substantive design question, the user can now pick "Ask Codex" and get Codex's read — endorsements of Claude's options, rejections, new options, and a single top recommendation — all merged into a follow-up AskUserQuestion so the user decides from the enriched set.

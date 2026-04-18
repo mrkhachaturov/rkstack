@@ -160,6 +160,20 @@ When Claude is stuck on a bug, wants a second implementation pass, or should off
 
 Default is write-capable so Codex can actually apply fixes. Use `--background` for open-ended work; session-lifecycle hooks clean up orphaned jobs when the session ends.
 
+### /codex-help: ask Codex to unblock Claude
+
+When Claude is stuck mid-task and you want another brain on it without handing off the work, `/codex-help` narrates Claude's current situation to Codex in first person (what I'm trying, what I've tried, what's breaking, my current hypothesis, relevant files). Codex returns a structured diagnosis + concrete next steps, Claude applies them, verifies by re-running whatever surfaced the symptom, and loops up to 3 rounds by default.
+
+```
+/codex-help                             # default 3 rounds
+/codex-help --rounds 5                  # bump the budget
+/codex-help --rounds 5 <framing>        # add an angle
+```
+
+Rounds share one persistent Codex thread — round 1 creates it (`--persist-thread`), rounds 2+ resume it (`--resume <thread-id>`). Codex's own reasoning carries across rounds via thread memory, so follow-up prompts are short deltas ("I applied X, got Y"), not re-statements. Claude tracks each round's diagnosis locally for stuck-loop detection: if the diagnosis converges on the same root cause across rounds, the loop exits early and recommends escalating to `/rescue` for hands-on iteration.
+
+Codex runs **read-only** — advises, never edits. Claude applies the next steps with its normal tools; `careful`/`guard` still warn on destructive operations. For write-capable delegation, use `/rescue`.
+
 ### Ask Codex during brainstorming and plan writing
 
 On substantive design questions (architecture, tradeoffs, approach, test harness, migration sequencing), `brainstorming` and `writing-plans` include `Ask Codex` as an extra option alongside Claude's own A/B/C. Pick it and Codex weighs in — endorsing some of Claude's options, rejecting others, proposing new ones Claude missed, with a single top recommendation. Claude re-presents the question with the merged set so you decide from the enriched list.
@@ -195,6 +209,7 @@ Flow: Claude assembles question + options + project context into an XML-block pr
 | **humanizer** | Write like a person. 35 anti-AI constraints active during composition. |
 | **dual-review** | Claude writes, Codex reviews. Structured JSON findings, sequential rounds until clean. |
 | **rescue** | Hand a task to Codex. Investigate, diagnose, or fix — background, resume, model selection. |
+| **codex-help** | Claude is stuck, Codex advises. Read-only, multi-round loop with persistent thread. |
 
 ### Safety guardrails
 
