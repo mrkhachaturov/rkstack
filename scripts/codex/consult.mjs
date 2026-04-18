@@ -42,7 +42,14 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_SCHEMA = path.join(HERE, "consult-schema.json");
 
 function parseArgs(argv) {
-  const out = { schema: DEFAULT_SCHEMA, cwd: process.cwd(), effort: "medium", model: null };
+  const out = {
+    schema: DEFAULT_SCHEMA,
+    cwd: process.cwd(),
+    effort: "medium",
+    model: null,
+    persistThread: false,
+    resumeThreadId: null
+  };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     switch (a) {
@@ -50,6 +57,8 @@ function parseArgs(argv) {
       case "--cwd": out.cwd = argv[++i]; break;
       case "--effort": out.effort = argv[++i]; break;
       case "--model": out.model = argv[++i]; break;
+      case "--persist-thread": out.persistThread = true; break;
+      case "--resume": out.resumeThreadId = argv[++i]; break;
       case "--help":
       case "-h": out.help = true; break;
       default:
@@ -63,16 +72,31 @@ function parseArgs(argv) {
 function usage() {
   console.error([
     "Usage: consult.mjs [--schema <path>] [--cwd <path>] [--effort <level>] [--model <name>]",
+    "                   [--persist-thread | --resume <thread-id>]",
     "",
     "Reads the consultation prompt from stdin. Calls Codex via the shared",
     "app-server broker with the consult output schema enforced. Emits parsed",
-    "JSON on stdout."
+    "JSON on stdout.",
+    "",
+    "Session resume:",
+    "  --persist-thread     Create a persistent Codex thread this call can be resumed against.",
+    "                       When set, output is an envelope: {thread_id, data}.",
+    "  --resume <id>        Resume an existing Codex thread (from an earlier --persist-thread",
+    "                       call). Output is also {thread_id, data}. Mutually exclusive with",
+    "                       --persist-thread.",
+    "",
+    "Without either flag, the Codex turn is ephemeral and output is the raw parsed JSON."
   ].join("\n"));
 }
 
 async function main() {
   const args = parseArgs(process.argv);
   if (args.help) { usage(); process.exit(0); }
+
+  if (args.persistThread && args.resumeThreadId) {
+    console.error("error: --persist-thread and --resume are mutually exclusive");
+    process.exit(2);
+  }
 
   const avail = getCodexAvailability(args.cwd);
   if (!avail.available) {
@@ -102,7 +126,9 @@ async function main() {
       outputSchema,
       sandbox: "read-only",
       effort: args.effort,
-      model: args.model
+      model: args.model,
+      persistThread: args.persistThread,
+      resumeThreadId: args.resumeThreadId
     });
   } catch (err) {
     console.error(`error: Codex turn failed: ${err.message}`);
@@ -121,7 +147,15 @@ async function main() {
     process.exit(1);
   }
 
-  process.stdout.write(JSON.stringify(parsed.parsed, null, 2) + "\n");
+  // Session-aware callers (--persist-thread or --resume) get an envelope so
+  // they can thread the same Codex session across rounds. Single-shot callers
+  // get the raw parsed JSON.
+  const sessionMode = args.persistThread || args.resumeThreadId;
+  const output = sessionMode
+    ? { thread_id: result.threadId ?? null, data: parsed.parsed }
+    : parsed.parsed;
+
+  process.stdout.write(JSON.stringify(output, null, 2) + "\n");
   process.exit(0);
 }
 
